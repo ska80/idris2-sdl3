@@ -100,6 +100,14 @@ export
 prim__renderTextureRegion : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double ->
                            Double -> Double -> Double -> Double -> PrimIO Int
 
+%foreign "C:idris_sdl_set_render_scale, libidris2_sdl3, sdl3.h"
+export
+prim__setRenderScale : AnyPtr -> Double -> Double -> PrimIO Int
+
+%foreign "C:idris_sdl_set_render_logical_presentation, libidris2_sdl3, sdl3.h"
+export
+prim__setRenderLogicalPresentation : AnyPtr -> Int32 -> Int32 -> Int -> PrimIO Int
+
 %foreign "C:idris_sdl_set_render_viewport, libidris2_sdl3, sdl3.h"
 export
 prim__setRenderViewport : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> PrimIO Int

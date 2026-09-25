@@ -90,6 +90,14 @@ failing "Mismatch between"
   wrongDrawBlendHandle : Texture StaticAccess -> IO Bool
   wrongDrawBlendHandle texture = setDrawBlendMode texture AlphaBlend
 
+failing "Mismatch between"
+  wrongPresentation : Renderer -> IO Bool
+  wrongPresentation renderer = setRenderLogicalPresentation renderer 320 240 LinearScale
+
+failing "Mismatch between"
+  wrongScaleHandle : Texture StaticAccess -> IO Bool
+  wrongScaleHandle texture = setRenderScale texture 2 2
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

@@ -25,6 +25,9 @@ IDRIS_SDL3 int idris_sdl_render_texture_source(SDL_Renderer* renderer, SDL_Textu
 IDRIS_SDL3 int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture, double sx, double sy, double sw, double sh,
                                                double dx, double dy, double dw, double dh);
 
+IDRIS_SDL3 int idris_sdl_set_render_scale(SDL_Renderer* renderer, double x, double y);
+IDRIS_SDL3 int idris_sdl_set_render_logical_presentation(SDL_Renderer* renderer, Sint32 w, Sint32 h, int mode);
+
 IDRIS_SDL3 int idris_sdl_set_render_viewport(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h);
 IDRIS_SDL3 int idris_sdl_reset_render_viewport(SDL_Renderer* renderer);
 IDRIS_SDL3 int idris_sdl_set_render_clip_rect(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h);

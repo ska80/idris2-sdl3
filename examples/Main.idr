@@ -50,6 +50,8 @@ loop window renderer texture buffer = do
 
 runRenderer : WindowID -> Renderer -> IO (Either String ())
 runRenderer identifier renderer = do
+  Right () <- require (setRenderLogicalPresentation renderer 640 480 PresentationLetterbox)
+    | Left err => pure (Left err)
   Right texture <- createTargetTexture renderer 200 180 | Left err => pure (Left err)
   result <- do
     Right () <- prepareTexture renderer texture | Left err => pure (Left err)

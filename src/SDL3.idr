@@ -43,6 +43,18 @@ scaleValue : ScaleMode -> Int
 scaleValue NearestScale = 0
 scaleValue LinearScale = 1
 
+||| How a fixed logical resolution fits the current render target.
+public export
+data LogicalPresentation = PresentationDisabled | PresentationStretch
+                         | PresentationLetterbox | PresentationOverscan | PresentationIntegerScale
+
+presentationValue : LogicalPresentation -> Int
+presentationValue PresentationDisabled = 0
+presentationValue PresentationStretch = 1
+presentationValue PresentationLetterbox = 2
+presentationValue PresentationOverscan = 3
+presentationValue PresentationIntegerScale = 4
+
 ||| Owned texture. Its creating renderer must remain alive.
 ||| The access parameter prevents non-target textures from becoming render targets.
 export
@@ -225,6 +237,20 @@ renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw 
 renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw sh)
                     (Just (MkFRect dx dy dw dh)) =
   (/= 0) <$> primIO (prim__renderTextureRegion renderer texture sx sy sw sh dx dy dw dh)
+
+||| Scale drawing coordinates on the current target. Use 1 and 1 to reset.
+||| Values convert to SDL floats. Call on the main thread. Returns False on failure.
+export
+setRenderScale : Renderer -> Double -> Double -> IO Bool
+setRenderScale (MkRenderer ptr) x y = (/= 0) <$> primIO (prim__setRenderScale ptr x y)
+
+||| Set a fixed logical resolution on the current target, using positive dimensions.
+||| Pass 0, 0, and PresentationDisabled to restore the target's pixel resolution.
+||| Does not convert input event coordinates. Call on the main thread.
+export
+setRenderLogicalPresentation : Renderer -> Int32 -> Int32 -> LogicalPresentation -> IO Bool
+setRenderLogicalPresentation (MkRenderer ptr) width height mode =
+  (/= 0) <$> primIO (prim__setRenderLogicalPresentation ptr width height (presentationValue mode))
 
 ||| Set the current target's drawing area and coordinate origin.
 ||| Nothing selects the whole target. Width and height must be nonnegative.

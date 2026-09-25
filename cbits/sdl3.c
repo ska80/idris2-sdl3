@@ -8,6 +8,10 @@ _Static_assert(SDL_MOUSEWHEEL_NORMAL == 0 && SDL_MOUSEWHEEL_FLIPPED == 1, "Updat
 
 _Static_assert(SDLK_ESCAPE == 27, "Update SDL3.Events.escapeKey");
 
+_Static_assert(SDL_LOGICAL_PRESENTATION_DISABLED == 0 && SDL_LOGICAL_PRESENTATION_STRETCH == 1 && SDL_LOGICAL_PRESENTATION_LETTERBOX == 2 &&
+                   SDL_LOGICAL_PRESENTATION_OVERSCAN == 3 && SDL_LOGICAL_PRESENTATION_INTEGER_SCALE == 4,
+               "Update SDL3 logical presentation constants");
+
 _Static_assert(SDL_BLENDMODE_NONE == 0 && SDL_BLENDMODE_BLEND == 1 && SDL_BLENDMODE_BLEND_PREMULTIPLIED == 0x10 && SDL_BLENDMODE_ADD == 2 &&
                    SDL_BLENDMODE_ADD_PREMULTIPLIED == 0x20 && SDL_BLENDMODE_MOD == 4 && SDL_BLENDMODE_MUL == 8,
                "Update SDL3 blend mode constants");
@@ -88,6 +92,14 @@ int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture
     const SDL_FRect source      = {(float)sx, (float)sy, (float)sw, (float)sh};
     const SDL_FRect destination = {(float)dx, (float)dy, (float)dw, (float)dh};
     return SDL_RenderTexture(renderer, texture, &source, &destination);
+}
+
+int idris_sdl_set_render_scale(SDL_Renderer* renderer, double x, double y) {
+    return SDL_SetRenderScale(renderer, (float)x, (float)y);
+}
+
+int idris_sdl_set_render_logical_presentation(SDL_Renderer* renderer, Sint32 w, Sint32 h, int mode) {
+    return SDL_SetRenderLogicalPresentation(renderer, w, h, (SDL_RendererLogicalPresentation)mode);
 }
 
 int idris_sdl_set_render_viewport(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h) {

@@ -28,10 +28,11 @@ The package build hook compiles `cbits/libidris2_sdl3.so`.  `--no-prompt` permit
 hook without an interactive question.  The Makefile uses `pack` for all Idris builds and sets native
 library search paths.
 
-`make run` creates a blue texture once and draws it as a rectangle in the window. Close the window
-or press Escape to exit.  `make test` uses SDL's dummy video driver, so it does not need a display.
-Use `make test CG=refc` for the secondary RefC compatibility test.  Use `make run-c` to build and
-run the example with RefC.  This target is a shortcut for `make run CG=refc`.
+`make run` creates a blue texture once and draws it in a fixed 640 by 480 scene.  Resizing preserves
+the scene's width-to-height ratio and adds borders where needed. Close the window or press Escape to
+exit.  `make test` uses SDL's dummy video driver, so it does not need a display.  Use `make test
+CG=refc` for the secondary RefC compatibility test.  Use `make run-c` to build and run the example
+with RefC.  This target is a shortcut for `make run CG=refc`.
 
 ## API and safety
 
@@ -62,6 +63,26 @@ memory.
 Creation calls copy the error into `Left` on failure.  Rendering, initialization, and text input
 start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
 failure, on the same thread, before another SDL call can replace the error.
+
+A logical resolution is a fixed coordinate size for drawing.  `setRenderLogicalPresentation renderer
+width height mode` fits that size to the current target.  Use positive `Int32` dimensions for
+enabled modes. The available modes are:
+
+- `PresentationDisabled` uses the target's pixel resolution. Pass zero for width and height.
+- `PresentationStretch` scales each axis to fill the target.
+- `PresentationLetterbox` preserves the width-to-height ratio and adds borders.
+- `PresentationOverscan` preserves the width-to-height ratio and crops excess content.
+- `PresentationIntegerScale` uses integer scale factors to fit the target.
+
+`setRenderScale renderer scaleX scaleY` applies additional scaling to drawing coordinates.  Use `1
+1` to reset it. Values convert from Idris `Double` to SDL `float`.  Each target retains its own
+scale and logical presentation state.  Configure only the intended targets to avoid scaling or
+letterboxing an off-screen image twice.  Both controls require the main thread and return `False` on
+failure.
+
+These controls do not transform input events. Mouse event positions remain in window coordinates.
+Event coordinate conversion is not yet bound. Do not treat mouse positions as logical drawing
+coordinates.
 
 A viewport is a drawing area with its own coordinate origin.  `setRenderViewport renderer (Just
 (MkRect x y width height))` sets that area on the current render target.  Drawing starts at `(0, 0)`
@@ -258,25 +279,26 @@ test destination rectangles, target reset, invalid dimensions, and rejection of 
 another renderer. BMP tests create temporary image files and remove them after each test.  They test
 missing and invalid files, pixel colors, source rectangles, and texture use after surface
 destruction. Renderer tests cover viewport origins, clipping, empty clip rectangles, per-target
-state, and shape alpha blending.  They also test that `clear` ignores viewport and clip state.
-Pixel tests cover all exposed blend modes, color and alpha modulation, and nearest and linear
-filtering.  Tests allow small rounding differences for fractional blending and interpolation.
-Compile-time tests reject mixed handle types, mixed flag types, forged handles, and static textures
-used as render targets. Event tests cover keyboard data, repeat status, window identifiers,
-timestamps, and data retained after buffer reuse. Mouse tests cover fractional coordinates, relative
-motion, presses, releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover
-normal, flipped, and unknown directions, fractional values, pointer position, and signed 32-bit
-limits. Text tests cover Unicode, empty and long text, composition selections, string ownership, and
-per-window start and stop controls. Area tests compare the stored SDL rectangle and cursor against
-the Idris values.  They also test area reset and composition cancellation without disabling text
-input.  The test-only native library inserts known events into SDL's queue. It is not part of the
-binding library.  The example builds in the test environment, but interactive display behavior needs
-a manual test.
+state, and shape alpha blending. They also test that `clear` ignores viewport and clip state.
+Scaling tests cover every logical presentation mode, independent axis scaling, and scale and logical
+state retained across target switches.  Pixel tests cover all exposed blend modes, color and alpha
+modulation, and nearest and linear filtering.  Tests allow small rounding differences for fractional
+blending and interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged
+handles, and static textures used as render targets. Event tests cover keyboard data, repeat status,
+window identifiers, timestamps, and data retained after buffer reuse. Mouse tests cover fractional
+coordinates, relative motion, presses, releases, click counts, unknown buttons, and button-state
+bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer
+position, and signed 32-bit limits. Text tests cover Unicode, empty and long text, composition
+selections, string ownership, and per-window start and stop controls. Area tests compare the stored
+SDL rectangle and cursor against the Idris values.  They also test area reset and composition
+cancellation without disabling text input.  The test-only native library inserts known events into
+SDL's queue. It is not part of the binding library.  The example builds in the test environment, but
+interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes streaming texture updates, audio streams, and scoped resource ownership.  Keep
-each addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
-before adding performance claims or a larger abstraction layer.
+Next work includes event coordinate conversion, streaming texture updates, audio streams, and scoped
+resource ownership.  Keep each addition close to SDL's API and test its failure paths.  Measure call
+overhead and allocations before adding performance claims or a larger abstraction layer.

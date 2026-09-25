@@ -6,6 +6,7 @@ import TypeSafety
 import EventTests
 import TextureTests
 import RenderTests
+import ScalingTests
 
 %default covering
 
@@ -64,6 +65,7 @@ resources window = do
       Right () <- eventTests buffer | Left err => pure (Left err)
       Right () <- textureTests window renderer | Left err => pure (Left err)
       Right () <- renderTests window renderer | Left err => pure (Left err)
+      Right () <- scalingTests window renderer | Left err => pure (Left err)
       render renderer
     freeEventBuffer buffer
     pure result
