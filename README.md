@@ -28,7 +28,8 @@ library search paths.
 
 `make run` opens a window with a blue rectangle. Close the window or press Escape to exit.  `make
 test` uses SDL's dummy video driver, so it does not need a display.  Use `make test CG=refc` for the
-secondary RefC compatibility test.  Use `make run CG=refc` to run the example with RefC.
+secondary RefC compatibility test.  Use `make run-c` to build and run the example with RefC.  This
+target is a shortcut for `make run CG=refc`.
 
 ## API and safety
 

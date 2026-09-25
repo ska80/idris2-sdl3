@@ -11,7 +11,7 @@ export IDRIS2_LDLIBS := $(IDRIS2_LDLIBS) -lidris2_sdl3 -lSDL3
 endif
 
 
-.PHONY: all example run
+.PHONY: all example run run-c
 all:
 	$(PACK) --no-prompt --cg=$(CG) build sdl3.ipkg
 
@@ -20,6 +20,9 @@ example: all
 
 run: example
 	$(PACK) --no-prompt --cg=$(CG) run examples/hello.ipkg
+
+run-c:
+	$(MAKE) run CG=refc
 
 
 .PHONY: test
