@@ -10,12 +10,23 @@ require action = do
   True <- action | False => Left <$> getError
   pure (Right ())
 
-frame : Renderer -> IO (Either String ())
-frame renderer = do
+prepareTexture : Renderer -> Texture TargetAccess -> IO (Either String ())
+prepareTexture renderer texture = do
+  Right () <- require (setRenderTarget renderer (Just texture)) | Left err => pure (Left err)
+  result <- do
+    Right () <- require (setDrawColor renderer 80 180 255 255) | Left err => pure (Left err)
+    require (clear renderer)
+  restored <- require (setRenderTarget renderer Nothing)
+  case result of
+    Left err => pure (Left err)
+    Right () => pure restored
+
+frame : Renderer -> Texture TargetAccess -> IO (Either String ())
+frame renderer texture = do
   Right () <- require (setDrawColor renderer 24 28 40 255) | Left err => pure (Left err)
   Right () <- require (clear renderer) | Left err => pure (Left err)
-  Right () <- require (setDrawColor renderer 80 180 255 255) | Left err => pure (Left err)
-  Right () <- require (fillRect renderer 220 150 200 180) | Left err => pure (Left err)
+  Right () <- require (renderTexture renderer texture (Just (MkFRect 220 150 200 180)))
+    | Left err => pure (Left err)
   require (present renderer)
 
 drain : WindowID -> EventBuffer -> IO Bool
@@ -30,22 +41,30 @@ drain window buffer = do
       if target == window && key == escapeKey then pure True else drain window buffer
     _ => drain window buffer
 
-loop : WindowID -> Renderer -> EventBuffer -> IO (Either String ())
-loop window renderer buffer = do
+loop : WindowID -> Renderer -> Texture TargetAccess -> EventBuffer -> IO (Either String ())
+loop window renderer texture buffer = do
   False <- drain window buffer | True => pure (Right ())
-  Right () <- frame renderer | Left err => pure (Left err)
+  Right () <- frame renderer texture | Left err => pure (Left err)
   delay 16
-  loop window renderer buffer
+  loop window renderer texture buffer
+
+runRenderer : WindowID -> Renderer -> IO (Either String ())
+runRenderer identifier renderer = do
+  Right texture <- createTargetTexture renderer 200 180 | Left err => pure (Left err)
+  result <- do
+    Right () <- prepareTexture renderer texture | Left err => pure (Left err)
+    Right buffer <- newEventBuffer | Left err => pure (Left err)
+    result <- loop identifier renderer texture buffer
+    freeEventBuffer buffer
+    pure result
+  destroyTexture texture
+  pure result
 
 runWindow : Window -> IO (Either String ())
 runWindow window = do
   Right identifier <- getWindowID window | Left err => pure (Left err)
   Right renderer <- createRenderer window | Left err => pure (Left err)
-  result <- do
-    Right buffer <- newEventBuffer | Left err => pure (Left err)
-    result <- loop identifier renderer buffer
-    freeEventBuffer buffer
-    pure result
+  result <- runRenderer identifier renderer
   destroyRenderer renderer
   pure result
 

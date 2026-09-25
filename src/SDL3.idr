@@ -14,6 +14,24 @@ data Window = MkWindow AnyPtr
 export
 data Renderer = MkRenderer AnyPtr
 
+public export
+data TextureAccess = StaticAccess | StreamingAccess | TargetAccess
+
+||| Owned texture. Its creating renderer must remain alive.
+||| The access parameter prevents non-target textures from becoming render targets.
+export
+data Texture : TextureAccess -> Type where
+  MkTexture : AnyPtr -> Texture access
+
+||| SDL floating-point rectangle. Values convert to single precision in C.
+public export
+record FRect where
+  constructor MkFRect
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+
 ||| Reusable native event storage. Free exactly once.
 export
 data EventBuffer = MkEventBuffer AnyPtr
@@ -81,6 +99,40 @@ createRenderer (MkWindow ptr) = owned MkRenderer (prim__createRenderer ptr)
 export
 destroyRenderer : Renderer -> IO ()
 destroyRenderer (MkRenderer ptr) = primIO (prim__destroyRenderer ptr)
+
+||| Create an RGBA32 texture for off-screen drawing on the main thread.
+||| Contents are undefined until drawn. Width and height must be positive C ints.
+export
+createTargetTexture : Renderer -> Int -> Int -> IO (Either String (Texture TargetAccess))
+createTargetTexture (MkRenderer ptr) width height =
+  if width <= 0 || height <= 0 || width > 2147483647 || height > 2147483647
+     then pure (Left "Texture dimensions must be positive 32-bit integers")
+     else owned MkTexture (prim__createTargetTexture ptr width height)
+
+||| Destroy on the main thread, before the creating renderer.
+||| Switch away from this texture as a render target first. Do not reuse the handle.
+export
+destroyTexture : Texture access -> IO ()
+destroyTexture (MkTexture ptr) = primIO (prim__destroyTexture ptr)
+
+||| Select an off-screen target. Nothing restores drawing to the window.
+||| The texture must belong to this renderer. Call on the main thread.
+export
+setRenderTarget : Renderer -> Maybe (Texture TargetAccess) -> IO Bool
+setRenderTarget (MkRenderer renderer) Nothing =
+  (/= 0) <$> primIO (prim__resetRenderTarget renderer)
+setRenderTarget (MkRenderer renderer) (Just (MkTexture texture)) =
+  (/= 0) <$> primIO (prim__setRenderTarget renderer texture)
+
+||| Draw the whole texture into the destination rectangle, or the whole target.
+||| The texture must belong to this renderer and must not be the current target.
+||| Call on the main thread. Nothing uses SDL's default destination rectangle.
+export
+renderTexture : Renderer -> Texture access -> Maybe FRect -> IO Bool
+renderTexture (MkRenderer renderer) (MkTexture texture) Nothing =
+  (/= 0) <$> primIO (prim__renderTexture renderer texture)
+renderTexture (MkRenderer renderer) (MkTexture texture) (Just (MkFRect x y width height)) =
+  (/= 0) <$> primIO (prim__renderTextureRect renderer texture x y width height)
 
 ||| Rendering calls return False on failure. Call getError for details.
 export

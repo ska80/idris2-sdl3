@@ -1,8 +1,9 @@
 # SDL3 for Idris 2
 
 Thin bindings for games and multimedia applications. This initial version covers initialization,
-windows, basic 2D rendering, keyboard and mouse events, text input, window-close events, and timers.
-It does not yet bind textures, audio streams, gamepads, or the GPU API.
+windows, basic 2D rendering, render-target textures, keyboard and mouse events, text input,
+window-close events, and timers.  It does not yet bind image loading, texture uploads, audio
+streams, gamepads, or the GPU API.
 
 The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the
 primary backend and the default for builds, examples, tests, and performance work.  RefC support is
@@ -27,10 +28,10 @@ The package build hook compiles `cbits/libidris2_sdl3.so`.  `--no-prompt` permit
 hook without an interactive question.  The Makefile uses `pack` for all Idris builds and sets native
 library search paths.
 
-`make run` opens a window with a blue rectangle. Close the window or press Escape to exit.  `make
-test` uses SDL's dummy video driver, so it does not need a display.  Use `make test CG=refc` for the
-secondary RefC compatibility test.  Use `make run-c` to build and run the example with RefC.  This
-target is a shortcut for `make run CG=refc`.
+`make run` creates a blue texture once and draws it as a rectangle in the window. Close the window
+or press Escape to exit.  `make test` uses SDL's dummy video driver, so it does not need a display.
+Use `make test CG=refc` for the secondary RefC compatibility test.  Use `make run-c` to build and
+run the example with RefC.  This target is a shortcut for `make run CG=refc`.
 
 ## API and safety
 
@@ -40,7 +41,8 @@ raw module unless you can enforce its pointer and lifetime requirements.
 
 The typed API provides these guarantees:
 
-- Distinct opaque types for windows, renderers, and event buffers.
+- Distinct opaque types for windows, renderers, textures, and event buffers.
+- Texture access types that restrict render targets to `Texture TargetAccess`.
 - Separate initialization and window flags, combined with `<+>` and empty flags through `neutral`.
 - Null checks on resource creation, with errors returned as `Either String a`.
 - Byte-sized color channels and fixed-width unsigned timer and flag values.
@@ -52,13 +54,32 @@ The API does not enforce resource lifetimes or thread rules in the type system. 
 initialization, window, rendering, and event functions on the main thread.  Do not share event
 buffers between threads.
 
-Destroy each renderer before its window. Free each event buffer exactly once.  Destroy all owned
-resources before `quit`, and call `quit` even if initialization fails.  Do not use or destroy a
-handle after destruction. This can access freed memory.
+Destroy each texture before its renderer, and each renderer before its window.  Free each event
+buffer exactly once. Destroy all owned resources before `quit`, and call `quit` even if
+initialization fails.  Do not use or destroy a handle after destruction. This can access freed
+memory.
 
 Creation calls copy the error into `Left` on failure.  Rendering, initialization, and text input
 start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
 failure, on the same thread, before another SDL call can replace the error.
+
+A render target is the destination for drawing commands.  `createTargetTexture renderer width
+height` creates an RGBA32 texture for off-screen drawing.  Creation returns `Either String (Texture
+TargetAccess)`. Dimensions must be positive 32-bit integers.  The texture starts with undefined
+contents, so clear or draw into it before use.
+
+`setRenderTarget renderer (Just texture)` directs drawing into a texture.  `setRenderTarget renderer
+Nothing` restores the window as the destination.  `renderTexture renderer texture (Just (MkFRect x y
+width height))` draws the whole source texture into the destination rectangle.  Pass `Nothing` as
+the destination rectangle to use the whole current target.  Restore the window target before
+`present`. Do not draw a texture into itself.
+
+Use a texture only with its creating renderer. The types distinguish access modes but do not track
+renderer identity or resource lifetimes.  SDL rejects textures from another renderer. Switch away
+from a texture as the current target before `destroyTexture`.  All texture calls require the main
+thread. Render targets retain separate SDL viewport, clipping, scaling, and presentation state.
+Only target-texture creation is bound so far. Image loading, uploads, source rectangles, and texture
+blend controls are not yet exposed.
 
 `pollEvent` returns only event types. `pollEventData` also returns timestamps and supported event
 data.  Both return `Nothing` for an empty queue. Each call consumes one event, so use one polling
@@ -80,14 +101,14 @@ main thread. `textInputActive window` reports the window's current text input st
 result from that query means inactive, not failure.
 
 `setTextInputArea window (Just area)` supplies the text field bounds and cursor position to SDL.
-Construct `area` with `MkTextInputArea x y width height cursorOffset`, using signed 32-bit window coordinates.
-The cursor offset is relative to `x`, not a character or byte index.
-Update the area when the field or cursor moves. The platform decides how to position the native input method window.
+Construct `area` with `MkTextInputArea x y width height cursorOffset`, using signed 32-bit window
+coordinates.  The cursor offset is relative to `x`, not a character or byte index.  Update the area
+when the field or cursor moves. The platform decides how to position the native input method window.
 Use `setTextInputArea window Nothing` to clear the area.
 
-`clearComposition window` dismisses native composition without disabling text input.
-Clear the application's composition display separately. Call both area controls and composition cancellation on the main thread.
-These calls return `False` on failure. Call `getError` immediately for details.
+`clearComposition window` dismisses native composition without disabling text input.  Clear the
+application's composition display separately. Call both area controls and composition cancellation
+on the main thread.  These calls return `False` on failure. Call `getError` immediately for details.
 
 `TextInputEvent` contains committed text and its window identifier. Use this event for character
 input instead of converting key codes.  An input method editor (IME) lets users compose characters.
@@ -99,7 +120,8 @@ text.
 The binding copies SDL's UTF-8 text into an Idris `String` before the next poll.  These strings
 remain valid after buffer reuse or destruction. `pollEvent` still returns only event types and does
 not copy text.  Starting text input can show a screen keyboard or activate an IME, which can consume
-key events. Candidate lists, text input properties, and querying the current text input area are not yet bound.
+key events. Candidate lists, text input properties, and querying the current text input area are not
+yet bound.
 
 `MouseMotionEvent` contains window and mouse identifiers, held button states, position, and relative
 motion.  `MouseButtonEvent` contains window and mouse identifiers, the button, press or release
@@ -135,9 +157,13 @@ installed headers.  Static assertions compare the exposed flag constants with th
 Allocate an event buffer once and reuse it in the event loop.  The adapter performs no heap
 allocation per draw or poll call. SDL and the Idris runtime can still allocate internally.
 Rendering rectangle values use Idris `Double` and convert to SDL `float` values on the C stack.
-Text input areas use `Int32` fields and a stack-allocated SDL rectangle, with no extra native heap allocation.  Text events
-allocate Idris strings when `pollEventData` copies their text. The C adapter does not allocate an
-additional text buffer.
+Text input areas use `Int32` fields and a stack-allocated SDL rectangle, with no extra native heap
+allocation.  Text events allocate Idris strings when `pollEventData` copies their text. The C
+adapter does not allocate an additional text buffer.
+
+Create textures outside the frame loop and reuse them. Texture destination rectangles use stack
+storage in the C adapter.  The example creates one target texture before its loop. The tests read
+pixels back to compare rendered colors, but normal rendering does not.
 
 No resource registry, finalizer, or automatic error-string copy runs on each successful rendering
 call.  Event polling uses multiple native calls and constructs Idris values.  There are no
@@ -158,21 +184,23 @@ library directories to `LIBRARY_PATH` and add `cbits` and the SDL include direct
 ## Tests and next steps
 
 The tests cover native event classification, unknown events, empty queues, flag combinations, window
-creation, drawing, and timers.  Compile-time tests reject mixed handle types, mixed flag types, and
-forged window handles. Event tests cover keyboard data, repeat status, window identifiers,
-timestamps, and data retained after buffer reuse. Mouse tests cover fractional coordinates, relative
-motion, presses, releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover
-normal, flipped, and unknown directions, fractional values, pointer position, and signed 32-bit
-limits. Text tests cover Unicode, empty and long text, composition selections, string ownership, and
-per-window start and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
-They also test area reset and composition cancellation without disabling text input.  The test-only native library inserts known events into SDL's
-queue. It is not part of the binding library.  The example builds in the test environment, but
-interactive display behavior needs a manual test.
+creation, drawing, and timers. Texture tests read pixels from off-screen and window targets.  They
+test destination rectangles, target reset, invalid dimensions, and rejection of textures from
+another renderer.  Compile-time tests reject mixed handle types, mixed flag types, and forged window
+handles. Event tests cover keyboard data, repeat status, window identifiers, timestamps, and data
+retained after buffer reuse. Mouse tests cover fractional coordinates, relative motion, presses,
+releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover normal, flipped,
+and unknown directions, fractional values, pointer position, and signed 32-bit limits. Text tests
+cover Unicode, empty and long text, composition selections, string ownership, and per-window start
+and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
+They also test area reset and composition cancellation without disabling text input.  The test-only
+native library inserts known events into SDL's queue. It is not part of the binding library.  The
+example builds in the test environment, but interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes textures, audio streams, and scoped resource ownership.
+Next work includes image loading, texture uploads, audio streams, and scoped resource ownership.
 Keep each addition close to SDL's API and test its failure paths.  Measure call overhead and
 allocations before adding performance claims or a larger abstraction layer.

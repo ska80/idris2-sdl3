@@ -39,6 +39,30 @@ prim__createRenderer : AnyPtr -> PrimIO AnyPtr
 export
 prim__destroyRenderer : AnyPtr -> PrimIO ()
 
+%foreign "C:idris_sdl_create_target_texture, libidris2_sdl3, sdl3.h"
+export
+prim__createTargetTexture : AnyPtr -> Int -> Int -> PrimIO AnyPtr
+
+%foreign "C:SDL_DestroyTexture, libSDL3, SDL3/SDL.h"
+export
+prim__destroyTexture : AnyPtr -> PrimIO ()
+
+%foreign "C:idris_sdl_set_render_target, libidris2_sdl3, sdl3.h"
+export
+prim__setRenderTarget : AnyPtr -> AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_reset_render_target, libidris2_sdl3, sdl3.h"
+export
+prim__resetRenderTarget : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_render_texture, libidris2_sdl3, sdl3.h"
+export
+prim__renderTexture : AnyPtr -> AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_render_texture_rect, libidris2_sdl3, sdl3.h"
+export
+prim__renderTextureRect : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double -> PrimIO Int
+
 %foreign "C:idris_sdl_draw_color, libidris2_sdl3, sdl3.h"
 export
 prim__drawColor : AnyPtr -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int

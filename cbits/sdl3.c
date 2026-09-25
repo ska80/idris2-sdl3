@@ -35,6 +35,27 @@ SDL_Renderer* idris_sdl_create_renderer(SDL_Window* window) {
     return SDL_CreateRenderer(window, NULL);
 }
 
+SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, int height) {
+    return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, width, height);
+}
+
+int idris_sdl_set_render_target(SDL_Renderer* renderer, SDL_Texture* texture) {
+    return SDL_SetRenderTarget(renderer, texture);
+}
+
+int idris_sdl_reset_render_target(SDL_Renderer* renderer) {
+    return SDL_SetRenderTarget(renderer, NULL);
+}
+
+int idris_sdl_render_texture(SDL_Renderer* renderer, SDL_Texture* texture) {
+    return SDL_RenderTexture(renderer, texture, NULL, NULL);
+}
+
+int idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h) {
+    const SDL_FRect rect = {(float)x, (float)y, (float)w, (float)h};
+    return SDL_RenderTexture(renderer, texture, NULL, &rect);
+}
+
 int idris_sdl_draw_color(SDL_Renderer* r, Uint8 red, Uint8 g, Uint8 b, Uint8 a) {
     return SDL_SetRenderDrawColor(r, red, g, b, a);
 }

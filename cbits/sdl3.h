@@ -11,6 +11,12 @@ IDRIS_SDL3 int idris_sdl_is_null(const void* ptr);
 IDRIS_SDL3 int   idris_sdl_init(Uint32 flags);
 IDRIS_SDL3 char* idris_sdl_get_error(void);
 
+IDRIS_SDL3 SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, int height);
+IDRIS_SDL3 int          idris_sdl_set_render_target(SDL_Renderer* renderer, SDL_Texture* texture);
+IDRIS_SDL3 int          idris_sdl_reset_render_target(SDL_Renderer* renderer);
+IDRIS_SDL3 int          idris_sdl_render_texture(SDL_Renderer* renderer, SDL_Texture* texture);
+IDRIS_SDL3 int          idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h);
+
 IDRIS_SDL3 SDL_Renderer* idris_sdl_create_renderer(SDL_Window* window);
 IDRIS_SDL3 int           idris_sdl_draw_color(SDL_Renderer* renderer, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 IDRIS_SDL3 int           idris_sdl_clear(SDL_Renderer* renderer);

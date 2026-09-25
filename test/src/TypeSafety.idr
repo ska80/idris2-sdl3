@@ -50,6 +50,18 @@ failing "Mismatch between"
   wrongCompositionWindow : Renderer -> IO Bool
   wrongCompositionWindow renderer = clearComposition renderer
 
+failing "Mismatch between"
+  wrongTexture : Renderer -> Window -> IO Bool
+  wrongTexture renderer window = renderTexture renderer window Nothing
+
+failing "Mismatch between"
+  wrongTextureAccess : Renderer -> Texture StreamingAccess -> IO Bool
+  wrongTextureAccess renderer texture = setRenderTarget renderer (Just texture)
+
+failing "Name SDL3.MkTexture is private"
+  forgeTexture : AnyPtr -> Texture TargetAccess
+  forgeTexture = MkTexture
+
 failing "Name SDL3.MkWindow is private"
   forgeWindow : AnyPtr -> Window
   forgeWindow = MkWindow

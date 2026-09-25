@@ -4,6 +4,7 @@ import SDL3
 import System
 import TypeSafety
 import EventTests
+import TextureTests
 
 %default covering
 
@@ -60,6 +61,7 @@ resources window = do
     Right buffer <- newEventBuffer | Left err => pure (Left err)
     result <- do
       Right () <- eventTests buffer | Left err => pure (Left err)
+      Right () <- textureTests window renderer | Left err => pure (Left err)
       render renderer
     freeEventBuffer buffer
     pure result

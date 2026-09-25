@@ -7,6 +7,11 @@ int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
+    assert(idris_sdl_create_target_texture(NULL, 16, 16) == NULL);
+    assert(idris_sdl_reset_render_target(NULL) == 0);
+    assert(idris_sdl_set_render_target(NULL, NULL) == 0);
+    assert(idris_sdl_render_texture(NULL, NULL) == 0);
+    assert(idris_sdl_render_texture_rect(NULL, NULL, 0, 0, 16, 16) == 0);
     assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_start_text_input(NULL) == 0);
     assert(idris_sdl_stop_text_input(NULL) == 0);

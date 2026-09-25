@@ -9,6 +9,21 @@ int idris_test_text_input_area(Uint32 window_id, Sint32 x, Sint32 y, Sint32 w, S
     return area.x == x && area.y == y && area.w == w && area.h == h && actual_cursor == cursor;
 }
 
+/* Readback allocates only in tests, never in the binding's draw path. */
+int idris_test_pixel(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    SDL_Window* window = SDL_GetWindowFromID(window_id);
+    if (!window) return 0;
+    SDL_Renderer* renderer = SDL_GetRenderer(window);
+    if (!renderer) return 0;
+    const SDL_Rect rect    = {x, y, 1, 1};
+    SDL_Surface*   surface = SDL_RenderReadPixels(renderer, &rect);
+    if (!surface) return 0;
+    Uint8 actual_r, actual_g, actual_b, actual_a;
+    int   ok = SDL_ReadSurfacePixel(surface, 0, 0, &actual_r, &actual_g, &actual_b, &actual_a);
+    SDL_DestroySurface(surface);
+    return ok && actual_r == r && actual_g == g && actual_b == b && actual_a == a;
+}
+
 /* Test-only events. Keep these symbols out of the binding library. */
 int idris_test_queue_event(int kind) {
     static char text[256];
