@@ -180,6 +180,16 @@ prim__drawColor : AnyPtr -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int
 export
 prim__clear : AnyPtr -> PrimIO Int
 
+||| Accepts -1 (adaptive), 0 (disabled), or a positive 32-bit C int interval.
+%foreign "C:idris_sdl_set_render_vsync, libidris2_sdl3, sdl3.h"
+export
+prim__setRenderVSync : AnyPtr -> Int64 -> PrimIO Int
+
+||| Returns -2 on failure, otherwise SDL's VSync value (-1, 0, or positive).
+%foreign "C:idris_sdl_get_render_vsync, libidris2_sdl3, sdl3.h"
+export
+prim__getRenderVSync : AnyPtr -> PrimIO Int32
+
 %foreign "C:idris_sdl_present, libidris2_sdl3, sdl3.h"
 export
 prim__present : AnyPtr -> PrimIO Int

@@ -15,6 +15,23 @@ data Window = MkWindow AnyPtr
 export
 data Renderer = MkRenderer AnyPtr
 
+||| Synchronize presentation with display refreshes, or disable synchronization.
+||| VSyncInterval requires a value from 1 through 2147483647.
+public export
+data VSyncMode = VSyncDisabled | VSyncAdaptive | VSyncInterval Bits32
+
+public export
+Eq VSyncMode where
+  VSyncDisabled == VSyncDisabled = True
+  VSyncAdaptive == VSyncAdaptive = True
+  VSyncInterval x == VSyncInterval y = x == y
+  _ == _ = False
+
+vsyncValue : VSyncMode -> Int64
+vsyncValue VSyncDisabled = 0
+vsyncValue VSyncAdaptive = -1
+vsyncValue (VSyncInterval n) = if n == 0 then -2 else cast n
+
 ||| Owned CPU image data. Destroy exactly once after use.
 export
 data Surface = MkSurface AnyPtr
@@ -179,6 +196,25 @@ export
 createTextureFromSurface : Renderer -> Surface -> IO (Either String (Texture StaticAccess))
 createTextureFromSurface (MkRenderer renderer) (MkSurface surface) =
   owned MkTexture (prim__createTextureFromSurface renderer surface)
+
+||| Configure presentation synchronization on the main thread.
+||| Interval 1 requests every refresh, 2 every second refresh, and so on.
+||| Not all modes or intervals are supported. Read getError after False.
+||| This state belongs to the renderer, not to individual render targets.
+export
+setRenderVSync : Renderer -> VSyncMode -> IO Bool
+setRenderVSync (MkRenderer ptr) mode = (/= 0) <$> primIO (prim__setRenderVSync ptr (vsyncValue mode))
+
+||| Read the renderer's presentation synchronization mode on the main thread.
+||| New renderers default to VSyncDisabled. Failure returns a copied SDL error.
+export
+getRenderVSync : Renderer -> IO (Either String VSyncMode)
+getRenderVSync (MkRenderer ptr) = do
+  value <- primIO (prim__getRenderVSync ptr)
+  if value == -2 then Left <$> getError
+     else pure (Right (if value == -1 then VSyncAdaptive
+                          else if value == 0 then VSyncDisabled
+                                  else VSyncInterval (cast value)))
 
 ||| Create an RGBA32 texture for off-screen drawing on the main thread.
 ||| Contents are undefined until drawn. Width and height must be positive C ints.

@@ -40,6 +40,10 @@ IDRIS_SDL3 double      idris_sdl_coordinate_y(const SDL_FPoint* point);
 IDRIS_SDL3 int         idris_sdl_render_coordinates_from_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point);
 IDRIS_SDL3 int         idris_sdl_render_coordinates_to_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point);
 
+IDRIS_SDL3 int    idris_sdl_set_render_vsync(SDL_Renderer* renderer, Sint64 value);
+/* Returns -2 on failure, outside the valid SDL VSync values. */
+IDRIS_SDL3 Sint32 idris_sdl_get_render_vsync(SDL_Renderer* renderer);
+
 IDRIS_SDL3 int idris_sdl_set_render_scale(SDL_Renderer* renderer, double x, double y);
 IDRIS_SDL3 int idris_sdl_set_render_logical_presentation(SDL_Renderer* renderer, Sint32 w, Sint32 h, int mode);
 

@@ -135,6 +135,14 @@ failing "Mismatch between"
   signedPreciseDelay : Int64 -> IO ()
   signedPreciseDelay = delayPrecise
 
+failing "Mismatch between"
+  wrongVSyncMode : Renderer -> IO Bool
+  wrongVSyncMode renderer = setRenderVSync renderer AlphaBlend
+
+failing "Mismatch between"
+  wrongVSyncHandle : Window -> IO (Either String VSyncMode)
+  wrongVSyncHandle window = getRenderVSync window
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

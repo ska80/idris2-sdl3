@@ -321,6 +321,31 @@ rate or synchronize frames with the display.
 If a frame exceeds its time budget, skip the delay.  Subtracting a larger unsigned elapsed time from
 a smaller budget wraps to a large delay.  The example tests the elapsed time before subtraction.
 
+### Display synchronization
+
+VSync synchronizes frame presentation with display refreshes.  `setRenderVSync renderer mode`
+selects a `VSyncMode` and returns `Bool`.  The available modes are:
+
+- `VSyncDisabled` disables synchronization. This is SDL's default for new renderers.
+- `VSyncInterval n` requests presentation every `n` refreshes. Use `1` for every refresh or `2` for
+  every second refresh.
+- `VSyncAdaptive` allows late frames without waiting for the next refresh.
+
+Adaptive mode can cause tearing, which shows parts of different frames in one refresh.  Intervals
+use `Bits32`, but valid values range from 1 through 2147483647.  The binding rejects zero and larger
+intervals before SDL changes the renderer.  Use `VSyncDisabled` instead of `VSyncInterval 0`.
+
+Drivers do not support every mode or interval.  If the setter returns `False`, read `getError`
+immediately before another SDL call replaces it.  `getRenderVSync renderer` returns the configured
+mode through `Either String VSyncMode`.  It copies the SDL error on failure and needs no
+caller-owned output buffer.  Both calls require the main thread. VSync belongs to the renderer, not
+to individual render targets.
+
+The example keeps its timer-based frame pacing.  If you enable VSync in your application, account
+for the time spent inside `present` before adding another delay.  Large intervals can make `present`
+wait a long time.  The dummy-driver tests do not measure physical display synchronization or
+tearing. These need manual testing on a display.
+
 ## Performance and native code
 
 The C adapter converts SDL boolean results to C integers and accesses SDL's event union, which
@@ -365,22 +390,24 @@ can resume the test late.  These tests are not timing-accuracy benchmarks.  Text
 pixels from off-screen and window targets.  They test destination rectangles, target reset, invalid
 dimensions, and rejection of textures from another renderer. BMP tests create temporary image files
 and remove them after each test.  They test missing and invalid files, pixel colors, source
-rectangles, and texture use after surface destruction. Renderer tests cover viewport origins,
-clipping, empty clip rectangles, per-target state, and shape alpha blending. They also test that
-`clear` ignores viewport and clip state.  Scaling tests cover every logical presentation mode,
-independent axis scaling, and scale and logical state retained across target switches. Coordinate
-tests cover inverse conversion, scaling, viewport offsets, letterbox borders, combined transforms,
-and copied point lifetime.  Compile-time tests reject mixed point spaces and buffer types.
-Streaming tests cover RGBA byte order, row padding, buffer reuse, and source data consumption.  They
-also cover short buffers, invalid pitch, size multiplication beyond 32 bits, and rejected upload
-preservation.  Partial upload tests cover source origin, padded rows, texture edges, and
-preservation of neighboring pixels.  They reject invalid rectangles, extreme coordinates, short
-buffers, and invalid pitch.  Compile-time tests reject floating-point upload rectangles and partial
-uploads to render-target textures.  Compile-time tests reject uploads to static textures and uploads
-from the wrong buffer type.  Pixel tests cover all exposed blend modes, color and alpha modulation,
-and nearest and linear filtering.  Tests allow small rounding differences for fractional blending
-and interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles,
-and static textures used as render targets. Event tests cover keyboard data, repeat status, window
+rectangles, and texture use after surface destruction. VSync tests cover mode queries,
+supported-mode selection, unsupported-mode errors, and interval bounds.  They restore disabled
+synchronization before presenting another frame.  Renderer tests cover viewport origins, clipping,
+empty clip rectangles, per-target state, and shape alpha blending. They also test that `clear`
+ignores viewport and clip state.  Scaling tests cover every logical presentation mode, independent
+axis scaling, and scale and logical state retained across target switches. Coordinate tests cover
+inverse conversion, scaling, viewport offsets, letterbox borders, combined transforms, and copied
+point lifetime.  Compile-time tests reject mixed point spaces and buffer types.  Streaming tests
+cover RGBA byte order, row padding, buffer reuse, and source data consumption.  They also cover
+short buffers, invalid pitch, size multiplication beyond 32 bits, and rejected upload preservation.
+Partial upload tests cover source origin, padded rows, texture edges, and preservation of
+neighboring pixels.  They reject invalid rectangles, extreme coordinates, short buffers, and invalid
+pitch.  Compile-time tests reject floating-point upload rectangles and partial uploads to
+render-target textures.  Compile-time tests reject uploads to static textures and uploads from the
+wrong buffer type.  Pixel tests cover all exposed blend modes, color and alpha modulation, and
+nearest and linear filtering.  Tests allow small rounding differences for fractional blending and
+interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
+static textures used as render targets. Event tests cover keyboard data, repeat status, window
 identifiers, timestamps, and data retained after buffer reuse. Mouse tests cover fractional
 coordinates, relative motion, presses, releases, click counts, unknown buttons, and button-state
 bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer

@@ -23,6 +23,11 @@ int main(void) {
     assert(idris_sdl_reset_render_clip_rect(NULL) == 0);
     assert(idris_sdl_set_draw_blend_mode(NULL, SDL_BLENDMODE_BLEND) == 0);
     assert(idris_sdl_set_render_scale(NULL, 2.0, 3.0) == 0);
+    assert(idris_sdl_set_render_vsync(NULL, 0) == 0);
+    assert(idris_sdl_set_render_vsync(NULL, -2) == 0);
+    assert(idris_sdl_set_render_vsync(NULL, 4294967295LL) == 0);
+    assert(idris_sdl_get_render_vsync(NULL) == -2);
+    assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_set_render_logical_presentation(NULL, 320, 240, SDL_LOGICAL_PRESENTATION_LETTERBOX) == 0);
     assert(idris_sdl_reset_render_target(NULL) == 0);
     assert(idris_sdl_set_render_target(NULL, NULL) == 0);

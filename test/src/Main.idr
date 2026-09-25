@@ -10,6 +10,7 @@ import ScalingTests
 import CoordinateTests
 import StreamingTests
 import TimerTests
+import VSyncTests
 
 %default covering
 
@@ -71,6 +72,7 @@ resources window = do
       Right () <- scalingTests window renderer | Left err => pure (Left err)
       Right () <- coordinateTests renderer | Left err => pure (Left err)
       Right () <- streamingTests window renderer | Left err => pure (Left err)
+      Right () <- vsyncTests renderer | Left err => pure (Left err)
       render renderer
     freeEventBuffer buffer
     pure result

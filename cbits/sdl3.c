@@ -8,6 +8,8 @@ _Static_assert(SDL_MOUSEWHEEL_NORMAL == 0 && SDL_MOUSEWHEEL_FLIPPED == 1, "Updat
 
 _Static_assert(SDLK_ESCAPE == 27, "Update SDL3.Events.escapeKey");
 
+_Static_assert(SDL_RENDERER_VSYNC_DISABLED == 0 && SDL_RENDERER_VSYNC_ADAPTIVE == -1, "Update SDL3 VSync constants");
+
 _Static_assert(SDL_LOGICAL_PRESENTATION_DISABLED == 0 && SDL_LOGICAL_PRESENTATION_STRETCH == 1 && SDL_LOGICAL_PRESENTATION_LETTERBOX == 2 &&
                    SDL_LOGICAL_PRESENTATION_OVERSCAN == 3 && SDL_LOGICAL_PRESENTATION_INTEGER_SCALE == 4,
                "Update SDL3 logical presentation constants");
@@ -196,6 +198,26 @@ int idris_sdl_draw_color(SDL_Renderer* r, Uint8 red, Uint8 g, Uint8 b, Uint8 a) 
 
 int idris_sdl_clear(SDL_Renderer* r) {
     return SDL_RenderClear(r);
+}
+
+int idris_sdl_set_render_vsync(SDL_Renderer* renderer, Sint64 value) {
+    /* Validate before narrowing, including values supplied as unsigned intervals. */
+    if (value < -1 || value > 2147483647) return SDL_SetError("Invalid VSync mode or interval");
+
+    return SDL_SetRenderVSync(renderer, (int)value);
+}
+
+Sint32 idris_sdl_get_render_vsync(SDL_Renderer* renderer) {
+    int value;
+
+    if (!SDL_GetRenderVSync(renderer, &value)) return -2;
+
+    if (value < -1) {
+        SDL_SetError("Unknown SDL VSync mode");
+        return -2;
+    }
+
+    return value;
 }
 
 int idris_sdl_present(SDL_Renderer* r) {
