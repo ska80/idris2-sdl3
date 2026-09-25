@@ -56,6 +56,18 @@ int idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, 
     return SDL_RenderTexture(renderer, texture, NULL, &rect);
 }
 
+int idris_sdl_render_texture_source(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h) {
+    const SDL_FRect source = {(float)x, (float)y, (float)w, (float)h};
+    return SDL_RenderTexture(renderer, texture, &source, NULL);
+}
+
+int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture, double sx, double sy, double sw, double sh, double dx,
+                                    double dy, double dw, double dh) {
+    const SDL_FRect source      = {(float)sx, (float)sy, (float)sw, (float)sh};
+    const SDL_FRect destination = {(float)dx, (float)dy, (float)dw, (float)dh};
+    return SDL_RenderTexture(renderer, texture, &source, &destination);
+}
+
 int idris_sdl_draw_color(SDL_Renderer* r, Uint8 red, Uint8 g, Uint8 b, Uint8 a) {
     return SDL_SetRenderDrawColor(r, red, g, b, a);
 }

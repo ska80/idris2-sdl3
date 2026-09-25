@@ -12,6 +12,9 @@ int main(void) {
     assert(idris_sdl_set_render_target(NULL, NULL) == 0);
     assert(idris_sdl_render_texture(NULL, NULL) == 0);
     assert(idris_sdl_render_texture_rect(NULL, NULL, 0, 0, 16, 16) == 0);
+    assert(idris_sdl_render_texture_source(NULL, NULL, 0, 0, 16, 16) == 0);
+    assert(idris_sdl_render_texture_region(NULL, NULL, 0, 0, 16, 16, 0, 0, 32, 32) == 0);
+    assert(SDL_CreateTextureFromSurface(NULL, NULL) == NULL);
     assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_start_text_input(NULL) == 0);
     assert(idris_sdl_stop_text_input(NULL) == 0);

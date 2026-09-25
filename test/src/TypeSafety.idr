@@ -58,6 +58,18 @@ failing "Mismatch between"
   wrongTextureAccess : Renderer -> Texture StreamingAccess -> IO Bool
   wrongTextureAccess renderer texture = setRenderTarget renderer (Just texture)
 
+failing "Mismatch between"
+  staticRenderTarget : Renderer -> Texture StaticAccess -> IO Bool
+  staticRenderTarget renderer texture = setRenderTarget renderer (Just texture)
+
+failing "Mismatch between"
+  wrongSurface : Renderer -> Window -> IO (Either String (Texture StaticAccess))
+  wrongSurface renderer window = createTextureFromSurface renderer window
+
+failing "Name SDL3.MkSurface is private"
+  forgeSurface : AnyPtr -> Surface
+  forgeSurface = MkSurface
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

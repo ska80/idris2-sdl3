@@ -1,6 +1,7 @@
 module TextureTests
 
 import SDL3
+import System.File
 
 %default covering
 
@@ -9,6 +10,56 @@ prim__pixel : Bits32 -> Int -> Int -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO
 
 pixel : Bits32 -> Int -> Int -> Bits8 -> Bits8 -> Bits8 -> IO Bool
 pixel window x y r g b = (== 1) <$> primIO (prim__pixel window x y r g b 255)
+
+%foreign "C:idris_test_make_bmp, libidris2_sdl3_test, fixtures.h"
+prim__makeBMP : PrimIO String
+
+drawImage : Bits32 -> Renderer -> Texture StaticAccess -> IO (Either String ())
+drawImage window renderer texture = do
+  True <- renderTexture renderer texture Nothing | False => Left <$> getError
+  True <- pixel window 16 32 220 30 40 | False => pure (Left "BMP left color was incorrect")
+  True <- pixel window 48 32 20 210 60 | False => pure (Left "BMP right color was incorrect")
+  True <- setDrawColor renderer 0 0 0 255 | False => Left <$> getError
+  True <- clear renderer | False => Left <$> getError
+  True <- renderTextureRegion renderer texture (MkFRect 4 0 4 4) (Just (MkFRect 8 8 16 24))
+    | False => Left <$> getError
+  True <- pixel window 16 16 20 210 60 | False => pure (Left "Source rectangle selected the wrong pixels")
+  True <- pixel window 0 0 0 0 0 | False => pure (Left "Sprite drawing changed pixels outside its destination")
+  True <- renderTextureRegion renderer texture (MkFRect 0 0 4 4) Nothing
+    | False => Left <$> getError
+  True <- pixel window 32 32 220 30 40 | False => pure (Left "Source rectangle with default destination was incorrect")
+  pure (Right ())
+
+bmpFile : Bits32 -> Renderer -> String -> IO (Either String ())
+bmpFile window renderer path = do
+  Right surface <- loadBMP path | Left err => pure (Left err)
+  textureResult <- createTextureFromSurface renderer surface
+  destroySurface surface
+  Right texture <- pure textureResult | Left err => pure (Left err)
+  -- Pixel tests must pass after the source surface is destroyed.
+  result <- drawImage window renderer texture
+  destroyTexture texture
+  Right () <- pure result | Left err => pure (Left err)
+  Right () <- writeFile path "not a BMP image" | Left _ => pure (Left "Cannot write invalid BMP fixture")
+  Left err <- loadBMP path
+    | Right surface => do
+        destroySurface surface
+        pure (Left "Invalid BMP data was accepted")
+  if err == "" then pure (Left "Invalid BMP data produced no error") else pure (Right ())
+
+bmpTests : Bits32 -> Renderer -> IO (Either String ())
+bmpTests window renderer = do
+  path <- primIO prim__makeBMP
+  if path == "" then pure (Left "Cannot create BMP fixture") else do
+    result <- bmpFile window renderer path
+    removed <- removeFile path
+    Right () <- pure result | Left err => pure (Left err)
+    Right () <- pure removed | Left _ => pure (Left "Cannot remove BMP fixture")
+    Left err <- loadBMP path
+      | Right surface => do
+          destroySurface surface
+          pure (Left "Missing BMP file was accepted")
+    if err == "" then pure (Left "Missing BMP file produced no error") else pure (Right ())
 
 draw : Bits32 -> Renderer -> Texture TargetAccess -> IO (Either String ())
 draw window renderer texture = do
@@ -59,6 +110,7 @@ textureTests window renderer = do
         destroyTexture texture
         pure (Left "Negative texture height was accepted")
   Right (MkWindowID identifier) <- getWindowID window | Left err => pure (Left err)
+  Right () <- bmpTests identifier renderer | Left err => pure (Left err)
   Right texture <- createTargetTexture renderer 16 16 | Left err => pure (Left err)
   result <- do
     Right () <- otherRenderer texture | Left err => pure (Left err)

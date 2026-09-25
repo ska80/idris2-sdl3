@@ -1,9 +1,9 @@
 # SDL3 for Idris 2
 
 Thin bindings for games and multimedia applications. This initial version covers initialization,
-windows, basic 2D rendering, render-target textures, keyboard and mouse events, text input,
-window-close events, and timers.  It does not yet bind image loading, texture uploads, audio
-streams, gamepads, or the GPU API.
+windows, 2D rendering, BMP loading, and static and render-target textures.  It also covers keyboard,
+mouse, text input, window-close events, and timers.  It does not yet bind streaming texture updates,
+other image formats, audio streams, gamepads, or the GPU API.
 
 The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the
 primary backend and the default for builds, examples, tests, and performance work.  RefC support is
@@ -41,7 +41,7 @@ raw module unless you can enforce its pointer and lifetime requirements.
 
 The typed API provides these guarantees:
 
-- Distinct opaque types for windows, renderers, textures, and event buffers.
+- Distinct opaque types for windows, renderers, surfaces, textures, and event buffers.
 - Texture access types that restrict render targets to `Texture TargetAccess`.
 - Separate initialization and window flags, combined with `<+>` and empty flags through `neutral`.
 - Null checks on resource creation, with errors returned as `Either String a`.
@@ -78,8 +78,31 @@ Use a texture only with its creating renderer. The types distinguish access mode
 renderer identity or resource lifetimes.  SDL rejects textures from another renderer. Switch away
 from a texture as the current target before `destroyTexture`.  All texture calls require the main
 thread. Render targets retain separate SDL viewport, clipping, scaling, and presentation state.
-Only target-texture creation is bound so far. Image loading, uploads, source rectangles, and texture
-blend controls are not yet exposed.
+Streaming texture creation, pixel updates, and texture blend controls are not yet exposed.
+
+A surface stores image pixels in CPU memory. `loadBMP path` returns an owned `Surface` or a copied
+SDL error.  `createTextureFromSurface renderer surface` copies those pixels into a `Texture
+StaticAccess` on the main thread.  This call does not consume the surface. Call `destroySurface`
+after conversion, on success or failure.  The texture remains usable after surface destruction. The
+type system prevents using a static texture as a render target.  BMP loading can run on a worker
+thread. Do not access a surface concurrently with conversion or destruction.
+
+For example, this function loads a texture and releases its temporary surface:
+
+```idris
+loadImage : Renderer -> String -> IO (Either String (Texture StaticAccess))
+loadImage renderer path = do
+  Right surface <- loadBMP path | Left err => pure (Left err)
+  result <- createTextureFromSurface renderer surface
+  destroySurface surface
+  pure result
+```
+
+`renderTextureRegion renderer texture source destination` draws part of a texture.  The `source` is
+an `FRect` in texture pixel coordinates. The `destination` is a `Maybe FRect` in the current
+target's rendering coordinates.  Pass `Nothing` as the destination to fill the current target.  This
+supports sprite sheets, images that contain several smaller images, without copying each sprite into
+a new texture.
 
 `pollEvent` returns only event types. `pollEventData` also returns timestamps and supported event
 data.  Both return `Nothing` for an empty queue. Each call consumes one event, so use one polling
@@ -186,21 +209,24 @@ library directories to `LIBRARY_PATH` and add `cbits` and the SDL include direct
 The tests cover native event classification, unknown events, empty queues, flag combinations, window
 creation, drawing, and timers. Texture tests read pixels from off-screen and window targets.  They
 test destination rectangles, target reset, invalid dimensions, and rejection of textures from
-another renderer.  Compile-time tests reject mixed handle types, mixed flag types, and forged window
-handles. Event tests cover keyboard data, repeat status, window identifiers, timestamps, and data
-retained after buffer reuse. Mouse tests cover fractional coordinates, relative motion, presses,
-releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover normal, flipped,
-and unknown directions, fractional values, pointer position, and signed 32-bit limits. Text tests
-cover Unicode, empty and long text, composition selections, string ownership, and per-window start
-and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
-They also test area reset and composition cancellation without disabling text input.  The test-only
-native library inserts known events into SDL's queue. It is not part of the binding library.  The
-example builds in the test environment, but interactive display behavior needs a manual test.
+another renderer. BMP tests create temporary image files and remove them after each test.  They test
+missing and invalid files, pixel colors, source rectangles, and texture use after surface
+destruction.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
+static textures used as render targets. Event tests cover keyboard data, repeat status, window
+identifiers, timestamps, and data retained after buffer reuse. Mouse tests cover fractional
+coordinates, relative motion, presses, releases, click counts, unknown buttons, and button-state
+bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer
+position, and signed 32-bit limits. Text tests cover Unicode, empty and long text, composition
+selections, string ownership, and per-window start and stop controls. Area tests compare the stored
+SDL rectangle and cursor against the Idris values.  They also test area reset and composition
+cancellation without disabling text input.  The test-only native library inserts known events into
+SDL's queue. It is not part of the binding library.  The example builds in the test environment, but
+interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes image loading, texture uploads, audio streams, and scoped resource ownership.
-Keep each addition close to SDL's API and test its failure paths.  Measure call overhead and
-allocations before adding performance claims or a larger abstraction layer.
+Next work includes streaming texture updates, texture blend controls, audio streams, and scoped
+resource ownership.  Keep each addition close to SDL's API and test its failure paths.  Measure call
+overhead and allocations before adding performance claims or a larger abstraction layer.

@@ -14,6 +14,10 @@ data Window = MkWindow AnyPtr
 export
 data Renderer = MkRenderer AnyPtr
 
+||| Owned CPU image data. Destroy exactly once after use.
+export
+data Surface = MkSurface AnyPtr
+
 public export
 data TextureAccess = StaticAccess | StreamingAccess | TargetAccess
 
@@ -100,6 +104,24 @@ export
 destroyRenderer : Renderer -> IO ()
 destroyRenderer (MkRenderer ptr) = primIO (prim__destroyRenderer ptr)
 
+||| Load a BMP file into CPU memory. Does not require a renderer.
+||| Destroy the returned surface when no longer needed.
+export
+loadBMP : String -> IO (Either String Surface)
+loadBMP path = owned MkSurface (prim__loadBMP path)
+
+||| Do not use the surface after this call. Avoid concurrent access to the surface.
+export
+destroySurface : Surface -> IO ()
+destroySurface (MkSurface ptr) = primIO (prim__destroySurface ptr)
+
+||| Copy a surface into a static texture on the main thread.
+||| The surface remains owned by the caller and can be destroyed after this call.
+export
+createTextureFromSurface : Renderer -> Surface -> IO (Either String (Texture StaticAccess))
+createTextureFromSurface (MkRenderer renderer) (MkSurface surface) =
+  owned MkTexture (prim__createTextureFromSurface renderer surface)
+
 ||| Create an RGBA32 texture for off-screen drawing on the main thread.
 ||| Contents are undefined until drawn. Width and height must be positive C ints.
 export
@@ -133,6 +155,17 @@ renderTexture (MkRenderer renderer) (MkTexture texture) Nothing =
   (/= 0) <$> primIO (prim__renderTexture renderer texture)
 renderTexture (MkRenderer renderer) (MkTexture texture) (Just (MkFRect x y width height)) =
   (/= 0) <$> primIO (prim__renderTextureRect renderer texture x y width height)
+
+||| Draw a source rectangle from a texture. Source coordinates use texture pixels.
+||| Nothing uses the whole current target as the destination.
+||| Ownership and thread rules are the same as for renderTexture.
+export
+renderTextureRegion : Renderer -> Texture access -> FRect -> Maybe FRect -> IO Bool
+renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw sh) Nothing =
+  (/= 0) <$> primIO (prim__renderTextureSource renderer texture sx sy sw sh)
+renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw sh)
+                    (Just (MkFRect dx dy dw dh)) =
+  (/= 0) <$> primIO (prim__renderTextureRegion renderer texture sx sy sw sh dx dy dw dh)
 
 ||| Rendering calls return False on failure. Call getError for details.
 export

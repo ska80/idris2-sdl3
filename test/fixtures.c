@@ -1,5 +1,32 @@
+#define _POSIX_C_SOURCE 200809L
 #include "fixtures.h"
 #include <SDL3/SDL.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+/* Linux test fixture. Return a unique file path, copied by Idris. */
+char* idris_test_make_bmp(void) {
+    static char path[64];
+    SDL_strlcpy(path, "/tmp/idris2-sdl3-bmp-XXXXXX", sizeof(path));
+    int fd = mkstemp(path);
+    if (fd < 0) return "";
+    close(fd);
+    SDL_Surface* surface = SDL_CreateSurface(8, 4, SDL_PIXELFORMAT_RGBA32);
+    if (!surface) {
+        unlink(path);
+        return "";
+    }
+    const SDL_Rect left  = {0, 0, 4, 4};
+    const SDL_Rect right = {4, 0, 4, 4};
+    int            ok    = SDL_FillSurfaceRect(surface, &left, SDL_MapSurfaceRGBA(surface, 220, 30, 40, 255)) &&
+             SDL_FillSurfaceRect(surface, &right, SDL_MapSurfaceRGBA(surface, 20, 210, 60, 255)) && SDL_SaveBMP(surface, path);
+    SDL_DestroySurface(surface);
+    if (!ok) {
+        unlink(path);
+        return "";
+    }
+    return path;
+}
 
 int idris_test_text_input_area(Uint32 window_id, Sint32 x, Sint32 y, Sint32 w, Sint32 h, Sint32 cursor) {
     SDL_Rect    area;
