@@ -30,6 +30,10 @@ failing "Mismatch between"
   wrongMouseButton : MouseButtons -> Bool
   wrongMouseButton buttons = buttonHeld buttons buttons
 
+failing "Mismatch between"
+  wrongWheelDirection : MouseAction -> WheelDirection
+  wrongWheelDirection action = action
+
 failing "Name SDL3.MkWindow is private"
   forgeWindow : AnyPtr -> Window
   forgeWindow = MkWindow

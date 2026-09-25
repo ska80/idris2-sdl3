@@ -24,7 +24,7 @@ IDRIS_SDL3 Uint32     idris_sdl_event_type(const SDL_Event* event);
 IDRIS_SDL3 int        idris_sdl_event_kind(const SDL_Event* event);
 IDRIS_SDL3 Uint64     idris_sdl_event_timestamp(const SDL_Event* event);
 
-/* Window access requires a close, keyboard, mouse motion, or mouse button event.
+/* Window access requires a close, keyboard, mouse motion, mouse button, or mouse wheel event.
  * Key access requires a keyboard event. */
 IDRIS_SDL3 Uint32 idris_sdl_event_window(const SDL_Event* event);
 IDRIS_SDL3 Uint32 idris_sdl_event_scancode(const SDL_Event* event);
@@ -32,7 +32,7 @@ IDRIS_SDL3 Uint32 idris_sdl_event_keycode(const SDL_Event* event);
 IDRIS_SDL3 Uint16 idris_sdl_event_modifiers(const SDL_Event* event);
 IDRIS_SDL3 int    idris_sdl_event_repeat(const SDL_Event* event);
 
-/* Requires a mouse motion or mouse button event. */
+/* Requires a mouse motion, mouse button, or mouse wheel event. */
 IDRIS_SDL3 Uint32 idris_sdl_event_mouse_id(const SDL_Event* event);
 IDRIS_SDL3 double idris_sdl_event_mouse_x(const SDL_Event* event);
 IDRIS_SDL3 double idris_sdl_event_mouse_y(const SDL_Event* event);
@@ -45,3 +45,10 @@ IDRIS_SDL3 double idris_sdl_event_mouse_dy(const SDL_Event* event);
 /* Requires a mouse button event. */
 IDRIS_SDL3 Uint8 idris_sdl_event_mouse_button(const SDL_Event* event);
 IDRIS_SDL3 Uint8 idris_sdl_event_mouse_clicks(const SDL_Event* event);
+
+/* Requires a mouse wheel event. */
+IDRIS_SDL3 double idris_sdl_event_wheel_x(const SDL_Event* event);
+IDRIS_SDL3 double idris_sdl_event_wheel_y(const SDL_Event* event);
+IDRIS_SDL3 Uint32 idris_sdl_event_wheel_direction(const SDL_Event* event);
+IDRIS_SDL3 Sint32 idris_sdl_event_wheel_integer_x(const SDL_Event* event);
+IDRIS_SDL3 Sint32 idris_sdl_event_wheel_integer_y(const SDL_Event* event);

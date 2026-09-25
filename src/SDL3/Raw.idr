@@ -79,7 +79,7 @@ prim__eventType : AnyPtr -> PrimIO Bits32
 export
 prim__eventTimestamp : AnyPtr -> PrimIO Bits64
 
-||| Requires a window-close, keyboard, mouse motion, or mouse button event.
+||| Requires a window-close, keyboard, mouse motion, mouse button, or mouse wheel event.
 %foreign "C:idris_sdl_event_window, libidris2_sdl3, sdl3.h"
 export
 prim__eventWindow : AnyPtr -> PrimIO Bits32
@@ -104,17 +104,17 @@ prim__eventModifiers : AnyPtr -> PrimIO Bits16
 export
 prim__eventRepeat : AnyPtr -> PrimIO Int
 
-||| Requires a mouse motion or mouse button event.
+||| Requires a mouse motion, mouse button, or mouse wheel event.
 %foreign "C:idris_sdl_event_mouse_id, libidris2_sdl3, sdl3.h"
 export
 prim__eventMouseID : AnyPtr -> PrimIO Bits32
 
-||| Requires a mouse motion or mouse button event.
+||| Requires a mouse motion, mouse button, or mouse wheel event.
 %foreign "C:idris_sdl_event_mouse_x, libidris2_sdl3, sdl3.h"
 export
 prim__eventMouseX : AnyPtr -> PrimIO Double
 
-||| Requires a mouse motion or mouse button event.
+||| Requires a mouse motion, mouse button, or mouse wheel event.
 %foreign "C:idris_sdl_event_mouse_y, libidris2_sdl3, sdl3.h"
 export
 prim__eventMouseY : AnyPtr -> PrimIO Double
@@ -143,6 +143,31 @@ prim__eventMouseButton : AnyPtr -> PrimIO Bits8
 %foreign "C:idris_sdl_event_mouse_clicks, libidris2_sdl3, sdl3.h"
 export
 prim__eventMouseClicks : AnyPtr -> PrimIO Bits8
+
+||| Requires a mouse wheel event.
+%foreign "C:idris_sdl_event_wheel_x, libidris2_sdl3, sdl3.h"
+export
+prim__eventWheelX : AnyPtr -> PrimIO Double
+
+||| Requires a mouse wheel event.
+%foreign "C:idris_sdl_event_wheel_y, libidris2_sdl3, sdl3.h"
+export
+prim__eventWheelY : AnyPtr -> PrimIO Double
+
+||| Requires a mouse wheel event.
+%foreign "C:idris_sdl_event_wheel_direction, libidris2_sdl3, sdl3.h"
+export
+prim__eventWheelDirection : AnyPtr -> PrimIO Bits32
+
+||| Requires a mouse wheel event.
+%foreign "C:idris_sdl_event_wheel_integer_x, libidris2_sdl3, sdl3.h"
+export
+prim__eventWheelIntegerX : AnyPtr -> PrimIO Int32
+
+||| Requires a mouse wheel event.
+%foreign "C:idris_sdl_event_wheel_integer_y, libidris2_sdl3, sdl3.h"
+export
+prim__eventWheelIntegerY : AnyPtr -> PrimIO Int32
 
 %foreign "C:SDL_GetTicks, libSDL3, SDL3/SDL.h"
 export

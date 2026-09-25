@@ -62,6 +62,21 @@ int idris_test_queue_event(int kind) {
         event.button.y        = 100.25f;
         break;
 
+    case 10:
+    case 11:
+    case 12:
+        event.type            = SDL_EVENT_MOUSE_WHEEL;
+        event.wheel.windowID  = 0x80000001u;
+        event.wheel.which     = 0xfffffffeu;
+        event.wheel.x         = kind == 11 ? 2.5f : -2.5f;
+        event.wheel.y         = kind == 11 ? -3.75f : 3.75f;
+        event.wheel.direction = kind == 10 ? SDL_MOUSEWHEEL_NORMAL : kind == 11 ? SDL_MOUSEWHEEL_FLIPPED : (SDL_MouseWheelDirection)42;
+        event.wheel.mouse_x   = -16.5f;
+        event.wheel.mouse_y   = 99.25f;
+        event.wheel.integer_x = kind == 12 ? SDL_MIN_SINT32 : kind == 11 ? 2 : -2;
+        event.wheel.integer_y = kind == 12 ? SDL_MAX_SINT32 : kind == 11 ? -3 : 3;
+        break;
+
     default:
         return 0;
     }

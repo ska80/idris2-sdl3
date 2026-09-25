@@ -2,6 +2,10 @@
 
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
 
+_Static_assert(SDL_VERSION_ATLEAST(3, 2, 12), "Bindings require SDL 3.2.12 or newer");
+
+_Static_assert(SDL_MOUSEWHEEL_NORMAL == 0 && SDL_MOUSEWHEEL_FLIPPED == 1, "Update SDL3 wheel direction decoding");
+
 _Static_assert(SDLK_ESCAPE == 27, "Update SDL3.Events.escapeKey");
 
 _Static_assert(SDL_BUTTON_LEFT == 1 && SDL_BUTTON_MIDDLE == 2 && SDL_BUTTON_RIGHT == 3 && SDL_BUTTON_X1 == 4 && SDL_BUTTON_X2 == 5,
@@ -76,6 +80,8 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
         return event->window.windowID;
     case SDL_EVENT_MOUSE_MOTION:
         return event->motion.windowID;
+    case SDL_EVENT_MOUSE_WHEEL:
+        return event->wheel.windowID;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
         return event->button.windowID;
@@ -101,6 +107,7 @@ int idris_sdl_event_repeat(const SDL_Event* event) {
 }
 
 Uint32 idris_sdl_event_mouse_id(const SDL_Event* event) {
+    if (event->type == SDL_EVENT_MOUSE_WHEEL) return event->wheel.which;
     return event->type == SDL_EVENT_MOUSE_MOTION ? event->motion.which : event->button.which;
 }
 
@@ -117,10 +124,12 @@ Uint8 idris_sdl_event_mouse_clicks(const SDL_Event* event) {
 }
 
 double idris_sdl_event_mouse_x(const SDL_Event* event) {
+    if (event->type == SDL_EVENT_MOUSE_WHEEL) return event->wheel.mouse_x;
     return event->type == SDL_EVENT_MOUSE_MOTION ? event->motion.x : event->button.x;
 }
 
 double idris_sdl_event_mouse_y(const SDL_Event* event) {
+    if (event->type == SDL_EVENT_MOUSE_WHEEL) return event->wheel.mouse_y;
     return event->type == SDL_EVENT_MOUSE_MOTION ? event->motion.y : event->button.y;
 }
 
@@ -130,6 +139,26 @@ double idris_sdl_event_mouse_dx(const SDL_Event* event) {
 
 double idris_sdl_event_mouse_dy(const SDL_Event* event) {
     return event->motion.yrel;
+}
+
+double idris_sdl_event_wheel_x(const SDL_Event* event) {
+    return event->wheel.x;
+}
+
+double idris_sdl_event_wheel_y(const SDL_Event* event) {
+    return event->wheel.y;
+}
+
+Uint32 idris_sdl_event_wheel_direction(const SDL_Event* event) {
+    return (Uint32)event->wheel.direction;
+}
+
+Sint32 idris_sdl_event_wheel_integer_x(const SDL_Event* event) {
+    return event->wheel.integer_x;
+}
+
+Sint32 idris_sdl_event_wheel_integer_y(const SDL_Event* event) {
+    return event->wheel.integer_y;
 }
 
 int idris_sdl_event_kind(const SDL_Event* event) {
@@ -148,6 +177,8 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 6;
     case SDL_EVENT_MOUSE_BUTTON_UP:
         return 7;
+    case SDL_EVENT_MOUSE_WHEEL:
+        return 8;
     default:
         return 0;
     }

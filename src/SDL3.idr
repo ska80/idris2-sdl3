@@ -26,6 +26,7 @@ data EventType = QuitRequested
                | MouseMotion
                | MouseButtonDown
                | MouseButtonUp
+               | MouseWheel
                | OtherEvent Bits32
 
 ||| Copy the current thread's SDL error. Read only after a failed call.
@@ -122,6 +123,7 @@ pollEvent (MkEventBuffer ptr) = do
       5 => pure MouseMotion
       6 => pure MouseButtonDown
       7 => pure MouseButtonUp
+      8 => pure MouseWheel
       _ => OtherEvent <$> primIO (prim__eventType ptr)
     pure (Just event)
 
@@ -155,6 +157,23 @@ mouseButtonData ptr action = do
   y <- primIO (prim__eventMouseY ptr)
   pure (MkMouseButtonData window mouse button action clicks x y)
 
+mouseWheelData : AnyPtr -> IO MouseWheelData
+mouseWheelData ptr = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  mouse <- MkMouseID <$> primIO (prim__eventMouseID ptr)
+  x <- primIO (prim__eventWheelX ptr)
+  y <- primIO (prim__eventWheelY ptr)
+  rawDirection <- primIO (prim__eventWheelDirection ptr)
+  let direction = case rawDirection of
+        0 => WheelNormal
+        1 => WheelFlipped
+        other => OtherWheelDirection other
+  mouseX <- primIO (prim__eventMouseX ptr)
+  mouseY <- primIO (prim__eventMouseY ptr)
+  integerX <- primIO (prim__eventWheelIntegerX ptr)
+  integerY <- primIO (prim__eventWheelIntegerY ptr)
+  pure (MkMouseWheelData window mouse x y direction mouseX mouseY integerX integerY)
+
 ||| Consume one event on the main thread. Nothing means the queue is empty.
 ||| Returned values remain valid after buffer reuse or destruction.
 ||| Do not call pollEvent first: each poll consumes a separate event.
@@ -175,6 +194,7 @@ pollEventData (MkEventBuffer ptr) = do
       5 => MouseMotionEvent timestamp <$> mouseMotionData ptr
       6 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonPressed
       7 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonReleased
+      8 => MouseWheelEvent timestamp <$> mouseWheelData ptr
       _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
     pure (Just event)
 

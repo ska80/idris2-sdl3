@@ -1,9 +1,8 @@
 # SDL3 for Idris 2
 
 Thin bindings for games and multimedia applications. This initial version covers initialization,
-windows, basic 2D rendering, keyboard, mouse motion, mouse button, and window-close events, and
-timers.  It does not yet bind textures, audio streams, mouse wheel data, text input, gamepads, or
-the GPU API.
+windows, basic 2D rendering, keyboard and mouse events, window-close events, and timers.  It does
+not yet bind textures, audio streams, text input, gamepads, or the GPU API.
 
 The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the
 primary backend and the default for builds, examples, tests, and performance work.  RefC support is
@@ -13,8 +12,9 @@ tested. The current C build produces a Linux shared library.
 
 ## Build and run
 
-Install `pack`, a C compiler, Make, `pkg-config`, and SDL3 development files.  The project pins the
-pack collection in `pack.toml`.  Run these commands from the project root:
+Install `pack`, a C compiler, Make, `pkg-config`, and SDL3 development files.  Use SDL 3.2.12 or
+newer. Wheel events use the integer scroll fields added in that version.  The project pins the pack
+collection in `pack.toml`. Run these commands from the project root:
 
 ```sh
 pkg-config --modversion sdl3
@@ -85,6 +85,16 @@ SDL's fractional values as Idris `Double` values.
 state bits are preserved. `buttonHeld` returns `False` for indices outside 1 through 32.  `MouseID`
 preserves SDL's device identifier, including synthetic touch and pen identifiers.
 
+`MouseWheelEvent` contains window and mouse identifiers, fractional scroll values, scroll direction,
+pointer position, and signed integer scroll values.  `scrollX` and `scrollY` preserve SDL's
+fractional values. `integerX` and `integerY` contain SDL's accumulated whole scroll steps, not
+rounded fractional values.  `mouseX` and `mouseY` locate the pointer relative to the window, not the
+amount scrolled.
+
+For `WheelNormal`, positive X means rightward and positive Y means away from the user.  For
+`WheelFlipped`, negate the scroll values to convert to the normal direction.  The binding does not
+change the values automatically. `OtherWheelDirection` preserves unknown numeric directions.
+
 Event timestamps use nanoseconds since SDL initialization. `ticks` still uses milliseconds.
 `UnknownEvent` preserves the timestamp and numeric type, but discards unsupported event data.
 Keyboard device identifiers and platform-specific key codes are not exposed yet.
@@ -121,14 +131,16 @@ The tests cover native event classification, unknown events, empty queues, flag 
 creation, drawing, and timers.  Compile-time tests reject mixed handle types, mixed flag types, and
 forged window handles. Event tests cover keyboard data, repeat status, window identifiers,
 timestamps, and data retained after buffer reuse. Mouse tests cover fractional coordinates, relative
-motion, presses, releases, click counts, unknown buttons, and button-state bits.  The test-only
-native library inserts known events into SDL's queue. It is not part of the binding library.  The
-example builds in the test environment, but interactive display behavior needs a manual test.
+motion, presses, releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover
+normal, flipped, and unknown directions, fractional values, pointer position, and signed 32-bit
+limits.  The test-only native library inserts known events into SDL's queue. It is not part of the
+binding library.  The example builds in the test environment, but interactive display behavior needs
+a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes mouse wheel data, text input, textures, audio streams, and scoped resource
-ownership.  Keep each addition close to SDL's API and test its failure paths.  Measure call overhead
-and allocations before adding performance claims or a larger abstraction layer.
+Next work includes text input, textures, audio streams, and scoped resource ownership.  Keep each
+addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
+before adding performance claims or a larger abstraction layer.

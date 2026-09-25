@@ -12,6 +12,34 @@ fixture buffer kind = do
   1 <- primIO (prim__queueEvent kind) | _ => pure Nothing
   pollEventData buffer
 
+wheelTests : EventBuffer -> IO (Either String ())
+wheelTests buffer = do
+  Just (MouseWheelEvent normalTime normal) <- fixture buffer 10
+    | _ => pure (Left "Normal wheel event was not decoded")
+  Just (MouseWheelEvent flippedTime flipped) <- fixture buffer 11
+    | _ => pure (Left "Flipped wheel event was not decoded")
+  Just (MouseWheelEvent unknownTime unknown) <- fixture buffer 12
+    | _ => pure (Left "Unknown wheel direction was not decoded")
+  -- Inspect data only after subsequent polls overwrite the native buffer.
+  let MkMouseWheelData normalWindow normalID x y WheelNormal mx my ix iy = normal
+    | _ => pure (Left "Normal wheel direction was incorrect")
+  let MkMouseWheelData flippedWindow flippedID fx fy WheelFlipped fmx fmy fix fiy = flipped
+    | _ => pure (Left "Flipped wheel direction was incorrect")
+  let MkMouseWheelData unknownWindow unknownID ux uy (OtherWheelDirection 42) umx umy uix uiy = unknown
+    | _ => pure (Left "Unknown wheel direction was not preserved")
+  let valuesOK = all (== 0x100000002) [normalTime, flippedTime, unknownTime] &&
+                 all (== MkWindowID 0x80000001) [normalWindow, flippedWindow, unknownWindow] &&
+                 all (== MkMouseID 0xfffffffe) [normalID, flippedID, unknownID] &&
+                 all (== -16.5) [mx, fmx, umx] && all (== 99.25) [my, fmy, umy] &&
+                 x == -2.5 && y == 3.75 && ix == -2 && iy == 3 &&
+                 fx == 2.5 && fy == -3.75 && fix == 2 && fiy == -3 &&
+                 ux == -2.5 && uy == 3.75 && uix == -2147483648 && uiy == 2147483647
+  if not valuesOK then pure (Left "Wheel event data was incorrect") else do
+    1 <- primIO (prim__queueEvent 10) | _ => pure (Left "Cannot queue wheel event")
+    Just MouseWheel <- pollEvent buffer | _ => pure (Left "Wheel event type was incorrect")
+    Nothing <- pollEventData buffer | _ => pure (Left "Wheel event queue was not empty")
+    pure (Right ())
+
 mouseTests : EventBuffer -> IO (Either String ())
 mouseTests buffer = do
   Just (MouseMotionEvent motionTime motion) <- fixture buffer 6
@@ -48,7 +76,7 @@ mouseTests buffer = do
     1 <- primIO (prim__queueEvent 8) | _ => pure (Left "Cannot queue mouse release")
     Just MouseButtonUp <- pollEvent buffer | _ => pure (Left "Mouse release type was incorrect")
     Nothing <- pollEventData buffer | _ => pure (Left "Mouse event queue was not empty")
-    pure (Right ())
+    wheelTests buffer
 
 export
 eventTests : EventBuffer -> IO (Either String ())

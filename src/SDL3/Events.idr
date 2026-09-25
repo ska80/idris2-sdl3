@@ -119,6 +119,26 @@ record MouseButtonData where
   x : Double
   y : Double
 
+||| SDL's scroll direction. Values are not normalized by the binding.
+public export
+data WheelDirection = WheelNormal | WheelFlipped | OtherWheelDirection Bits32
+
+||| Scroll values and pointer position are distinct fields.
+||| Positive normal scroll values mean rightward (X) and away from the user (Y).
+||| For WheelFlipped, negate scroll values to convert to the normal direction.
+public export
+record MouseWheelData where
+  constructor MkMouseWheelData
+  windowID : WindowID
+  mouseID : MouseID
+  scrollX : Double
+  scrollY : Double
+  direction : WheelDirection
+  mouseX : Double
+  mouseY : Double
+  integerX : Int32
+  integerY : Int32
+
 ||| Event data copied from the reusable buffer. Timestamps use nanoseconds.
 ||| Other types retain their numeric type and timestamp, but not their payload.
 public export
@@ -127,4 +147,5 @@ data Event = QuitEvent Bits64
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData
+           | MouseWheelEvent Bits64 MouseWheelData
            | UnknownEvent Bits64 Bits32
