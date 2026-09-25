@@ -12,6 +12,9 @@ IDRIS_SDL3 int   idris_sdl_init(Uint32 flags);
 IDRIS_SDL3 char* idris_sdl_get_error(void);
 
 IDRIS_SDL3 SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, int height);
+IDRIS_SDL3 SDL_Texture* idris_sdl_create_streaming_texture(SDL_Renderer* renderer, int width, int height);
+/* Size must describe the actual capacity of pixels. No pointer is retained. */
+IDRIS_SDL3 int          idris_sdl_update_texture_rgba(SDL_Texture* texture, const void* pixels, Uint64 size, Sint32 pitch);
 IDRIS_SDL3 int          idris_sdl_set_texture_color_mod(SDL_Texture* texture, Uint8 r, Uint8 g, Uint8 b);
 IDRIS_SDL3 int          idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Uint8 alpha);
 IDRIS_SDL3 int          idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode);

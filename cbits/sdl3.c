@@ -49,6 +49,29 @@ SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, 
     return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, width, height);
 }
 
+SDL_Texture* idris_sdl_create_streaming_texture(SDL_Renderer* renderer, int width, int height) {
+    return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, width, height);
+}
+
+int idris_sdl_update_texture_rgba(SDL_Texture* texture, const void* pixels, Uint64 size, Sint32 pitch) {
+    if (!texture || !pixels) return SDL_SetError("Texture and pixel buffer must not be null");
+
+    if (texture->format != SDL_PIXELFORMAT_RGBA32) return SDL_SetError("Texture must use RGBA32 pixels");
+
+    if (texture->w <= 0 || texture->h <= 0) return SDL_SetError("Texture dimensions must be positive");
+
+    const Uint64 row_bytes = (Uint64)texture->w * 4;
+
+    if (pitch <= 0 || (Uint64)pitch < row_bytes) return SDL_SetError("Pixel pitch is smaller than one RGBA row");
+
+    /* Both factors are positive 32-bit integers, so this product fits Uint64. */
+    const Uint64 required = (Uint64)pitch * (Uint64)texture->h;
+
+    if (size < required) return SDL_SetError("Pixel buffer is too small for the texture and pitch");
+
+    return SDL_UpdateTexture(texture, NULL, pixels, pitch);
+}
+
 int idris_sdl_set_texture_color_mod(SDL_Texture* texture, Uint8 r, Uint8 g, Uint8 b) {
     return SDL_SetTextureColorMod(texture, r, g, b);
 }

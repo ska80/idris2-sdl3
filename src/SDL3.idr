@@ -3,6 +3,7 @@ module SDL3
 import public SDL3.Events
 import public SDL3.Flags
 import SDL3.Raw
+import Data.Buffer
 
 %default total
 
@@ -187,6 +188,25 @@ createTargetTexture (MkRenderer ptr) width height =
   if width <= 0 || height <= 0 || width > 2147483647 || height > 2147483647
      then pure (Left "Texture dimensions must be positive 32-bit integers")
      else owned MkTexture (prim__createTargetTexture ptr width height)
+
+||| Create an RGBA32 texture for repeated uploads on the main thread.
+||| Pixel bytes use R, G, B, A order. Contents are undefined until uploaded.
+export
+createStreamingTexture : Renderer -> Int -> Int -> IO (Either String (Texture StreamingAccess))
+createStreamingTexture (MkRenderer ptr) width height =
+  if width <= 0 || height <= 0 || width > 2147483647 || height > 2147483647
+     then pure (Left "Texture dimensions must be positive 32-bit integers")
+     else owned MkTexture (prim__createStreamingTexture ptr width height)
+
+||| Upload the entire RGBA32 texture. Pitch is the byte distance between rows.
+||| Requires pitch >= width * 4 and buffer size >= pitch * height.
+||| Reuse the Buffer. SDL consumes the bytes during this main-thread call.
+||| Do not modify the buffer concurrently. Returns False on failure.
+export
+updateTextureRGBA : Texture StreamingAccess -> Buffer -> Int32 -> IO Bool
+updateTextureRGBA (MkTexture ptr) buffer pitch = do
+  size <- rawSize buffer
+  (/= 0) <$> primIO (prim__updateTextureRGBA ptr buffer (cast size) pitch)
 
 ||| Destroy on the main thread, before the creating renderer.
 ||| Switch away from this texture as a render target first. Do not reuse the handle.

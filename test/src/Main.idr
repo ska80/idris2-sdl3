@@ -8,6 +8,7 @@ import TextureTests
 import RenderTests
 import ScalingTests
 import CoordinateTests
+import StreamingTests
 
 %default covering
 
@@ -68,6 +69,7 @@ resources window = do
       Right () <- renderTests window renderer | Left err => pure (Left err)
       Right () <- scalingTests window renderer | Left err => pure (Left err)
       Right () <- coordinateTests renderer | Left err => pure (Left err)
+      Right () <- streamingTests window renderer | Left err => pure (Left err)
       render renderer
     freeEventBuffer buffer
     pure result

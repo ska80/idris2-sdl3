@@ -8,6 +8,9 @@ int main(void) {
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
     assert(idris_sdl_create_target_texture(NULL, 16, 16) == NULL);
+    assert(idris_sdl_create_streaming_texture(NULL, 2, 2) == NULL);
+    const Uint8 pixels[16] = {0};
+    assert(idris_sdl_update_texture_rgba(NULL, pixels, sizeof(pixels), 8) == 0);
     assert(idris_sdl_set_texture_color_mod(NULL, 255, 255, 255) == 0);
     assert(idris_sdl_set_texture_alpha_mod(NULL, 255) == 0);
     assert(idris_sdl_set_texture_blend_mode(NULL, SDL_BLENDMODE_BLEND) == 0);

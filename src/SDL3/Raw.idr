@@ -1,6 +1,8 @@
 ||| Unsafe C boundary. Prefer SDL3 for typed handles and null checks.
 module SDL3.Raw
 
+import Data.Buffer
+
 %default total
 
 %foreign "C:idris_sdl_init, libidris2_sdl3, sdl3.h"
@@ -54,6 +56,15 @@ prim__createTextureFromSurface : AnyPtr -> AnyPtr -> PrimIO AnyPtr
 %foreign "C:idris_sdl_create_target_texture, libidris2_sdl3, sdl3.h"
 export
 prim__createTargetTexture : AnyPtr -> Int -> Int -> PrimIO AnyPtr
+
+%foreign "C:idris_sdl_create_streaming_texture, libidris2_sdl3, sdl3.h"
+export
+prim__createStreamingTexture : AnyPtr -> Int -> Int -> PrimIO AnyPtr
+
+||| Size must be the actual buffer capacity. Prefer SDL3.updateTextureRGBA.
+%foreign "C:idris_sdl_update_texture_rgba, libidris2_sdl3, sdl3.h"
+export
+prim__updateTextureRGBA : AnyPtr -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 
 %foreign "C:SDL_DestroyTexture, libSDL3, SDL3/SDL.h"
 export

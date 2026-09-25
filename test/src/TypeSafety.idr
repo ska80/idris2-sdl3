@@ -1,6 +1,7 @@
 module TypeSafety
 
 import SDL3
+import Data.Buffer
 
 failing "Mismatch between"
   wrongHandle : Window -> IO Bool
@@ -109,6 +110,14 @@ failing "Mismatch between"
 failing "Name SDL3.MkCoordinateBuffer is private"
   forgeCoordinateBuffer : AnyPtr -> CoordinateBuffer
   forgeCoordinateBuffer = MkCoordinateBuffer
+
+failing "Mismatch between"
+  wrongUploadAccess : Texture StaticAccess -> Buffer -> IO Bool
+  wrongUploadAccess texture buffer = updateTextureRGBA texture buffer 8
+
+failing "Mismatch between"
+  wrongUploadBuffer : Texture StreamingAccess -> CoordinateBuffer -> IO Bool
+  wrongUploadBuffer texture buffer = updateTextureRGBA texture buffer 8
 
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
