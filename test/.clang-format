@@ -1,0 +1,24 @@
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 140
+
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AlignConsecutiveDeclarations: AcrossComments
+AlignConsecutiveAssignments: AcrossComments
+AlignConsecutiveMacros: AcrossComments
+AlignConsecutiveBitFields: AcrossComments
+AlignEscapedNewlines: Left
+AlignTrailingComments: true
+AlignOperands: AlignAfterOperator
+AlignArrayOfStructures: Left
+KeepEmptyLinesAtTheStartOfBlocks: false
+IndentPPDirectives: BeforeHash
+PointerAlignment: Left
+
+
+#---
+#Language: Cpp
+#DisableFormat: true

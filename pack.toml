@@ -1,0 +1,15 @@
+[custom.all.sdl3]
+type = "local"
+path = "."
+ipkg = "sdl3.ipkg"
+test = "test/test.ipkg"
+
+[custom.all.sdl3-test]
+type = "local"
+path = "test"
+ipkg = "test.ipkg"
+
+[custom.all.sdl3-hello]
+type = "local"
+path = "examples"
+ipkg = "hello.ipkg"

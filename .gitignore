@@ -1,0 +1,8 @@
+# ignore files
+
+/build/
+**/build/
+
+/cbits/*.so
+
+/.agent-shell/

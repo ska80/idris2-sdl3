@@ -1,0 +1,11 @@
+package sdl3-test
+
+version = 0.0.0
+
+depends = sdl3
+
+sourcedir = "src"
+
+main = Main
+
+executable = sdl3-test

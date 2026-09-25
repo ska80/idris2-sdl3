@@ -1,0 +1,15 @@
+CompileFlags:
+  Add:
+    - -x
+    - c
+    - -std=c2x
+    - -DDEBUG=1
+
+If:
+  PathMatch: .*\.h
+CompileFlags:
+  Add:
+    - -x
+    - c
+    - -std=c2x
+    - -DDEBUG=1

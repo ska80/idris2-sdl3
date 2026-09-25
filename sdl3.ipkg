@@ -1,0 +1,25 @@
+package sdl3
+
+authors     = "Kamil Shakirov"
+maintainers = "Kamil Shakirov"
+
+license = "MIT"
+brief   = "Thin typed SDL3 bindings"
+readme  = "README.md"
+version = 0.0.0
+
+homepage   = "https://codeberg.org/ska80/idris2-sdl3"
+sourceloc  = "https://codeberg.org/ska80/idris2-sdl3.git"
+bugtracker = "https://codeberg.org/ska80/idris2-sdl3/issues"
+
+langversion >= 0.8.0
+
+depends = base >= 0.8.0
+
+sourcedir = "src"
+
+modules = SDL3
+        , SDL3.Flags
+        , SDL3.Raw
+
+prebuild = "make -C cbits"
