@@ -94,6 +94,32 @@ int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture
     return SDL_RenderTexture(renderer, texture, &source, &destination);
 }
 
+SDL_FPoint* idris_sdl_coordinate_new(void) {
+    SDL_FPoint* point = SDL_calloc(1, sizeof(SDL_FPoint));
+    if (!point) SDL_SetError("Cannot allocate coordinate buffer");
+    return point;
+}
+
+void idris_sdl_coordinate_free(SDL_FPoint* point) {
+    SDL_free(point);
+}
+
+double idris_sdl_coordinate_x(const SDL_FPoint* point) {
+    return point->x;
+}
+
+double idris_sdl_coordinate_y(const SDL_FPoint* point) {
+    return point->y;
+}
+
+int idris_sdl_render_coordinates_from_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point) {
+    return SDL_RenderCoordinatesFromWindow(renderer, (float)x, (float)y, &point->x, &point->y);
+}
+
+int idris_sdl_render_coordinates_to_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point) {
+    return SDL_RenderCoordinatesToWindow(renderer, (float)x, (float)y, &point->x, &point->y);
+}
+
 int idris_sdl_set_render_scale(SDL_Renderer* renderer, double x, double y) {
     return SDL_SetRenderScale(renderer, (float)x, (float)y);
 }

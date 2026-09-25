@@ -98,6 +98,18 @@ failing "Mismatch between"
   wrongScaleHandle : Texture StaticAccess -> IO Bool
   wrongScaleHandle texture = setRenderScale texture 2 2
 
+failing "Mismatch between"
+  wrongPointSpace : Renderer -> CoordinateBuffer -> Point RenderSpace -> IO (Either String (Point RenderSpace))
+  wrongPointSpace renderer buffer point = renderCoordinatesFromWindow renderer buffer point
+
+failing "Mismatch between"
+  wrongCoordinateBuffer : Renderer -> EventBuffer -> IO (Either String (Point RenderSpace))
+  wrongCoordinateBuffer renderer buffer = renderCoordinatesFromWindow renderer buffer (MkPoint 0 0)
+
+failing "Name SDL3.MkCoordinateBuffer is private"
+  forgeCoordinateBuffer : AnyPtr -> CoordinateBuffer
+  forgeCoordinateBuffer = MkCoordinateBuffer
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

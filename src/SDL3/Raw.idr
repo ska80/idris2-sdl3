@@ -100,6 +100,34 @@ export
 prim__renderTextureRegion : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double ->
                            Double -> Double -> Double -> Double -> PrimIO Int
 
+%foreign "C:idris_sdl_coordinate_new, libidris2_sdl3, sdl3.h"
+export
+prim__coordinateNew : PrimIO AnyPtr
+
+%foreign "C:idris_sdl_coordinate_free, libidris2_sdl3, sdl3.h"
+export
+prim__coordinateFree : AnyPtr -> PrimIO ()
+
+||| Requires a live coordinate buffer containing a successful conversion result.
+%foreign "C:idris_sdl_coordinate_x, libidris2_sdl3, sdl3.h"
+export
+prim__coordinateX : AnyPtr -> PrimIO Double
+
+||| Requires a live coordinate buffer containing a successful conversion result.
+%foreign "C:idris_sdl_coordinate_y, libidris2_sdl3, sdl3.h"
+export
+prim__coordinateY : AnyPtr -> PrimIO Double
+
+||| Requires a live coordinate buffer as the final argument.
+%foreign "C:idris_sdl_render_coordinates_from_window, libidris2_sdl3, sdl3.h"
+export
+prim__renderCoordinatesFromWindow : AnyPtr -> Double -> Double -> AnyPtr -> PrimIO Int
+
+||| Requires a live coordinate buffer as the final argument.
+%foreign "C:idris_sdl_render_coordinates_to_window, libidris2_sdl3, sdl3.h"
+export
+prim__renderCoordinatesToWindow : AnyPtr -> Double -> Double -> AnyPtr -> PrimIO Int
+
 %foreign "C:idris_sdl_set_render_scale, libidris2_sdl3, sdl3.h"
 export
 prim__setRenderScale : AnyPtr -> Double -> Double -> PrimIO Int

@@ -29,24 +29,36 @@ frame renderer texture = do
     | Left err => pure (Left err)
   require (present renderer)
 
-drain : WindowID -> EventBuffer -> IO Bool
-drain window buffer = do
+clickedRectangle : Renderer -> CoordinateBuffer -> Double -> Double -> IO (Either String Bool)
+clickedRectangle renderer coordinates windowX windowY = do
+  Right (MkPoint x y) <- renderCoordinatesFromWindow renderer coordinates (MkPoint windowX windowY)
+    | Left err => pure (Left err)
+  pure (Right (x >= 220 && x < 420 && y >= 150 && y < 330))
+
+drain : WindowID -> Renderer -> CoordinateBuffer -> EventBuffer -> IO (Either String Bool)
+drain window renderer coordinates buffer = do
   event <- pollEventData buffer
   case event of
-    Nothing => pure False
-    Just (QuitEvent _) => pure True
+    Nothing => pure (Right False)
+    Just (QuitEvent _) => pure (Right True)
     Just (WindowCloseEvent _ target) =>
-      if target == window then pure True else drain window buffer
+      if target == window then pure (Right True) else drain window renderer coordinates buffer
     Just (KeyboardEvent _ (MkKeyboardData target Pressed _ key _ False)) =>
-      if target == window && key == escapeKey then pure True else drain window buffer
-    _ => drain window buffer
+      if target == window && key == escapeKey then pure (Right True) else drain window renderer coordinates buffer
+    Just (MouseButtonEvent _ (MkMouseButtonData target _ button ButtonPressed _ x y)) =>
+      if target == window && button == leftButton then do
+        Right hit <- clickedRectangle renderer coordinates x y | Left err => pure (Left err)
+        if hit then pure (Right True) else drain window renderer coordinates buffer
+      else drain window renderer coordinates buffer
+    _ => drain window renderer coordinates buffer
 
-loop : WindowID -> Renderer -> Texture TargetAccess -> EventBuffer -> IO (Either String ())
-loop window renderer texture buffer = do
-  False <- drain window buffer | True => pure (Right ())
-  Right () <- frame renderer texture | Left err => pure (Left err)
-  delay 16
-  loop window renderer texture buffer
+loop : WindowID -> Renderer -> Texture TargetAccess -> CoordinateBuffer -> EventBuffer -> IO (Either String ())
+loop window renderer texture coordinates buffer = do
+  Right stop <- drain window renderer coordinates buffer | Left err => pure (Left err)
+  if stop then pure (Right ()) else do
+    Right () <- frame renderer texture | Left err => pure (Left err)
+    delay 16
+    loop window renderer texture coordinates buffer
 
 runRenderer : WindowID -> Renderer -> IO (Either String ())
 runRenderer identifier renderer = do
@@ -55,9 +67,13 @@ runRenderer identifier renderer = do
   Right texture <- createTargetTexture renderer 200 180 | Left err => pure (Left err)
   result <- do
     Right () <- prepareTexture renderer texture | Left err => pure (Left err)
-    Right buffer <- newEventBuffer | Left err => pure (Left err)
-    result <- loop identifier renderer texture buffer
-    freeEventBuffer buffer
+    Right coordinates <- newCoordinateBuffer | Left err => pure (Left err)
+    result <- do
+      Right buffer <- newEventBuffer | Left err => pure (Left err)
+      result <- loop identifier renderer texture coordinates buffer
+      freeEventBuffer buffer
+      pure result
+    freeCoordinateBuffer coordinates
     pure result
   destroyTexture texture
   pure result

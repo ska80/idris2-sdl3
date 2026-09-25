@@ -25,6 +25,14 @@ IDRIS_SDL3 int idris_sdl_render_texture_source(SDL_Renderer* renderer, SDL_Textu
 IDRIS_SDL3 int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture, double sx, double sy, double sw, double sh,
                                                double dx, double dy, double dw, double dh);
 
+IDRIS_SDL3 SDL_FPoint* idris_sdl_coordinate_new(void);
+IDRIS_SDL3 void        idris_sdl_coordinate_free(SDL_FPoint* point);
+/* Read coordinates only after a successful conversion into this buffer. */
+IDRIS_SDL3 double      idris_sdl_coordinate_x(const SDL_FPoint* point);
+IDRIS_SDL3 double      idris_sdl_coordinate_y(const SDL_FPoint* point);
+IDRIS_SDL3 int         idris_sdl_render_coordinates_from_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point);
+IDRIS_SDL3 int         idris_sdl_render_coordinates_to_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point);
+
 IDRIS_SDL3 int idris_sdl_set_render_scale(SDL_Renderer* renderer, double x, double y);
 IDRIS_SDL3 int idris_sdl_set_render_logical_presentation(SDL_Renderer* renderer, Sint32 w, Sint32 h, int mode);
 

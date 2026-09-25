@@ -29,10 +29,11 @@ hook without an interactive question.  The Makefile uses `pack` for all Idris bu
 library search paths.
 
 `make run` creates a blue texture once and draws it in a fixed 640 by 480 scene.  Resizing preserves
-the scene's width-to-height ratio and adds borders where needed. Close the window or press Escape to
-exit.  `make test` uses SDL's dummy video driver, so it does not need a display.  Use `make test
-CG=refc` for the secondary RefC compatibility test.  Use `make run-c` to build and run the example
-with RefC.  This target is a shortcut for `make run CG=refc`.
+the scene's width-to-height ratio and adds borders where needed.  Close the window, press Escape, or
+left-click the blue rectangle to exit.  The example converts click positions into scene coordinates,
+including after resizing.  `make test` uses SDL's dummy video driver, so it does not need a display.
+Use `make test CG=refc` for the secondary RefC compatibility test.  Use `make run-c` to build and
+run the example with RefC.  This target is a shortcut for `make run CG=refc`.
 
 ## API and safety
 
@@ -42,7 +43,9 @@ raw module unless you can enforce its pointer and lifetime requirements.
 
 The typed API provides these guarantees:
 
-- Distinct opaque types for windows, renderers, surfaces, textures, and event buffers.
+- Distinct opaque types for windows, renderers, surfaces, textures, event buffers, and coordinate
+  buffers.
+- Distinct point types for window and render coordinates.
 - Texture access types that restrict render targets to `Texture TargetAccess`.
 - Separate initialization and window flags, combined with `<+>` and empty flags through `neutral`.
 - Null checks on resource creation, with errors returned as `Either String a`.
@@ -52,13 +55,13 @@ The typed API provides these guarantees:
   bits.
 
 The API does not enforce resource lifetimes or thread rules in the type system.  Call
-initialization, window, rendering, and event functions on the main thread.  Do not share event
-buffers between threads.
+initialization, window, rendering, and event functions on the main thread.  Do not share event or
+coordinate buffers between threads.
 
 Destroy each texture before its renderer, and each renderer before its window.  Free each event
-buffer exactly once. Destroy all owned resources before `quit`, and call `quit` even if
-initialization fails.  Do not use or destroy a handle after destruction. This can access freed
-memory.
+buffer and coordinate buffer exactly once. Destroy all owned resources before `quit`, and call
+`quit` even if initialization fails.  Do not use or destroy a handle after destruction. This can
+access freed memory.
 
 Creation calls copy the error into `Left` on failure.  Rendering, initialization, and text input
 start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
@@ -81,8 +84,23 @@ letterboxing an off-screen image twice.  Both controls require the main thread a
 failure.
 
 These controls do not transform input events. Mouse event positions remain in window coordinates.
-Event coordinate conversion is not yet bound. Do not treat mouse positions as logical drawing
-coordinates.
+Allocate a reusable buffer with `newCoordinateBuffer` to convert positions explicitly.
+`renderCoordinatesFromWindow renderer buffer point` converts a `Point WindowSpace` into a `Point
+RenderSpace`.  `renderCoordinatesToWindow` performs the inverse conversion. Both return a copied
+point or an SDL error through `Either`.  Construct input points with `MkPoint x y`, using the
+event's position values.
+
+Conversion uses SDL's window dimensions, logical presentation, drawing scale, and viewport state.
+Call on the main thread with the intended render target selected.  For multiple windows, match the
+event's `WindowID` to the renderer before conversion.  Points outside the scene are not clamped, and
+clipping does not restrict conversion.  Compare the returned position with your scene bounds before
+handling a click.
+
+Reuse the buffer for later conversions, then call `freeCoordinateBuffer` during cleanup.  Returned
+points retain their values after buffer reuse or destruction.  Conversions do not modify event
+records or convert relative motion values. They convert positions, not movement distances.  The
+point types distinguish coordinate spaces, but do not track renderer identity or later changes to
+rendering state.
 
 A viewport is a drawing area with its own coordinate origin.  `setRenderViewport renderer (Just
 (MkRect x y width height))` sets that area on the current render target.  Drawing starts at `(0, 0)`
@@ -256,7 +274,9 @@ storage in the C adapter.  The example creates one target texture before its loo
 pixels back to compare rendered colors, but normal rendering does not.
 
 No resource registry, finalizer, or automatic error-string copy runs on each successful rendering
-call.  Event polling uses multiple native calls and constructs Idris values.  There are no
+call. Event polling uses multiple native calls and constructs Idris values.  A successful point
+conversion uses one SDL call and two native field reads.  The adapter allocates no native memory per
+conversion when you reuse a coordinate buffer. Idris still constructs result values.  There are no
 benchmarks yet, so this project does not claim zero overhead.
 
 ## Use from another package
@@ -281,24 +301,26 @@ missing and invalid files, pixel colors, source rectangles, and texture use afte
 destruction. Renderer tests cover viewport origins, clipping, empty clip rectangles, per-target
 state, and shape alpha blending. They also test that `clear` ignores viewport and clip state.
 Scaling tests cover every logical presentation mode, independent axis scaling, and scale and logical
-state retained across target switches.  Pixel tests cover all exposed blend modes, color and alpha
-modulation, and nearest and linear filtering.  Tests allow small rounding differences for fractional
-blending and interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged
-handles, and static textures used as render targets. Event tests cover keyboard data, repeat status,
-window identifiers, timestamps, and data retained after buffer reuse. Mouse tests cover fractional
-coordinates, relative motion, presses, releases, click counts, unknown buttons, and button-state
-bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer
-position, and signed 32-bit limits. Text tests cover Unicode, empty and long text, composition
-selections, string ownership, and per-window start and stop controls. Area tests compare the stored
-SDL rectangle and cursor against the Idris values.  They also test area reset and composition
-cancellation without disabling text input.  The test-only native library inserts known events into
-SDL's queue. It is not part of the binding library.  The example builds in the test environment, but
-interactive display behavior needs a manual test.
+state retained across target switches. Coordinate tests cover inverse conversion, scaling, viewport
+offsets, letterbox borders, combined transforms, and copied point lifetime.  Compile-time tests
+reject mixed point spaces and buffer types.  Pixel tests cover all exposed blend modes, color and
+alpha modulation, and nearest and linear filtering.  Tests allow small rounding differences for
+fractional blending and interpolation.  Compile-time tests reject mixed handle types, mixed flag
+types, forged handles, and static textures used as render targets. Event tests cover keyboard data,
+repeat status, window identifiers, timestamps, and data retained after buffer reuse. Mouse tests
+cover fractional coordinates, relative motion, presses, releases, click counts, unknown buttons, and
+button-state bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values,
+pointer position, and signed 32-bit limits. Text tests cover Unicode, empty and long text,
+composition selections, string ownership, and per-window start and stop controls. Area tests compare
+the stored SDL rectangle and cursor against the Idris values.  They also test area reset and
+composition cancellation without disabling text input.  The test-only native library inserts known
+events into SDL's queue. It is not part of the binding library.  The example builds in the test
+environment, but interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes event coordinate conversion, streaming texture updates, audio streams, and scoped
-resource ownership.  Keep each addition close to SDL's API and test its failure paths.  Measure call
-overhead and allocations before adding performance claims or a larger abstraction layer.
+Next work includes streaming texture updates, audio streams, and scoped resource ownership.  Keep
+each addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
+before adding performance claims or a larger abstraction layer.

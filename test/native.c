@@ -40,6 +40,14 @@ int main(void) {
     empty_text.type = SDL_EVENT_TEXT_EDITING;
     assert(idris_sdl_event_text(&empty_text)[0] == '\0');
 
+    SDL_FPoint* coordinates = idris_sdl_coordinate_new();
+    assert(coordinates);
+    assert(idris_sdl_render_coordinates_from_window(NULL, 1.5, 2.5, coordinates) == 0);
+    assert(idris_sdl_get_error()[0] != '\0');
+    assert(idris_sdl_render_coordinates_to_window(NULL, 1.5, 2.5, coordinates) == 0);
+    assert(idris_sdl_get_error()[0] != '\0');
+    idris_sdl_coordinate_free(coordinates);
+
     SDL_Event* buffer = idris_sdl_event_new();
 
     assert(buffer && !idris_sdl_is_null(buffer));

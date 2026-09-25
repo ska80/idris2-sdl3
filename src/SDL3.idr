@@ -79,6 +79,20 @@ record FRect where
   width : Double
   height : Double
 
+public export
+data CoordinateSpace = WindowSpace | RenderSpace
+
+||| A point tagged with its coordinate space. SDL conversions use single precision.
+public export
+record Point (space : CoordinateSpace) where
+  constructor MkPoint
+  x : Double
+  y : Double
+
+||| Reusable output storage for coordinate conversion. Free exactly once.
+export
+data CoordinateBuffer = MkCoordinateBuffer AnyPtr
+
 ||| Reusable native event storage. Free exactly once.
 export
 data EventBuffer = MkEventBuffer AnyPtr
@@ -237,6 +251,41 @@ renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw 
 renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw sh)
                     (Just (MkFRect dx dy dw dh)) =
   (/= 0) <$> primIO (prim__renderTextureRegion renderer texture sx sy sw sh dx dy dw dh)
+
+||| Allocate once and reuse for coordinate conversions. Do not share between threads.
+export
+newCoordinateBuffer : IO (Either String CoordinateBuffer)
+newCoordinateBuffer = owned MkCoordinateBuffer prim__coordinateNew
+
+||| Do not use the buffer after this call. Copied points remain valid.
+export
+freeCoordinateBuffer : CoordinateBuffer -> IO ()
+freeCoordinateBuffer (MkCoordinateBuffer ptr) = primIO (prim__coordinateFree ptr)
+
+convertedPoint : AnyPtr -> PrimIO Int -> IO (Either String (Point space))
+convertedPoint buffer action = do
+  ok <- primIO action
+  if ok == 0 then Left <$> getError else do
+    x <- primIO (prim__coordinateX buffer)
+    y <- primIO (prim__coordinateY buffer)
+    pure (Right (MkPoint x y))
+
+||| Convert a window point using the renderer's current target, viewport, and scales.
+||| Call on the main thread. Match the renderer to the event's window first.
+||| This does not clip points outside the drawing area or modify input events.
+export
+renderCoordinatesFromWindow : Renderer -> CoordinateBuffer -> Point WindowSpace ->
+                              IO (Either String (Point RenderSpace))
+renderCoordinatesFromWindow (MkRenderer renderer) (MkCoordinateBuffer buffer) (MkPoint x y) =
+  convertedPoint buffer (prim__renderCoordinatesFromWindow renderer x y buffer)
+
+||| Convert a render point to window coordinates on the main thread.
+||| Returned points own their values and survive buffer reuse or destruction.
+export
+renderCoordinatesToWindow : Renderer -> CoordinateBuffer -> Point RenderSpace ->
+                            IO (Either String (Point WindowSpace))
+renderCoordinatesToWindow (MkRenderer renderer) (MkCoordinateBuffer buffer) (MkPoint x y) =
+  convertedPoint buffer (prim__renderCoordinatesToWindow renderer x y buffer)
 
 ||| Scale drawing coordinates on the current target. Use 1 and 1 to reset.
 ||| Values convert to SDL floats. Call on the main thread. Returns False on failure.
