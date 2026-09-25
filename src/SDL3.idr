@@ -21,7 +21,7 @@ data Surface = MkSurface AnyPtr
 public export
 data TextureAccess = StaticAccess | StreamingAccess | TargetAccess
 
-||| How source texture pixels combine with destination pixels.
+||| How source pixels combine with destination pixels.
 public export
 data BlendMode = NoBlend | AlphaBlend | PremultipliedAlphaBlend
                | AdditiveBlend | PremultipliedAdditiveBlend | ModulateBlend | MultiplyBlend
@@ -48,6 +48,15 @@ scaleValue LinearScale = 1
 export
 data Texture : TextureAccess -> Type where
   MkTexture : AnyPtr -> Texture access
+
+||| SDL integer rectangle, used for viewports and clipping.
+public export
+record Rect where
+  constructor MkRect
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
 
 ||| SDL floating-point rectangle. Values convert to single precision in C.
 public export
@@ -217,12 +226,40 @@ renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw 
                     (Just (MkFRect dx dy dw dh)) =
   (/= 0) <$> primIO (prim__renderTextureRegion renderer texture sx sy sw sh dx dy dw dh)
 
+||| Set the current target's drawing area and coordinate origin.
+||| Nothing selects the whole target. Width and height must be nonnegative.
+||| Call on the main thread. Returns False on failure.
+export
+setRenderViewport : Renderer -> Maybe Rect -> IO Bool
+setRenderViewport (MkRenderer ptr) Nothing =
+  (/= 0) <$> primIO (prim__resetRenderViewport ptr)
+setRenderViewport (MkRenderer ptr) (Just (MkRect x y width height)) =
+  (/= 0) <$> primIO (prim__setRenderViewport ptr x y width height)
+
+||| Set clipping relative to the current viewport. Nothing disables clipping.
+||| An empty rectangle clips all drawing. Each target keeps its own clip state.
+||| Call on the main thread. Returns False on failure.
+export
+setRenderClipRect : Renderer -> Maybe Rect -> IO Bool
+setRenderClipRect (MkRenderer ptr) Nothing =
+  (/= 0) <$> primIO (prim__resetRenderClipRect ptr)
+setRenderClipRect (MkRenderer ptr) (Just (MkRect x y width height)) =
+  (/= 0) <$> primIO (prim__setRenderClipRect ptr x y width height)
+
+||| Set blending for shapes, not textures. Call on the main thread.
+||| SDL can select the closest supported mode. Returns False on failure.
+export
+setDrawBlendMode : Renderer -> BlendMode -> IO Bool
+setDrawBlendMode (MkRenderer ptr) mode =
+  (/= 0) <$> primIO (prim__setDrawBlendMode ptr (blendBits mode))
+
 ||| Rendering calls return False on failure. Call getError for details.
 export
 setDrawColor : Renderer -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> IO Bool
 setDrawColor (MkRenderer ptr) r g b a =
   (/= 0) <$> primIO (prim__drawColor ptr r g b a)
 
+||| Clear the entire current target, ignoring the viewport and clip rectangle.
 export
 clear : Renderer -> IO Bool
 clear (MkRenderer ptr) = (/= 0) <$> primIO (prim__clear ptr)

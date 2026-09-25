@@ -100,6 +100,26 @@ export
 prim__renderTextureRegion : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double ->
                            Double -> Double -> Double -> Double -> PrimIO Int
 
+%foreign "C:idris_sdl_set_render_viewport, libidris2_sdl3, sdl3.h"
+export
+prim__setRenderViewport : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_reset_render_viewport, libidris2_sdl3, sdl3.h"
+export
+prim__resetRenderViewport : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_set_render_clip_rect, libidris2_sdl3, sdl3.h"
+export
+prim__setRenderClipRect : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_reset_render_clip_rect, libidris2_sdl3, sdl3.h"
+export
+prim__resetRenderClipRect : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_set_draw_blend_mode, libidris2_sdl3, sdl3.h"
+export
+prim__setDrawBlendMode : AnyPtr -> Bits32 -> PrimIO Int
+
 %foreign "C:idris_sdl_draw_color, libidris2_sdl3, sdl3.h"
 export
 prim__drawColor : AnyPtr -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int

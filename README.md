@@ -63,6 +63,23 @@ Creation calls copy the error into `Left` on failure.  Rendering, initialization
 start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
 failure, on the same thread, before another SDL call can replace the error.
 
+A viewport is a drawing area with its own coordinate origin.  `setRenderViewport renderer (Just
+(MkRect x y width height))` sets that area on the current render target.  Drawing starts at `(0, 0)`
+within the viewport and clips to its bounds.  `Rect` uses signed 32-bit integers. Viewport width and
+height must be nonnegative.  Use `setRenderViewport renderer Nothing` to restore the whole target.
+
+`setRenderClipRect renderer (Just rect)` adds clipping relative to the viewport without moving the
+drawing origin.  An empty clip rectangle blocks all drawing. `setRenderClipRect renderer Nothing`
+disables this extra clipping, but does not remove viewport clipping.  Each render target retains its
+own viewport and clip rectangle when you switch targets.  `clear` ignores both areas and clears the
+entire current target. Use `fillRect` to clear only a drawing region.
+
+`setDrawBlendMode renderer mode` selects blending for shapes such as filled rectangles, using the
+same `BlendMode` type as textures.  It does not change texture blending. Use `setTextureBlendMode`
+for that.  Viewport, clip, and draw blend controls require the main thread and return `False` on
+failure.  Call `getError` immediately after failure. SDL can choose the closest supported draw blend
+mode.
+
 A render target is the destination for drawing commands.  `createTargetTexture renderer width
 height` creates an RGBA32 texture for off-screen drawing.  Creation returns `Either String (Texture
 TargetAccess)`. Dimensions must be positive 32-bit integers.  The texture starts with undefined
@@ -240,8 +257,10 @@ creation, drawing, and timers. Texture tests read pixels from off-screen and win
 test destination rectangles, target reset, invalid dimensions, and rejection of textures from
 another renderer. BMP tests create temporary image files and remove them after each test.  They test
 missing and invalid files, pixel colors, source rectangles, and texture use after surface
-destruction. Pixel tests cover all exposed blend modes, color and alpha modulation, and nearest and
-linear filtering.  Tests allow small rounding differences for fractional blending and interpolation.
+destruction. Renderer tests cover viewport origins, clipping, empty clip rectangles, per-target
+state, and shape alpha blending.  They also test that `clear` ignores viewport and clip state.
+Pixel tests cover all exposed blend modes, color and alpha modulation, and nearest and linear
+filtering.  Tests allow small rounding differences for fractional blending and interpolation.
 Compile-time tests reject mixed handle types, mixed flag types, forged handles, and static textures
 used as render targets. Event tests cover keyboard data, repeat status, window identifiers,
 timestamps, and data retained after buffer reuse. Mouse tests cover fractional coordinates, relative

@@ -12,6 +12,11 @@ int main(void) {
     assert(idris_sdl_set_texture_alpha_mod(NULL, 255) == 0);
     assert(idris_sdl_set_texture_blend_mode(NULL, SDL_BLENDMODE_BLEND) == 0);
     assert(idris_sdl_set_texture_scale_mode(NULL, SDL_SCALEMODE_NEAREST) == 0);
+    assert(idris_sdl_set_render_viewport(NULL, 0, 0, 16, 16) == 0);
+    assert(idris_sdl_reset_render_viewport(NULL) == 0);
+    assert(idris_sdl_set_render_clip_rect(NULL, 0, 0, 16, 16) == 0);
+    assert(idris_sdl_reset_render_clip_rect(NULL) == 0);
+    assert(idris_sdl_set_draw_blend_mode(NULL, SDL_BLENDMODE_BLEND) == 0);
     assert(idris_sdl_reset_render_target(NULL) == 0);
     assert(idris_sdl_set_render_target(NULL, NULL) == 0);
     assert(idris_sdl_render_texture(NULL, NULL) == 0);

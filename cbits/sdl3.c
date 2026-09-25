@@ -90,6 +90,28 @@ int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture
     return SDL_RenderTexture(renderer, texture, &source, &destination);
 }
 
+int idris_sdl_set_render_viewport(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h) {
+    const SDL_Rect rect = {x, y, w, h};
+    return SDL_SetRenderViewport(renderer, &rect);
+}
+
+int idris_sdl_reset_render_viewport(SDL_Renderer* renderer) {
+    return SDL_SetRenderViewport(renderer, NULL);
+}
+
+int idris_sdl_set_render_clip_rect(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h) {
+    const SDL_Rect rect = {x, y, w, h};
+    return SDL_SetRenderClipRect(renderer, &rect);
+}
+
+int idris_sdl_reset_render_clip_rect(SDL_Renderer* renderer) {
+    return SDL_SetRenderClipRect(renderer, NULL);
+}
+
+int idris_sdl_set_draw_blend_mode(SDL_Renderer* renderer, Uint32 mode) {
+    return SDL_SetRenderDrawBlendMode(renderer, mode);
+}
+
 int idris_sdl_draw_color(SDL_Renderer* r, Uint8 red, Uint8 g, Uint8 b, Uint8 a) {
     return SDL_SetRenderDrawColor(r, red, g, b, a);
 }

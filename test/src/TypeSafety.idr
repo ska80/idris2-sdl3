@@ -78,6 +78,18 @@ failing "Mismatch between"
   wrongBlendHandle : Renderer -> IO Bool
   wrongBlendHandle renderer = setTextureBlendMode renderer AlphaBlend
 
+failing "Mismatch between"
+  wrongViewportRect : Renderer -> FRect -> IO Bool
+  wrongViewportRect renderer rect = setRenderViewport renderer (Just rect)
+
+failing "Mismatch between"
+  wrongClipHandle : Window -> IO Bool
+  wrongClipHandle window = setRenderClipRect window Nothing
+
+failing "Mismatch between"
+  wrongDrawBlendHandle : Texture StaticAccess -> IO Bool
+  wrongDrawBlendHandle texture = setDrawBlendMode texture AlphaBlend
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture
