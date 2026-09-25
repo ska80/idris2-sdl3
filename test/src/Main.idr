@@ -3,6 +3,7 @@ module Main
 import SDL3
 import System
 import TypeSafety
+import EventTests
 
 %default covering
 
@@ -23,11 +24,16 @@ render renderer = do
 
 resources : Window -> IO (Either String ())
 resources window = do
+  Right (MkWindowID identifier) <- getWindowID window
+    | Left err => pure (Left err)
+  Right () <- require "Window identifier was zero" (identifier /= 0)
+    | Left err => pure (Left err)
   Right renderer <- createRenderer window | Left err => pure (Left err)
   result <- do
     Right buffer <- newEventBuffer | Left err => pure (Left err)
-    _ <- pollEvent buffer
-    result <- render renderer
+    result <- do
+      Right () <- eventTests buffer | Left err => pure (Left err)
+      render renderer
     freeEventBuffer buffer
     pure result
   destroyRenderer renderer

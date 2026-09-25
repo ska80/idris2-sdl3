@@ -2,6 +2,8 @@
 
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
 
+_Static_assert(SDLK_ESCAPE == 27, "Update SDL3.Events.escapeKey");
+
 _Static_assert(SDL_INIT_VIDEO == 0x20 && SDL_INIT_AUDIO == 0x10 && SDL_INIT_EVENTS == 0x4000 && SDL_INIT_GAMEPAD == 0x2000,
                "Update SDL3.Flags init constants");
 
@@ -59,6 +61,31 @@ int idris_sdl_poll(SDL_Event* event) {
 
 Uint32 idris_sdl_event_type(const SDL_Event* event) {
     return event->type;
+}
+
+Uint64 idris_sdl_event_timestamp(const SDL_Event* event) {
+    return event->common.timestamp;
+}
+
+Uint32 idris_sdl_event_window(const SDL_Event* event) {
+    if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) return event->window.windowID;
+    return event->key.windowID;
+}
+
+Uint32 idris_sdl_event_scancode(const SDL_Event* event) {
+    return (Uint32)event->key.scancode;
+}
+
+Uint32 idris_sdl_event_keycode(const SDL_Event* event) {
+    return event->key.key;
+}
+
+Uint16 idris_sdl_event_modifiers(const SDL_Event* event) {
+    return event->key.mod;
+}
+
+int idris_sdl_event_repeat(const SDL_Event* event) {
+    return event->key.repeat;
 }
 
 int idris_sdl_event_kind(const SDL_Event* event) {

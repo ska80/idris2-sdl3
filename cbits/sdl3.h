@@ -19,3 +19,10 @@ IDRIS_SDL3 void          idris_sdl_event_free(SDL_Event* event);
 IDRIS_SDL3 int           idris_sdl_poll(SDL_Event* event);
 IDRIS_SDL3 Uint32        idris_sdl_event_type(const SDL_Event* event);
 IDRIS_SDL3 int           idris_sdl_event_kind(const SDL_Event* event);
+IDRIS_SDL3 Uint64        idris_sdl_event_timestamp(const SDL_Event* event);
+/* Window access requires a close or keyboard event. Key access requires a keyboard event. */
+IDRIS_SDL3 Uint32        idris_sdl_event_window(const SDL_Event* event);
+IDRIS_SDL3 Uint32        idris_sdl_event_scancode(const SDL_Event* event);
+IDRIS_SDL3 Uint32        idris_sdl_event_keycode(const SDL_Event* event);
+IDRIS_SDL3 Uint16        idris_sdl_event_modifiers(const SDL_Event* event);
+IDRIS_SDL3 int           idris_sdl_event_repeat(const SDL_Event* event);

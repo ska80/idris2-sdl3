@@ -18,28 +18,32 @@ frame renderer = do
   Right () <- require (fillRect renderer 220 150 200 180) | Left err => pure (Left err)
   require (present renderer)
 
-drain : EventBuffer -> IO Bool
-drain buffer = do
-  event <- pollEvent buffer
+drain : WindowID -> EventBuffer -> IO Bool
+drain window buffer = do
+  event <- pollEventData buffer
   case event of
     Nothing => pure False
-    Just QuitRequested => pure True
-    Just WindowCloseRequested => pure True
-    _ => drain buffer
+    Just (QuitEvent _) => pure True
+    Just (WindowCloseEvent _ target) =>
+      if target == window then pure True else drain window buffer
+    Just (KeyboardEvent _ (MkKeyboardData target Pressed _ key _ False)) =>
+      if target == window && key == escapeKey then pure True else drain window buffer
+    _ => drain window buffer
 
-loop : Renderer -> EventBuffer -> IO (Either String ())
-loop renderer buffer = do
-  False <- drain buffer | True => pure (Right ())
+loop : WindowID -> Renderer -> EventBuffer -> IO (Either String ())
+loop window renderer buffer = do
+  False <- drain window buffer | True => pure (Right ())
   Right () <- frame renderer | Left err => pure (Left err)
   delay 16
-  loop renderer buffer
+  loop window renderer buffer
 
 runWindow : Window -> IO (Either String ())
 runWindow window = do
+  Right identifier <- getWindowID window | Left err => pure (Left err)
   Right renderer <- createRenderer window | Left err => pure (Left err)
   result <- do
     Right buffer <- newEventBuffer | Left err => pure (Left err)
-    result <- loop renderer buffer
+    result <- loop identifier renderer buffer
     freeEventBuffer buffer
     pure result
   destroyRenderer renderer

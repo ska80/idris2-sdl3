@@ -14,6 +14,14 @@ failing "Mismatch between"
   wrongWindowFlags : IO (Either String Window)
   wrongWindowFlags = createWindow "wrong flags" 64 64 video
 
+failing "Mismatch between"
+  wrongKey : Scancode -> Keycode
+  wrongKey scan = scan
+
+failing "Mismatch between"
+  wrongWindowID : WindowID -> IO ()
+  wrongWindowID identifier = destroyWindow identifier
+
 failing "Name SDL3.MkWindow is private"
   forgeWindow : AnyPtr -> Window
   forgeWindow = MkWindow

@@ -19,6 +19,7 @@ depends = base >= 0.8.0
 sourcedir = "src"
 
 modules = SDL3
+        , SDL3.Events
         , SDL3.Flags
         , SDL3.Raw
 

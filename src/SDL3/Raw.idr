@@ -27,6 +27,10 @@ prim__createWindow : String -> Int -> Int -> Bits64 -> PrimIO AnyPtr
 export
 prim__destroyWindow : AnyPtr -> PrimIO ()
 
+%foreign "C:SDL_GetWindowID, libSDL3, SDL3/SDL.h"
+export
+prim__getWindowID : AnyPtr -> PrimIO Bits32
+
 %foreign "C:idris_sdl_create_renderer, libidris2_sdl3, sdl3.h"
 export
 prim__createRenderer : AnyPtr -> PrimIO AnyPtr
@@ -70,6 +74,35 @@ prim__eventKind : AnyPtr -> PrimIO Int
 %foreign "C:idris_sdl_event_type, libidris2_sdl3, sdl3.h"
 export
 prim__eventType : AnyPtr -> PrimIO Bits32
+
+%foreign "C:idris_sdl_event_timestamp, libidris2_sdl3, sdl3.h"
+export
+prim__eventTimestamp : AnyPtr -> PrimIO Bits64
+
+||| Requires a window-close or keyboard event.
+%foreign "C:idris_sdl_event_window, libidris2_sdl3, sdl3.h"
+export
+prim__eventWindow : AnyPtr -> PrimIO Bits32
+
+||| Requires a keyboard event.
+%foreign "C:idris_sdl_event_scancode, libidris2_sdl3, sdl3.h"
+export
+prim__eventScancode : AnyPtr -> PrimIO Bits32
+
+||| Requires a keyboard event.
+%foreign "C:idris_sdl_event_keycode, libidris2_sdl3, sdl3.h"
+export
+prim__eventKeycode : AnyPtr -> PrimIO Bits32
+
+||| Requires a keyboard event.
+%foreign "C:idris_sdl_event_modifiers, libidris2_sdl3, sdl3.h"
+export
+prim__eventModifiers : AnyPtr -> PrimIO Bits16
+
+||| Requires a keyboard event.
+%foreign "C:idris_sdl_event_repeat, libidris2_sdl3, sdl3.h"
+export
+prim__eventRepeat : AnyPtr -> PrimIO Int
 
 %foreign "C:SDL_GetTicks, libSDL3, SDL3/SDL.h"
 export

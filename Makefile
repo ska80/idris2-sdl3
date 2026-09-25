@@ -23,6 +23,12 @@ run: example
 
 
 .PHONY: test
+test: export LD_LIBRARY_PATH := $(ROOT)/test/build:$(LD_LIBRARY_PATH)
+ifeq ($(CG),refc)
+test: export LIBRARY_PATH := $(ROOT)/test/build:$(LIBRARY_PATH)
+test: export CPATH := $(ROOT)/test:$(CPATH)
+test: export IDRIS2_LDLIBS := $(IDRIS2_LDLIBS) -lidris2_sdl3_test
+endif
 test: all
 	$(MAKE) -C test native
 	$(RM) -f test/build/exec/sdl3-test
