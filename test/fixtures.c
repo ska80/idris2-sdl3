@@ -37,7 +37,7 @@ int idris_test_text_input_area(Uint32 window_id, Sint32 x, Sint32 y, Sint32 w, S
 }
 
 /* Readback allocates only in tests, never in the binding's draw path. */
-int idris_test_pixel(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+int idris_test_pixel_near(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 tolerance) {
     SDL_Window* window = SDL_GetWindowFromID(window_id);
     if (!window) return 0;
     SDL_Renderer* renderer = SDL_GetRenderer(window);
@@ -48,7 +48,12 @@ int idris_test_pixel(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, 
     Uint8 actual_r, actual_g, actual_b, actual_a;
     int   ok = SDL_ReadSurfacePixel(surface, 0, 0, &actual_r, &actual_g, &actual_b, &actual_a);
     SDL_DestroySurface(surface);
-    return ok && actual_r == r && actual_g == g && actual_b == b && actual_a == a;
+    return ok && abs((int)actual_r - r) <= tolerance && abs((int)actual_g - g) <= tolerance && abs((int)actual_b - b) <= tolerance &&
+           abs((int)actual_a - a) <= tolerance;
+}
+
+int idris_test_pixel(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    return idris_test_pixel_near(window_id, x, y, r, g, b, a, 0);
 }
 
 /* Test-only events. Keep these symbols out of the binding library. */

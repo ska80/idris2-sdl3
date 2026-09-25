@@ -78,7 +78,7 @@ Use a texture only with its creating renderer. The types distinguish access mode
 renderer identity or resource lifetimes.  SDL rejects textures from another renderer. Switch away
 from a texture as the current target before `destroyTexture`.  All texture calls require the main
 thread. Render targets retain separate SDL viewport, clipping, scaling, and presentation state.
-Streaming texture creation, pixel updates, and texture blend controls are not yet exposed.
+Streaming texture creation and pixel updates are not yet exposed.
 
 A surface stores image pixels in CPU memory. `loadBMP path` returns an owned `Surface` or a copied
 SDL error.  `createTextureFromSurface renderer surface` copies those pixels into a `Texture
@@ -103,6 +103,35 @@ an `FRect` in texture pixel coordinates. The `destination` is a `Maybe FRect` in
 target's rendering coordinates.  Pass `Nothing` as the destination to fill the current target.  This
 supports sprite sheets, images that contain several smaller images, without copying each sprite into
 a new texture.
+
+Color modulation multiplies each source color channel during drawing.  `setTextureColorMod texture r
+g b` uses byte values, with 255 preserving a channel and zero removing it.  `setTextureAlphaMod
+texture alpha` multiplies source alpha, which controls opacity, by `alpha / 255`.  These controls do
+not change the stored texture pixels. An alpha value of 255 preserves the original alpha, rather
+than forcing opacity.
+
+Blending combines source texture pixels with destination pixels. Use `setTextureBlendMode texture
+mode` with one of these modes:
+
+- `NoBlend` copies source color and alpha.
+- `AlphaBlend` combines colors using source alpha.
+- `PremultipliedAlphaBlend` uses source colors already multiplied by their alpha.
+- `AdditiveBlend` adds source colors, scaled by source alpha, to destination colors.
+- `PremultipliedAdditiveBlend` adds source colors without scaling them again.
+- `ModulateBlend` multiplies source and destination colors.
+- `MultiplyBlend` also preserves destination color based on source transparency.
+
+With `AlphaBlend`, alpha modulation of zero makes the texture invisible.  Premultiplied modes
+require correctly prepared pixels. The binding does not convert their color values.  When fading a
+premultiplied texture, scale RGB and alpha together.  For example, use 128 for all three color
+multipliers and for alpha to reduce both by approximately half.
+
+Filtering selects source pixels when drawing a scaled texture.  `setTextureScaleMode texture
+NearestScale` selects individual pixels, which suits pixel art.  `LinearScale` interpolates
+neighboring pixels and is SDL's default.  All four texture controls require the main thread and
+return `False` on failure.  Call `getError` immediately after failure. SDL can choose the closest
+supported blend or scale mode, so failure does not guarantee unchanged state.  Custom blend modes
+and queries for these texture settings are not yet exposed.
 
 `pollEvent` returns only event types. `pollEventData` also returns timestamps and supported event
 data.  Both return `Nothing` for an empty queue. Each call consumes one event, so use one polling
@@ -211,22 +240,24 @@ creation, drawing, and timers. Texture tests read pixels from off-screen and win
 test destination rectangles, target reset, invalid dimensions, and rejection of textures from
 another renderer. BMP tests create temporary image files and remove them after each test.  They test
 missing and invalid files, pixel colors, source rectangles, and texture use after surface
-destruction.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
-static textures used as render targets. Event tests cover keyboard data, repeat status, window
-identifiers, timestamps, and data retained after buffer reuse. Mouse tests cover fractional
-coordinates, relative motion, presses, releases, click counts, unknown buttons, and button-state
-bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer
-position, and signed 32-bit limits. Text tests cover Unicode, empty and long text, composition
-selections, string ownership, and per-window start and stop controls. Area tests compare the stored
-SDL rectangle and cursor against the Idris values.  They also test area reset and composition
-cancellation without disabling text input.  The test-only native library inserts known events into
-SDL's queue. It is not part of the binding library.  The example builds in the test environment, but
-interactive display behavior needs a manual test.
+destruction. Pixel tests cover all exposed blend modes, color and alpha modulation, and nearest and
+linear filtering.  Tests allow small rounding differences for fractional blending and interpolation.
+Compile-time tests reject mixed handle types, mixed flag types, forged handles, and static textures
+used as render targets. Event tests cover keyboard data, repeat status, window identifiers,
+timestamps, and data retained after buffer reuse. Mouse tests cover fractional coordinates, relative
+motion, presses, releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover
+normal, flipped, and unknown directions, fractional values, pointer position, and signed 32-bit
+limits. Text tests cover Unicode, empty and long text, composition selections, string ownership, and
+per-window start and stop controls. Area tests compare the stored SDL rectangle and cursor against
+the Idris values.  They also test area reset and composition cancellation without disabling text
+input.  The test-only native library inserts known events into SDL's queue. It is not part of the
+binding library.  The example builds in the test environment, but interactive display behavior needs
+a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes streaming texture updates, texture blend controls, audio streams, and scoped
-resource ownership.  Keep each addition close to SDL's API and test its failure paths.  Measure call
-overhead and allocations before adding performance claims or a larger abstraction layer.
+Next work includes streaming texture updates, audio streams, and scoped resource ownership.  Keep
+each addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
+before adding performance claims or a larger abstraction layer.

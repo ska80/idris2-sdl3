@@ -70,6 +70,14 @@ failing "Name SDL3.MkSurface is private"
   forgeSurface : AnyPtr -> Surface
   forgeSurface = MkSurface
 
+failing "Mismatch between"
+  wrongScaleMode : Texture StaticAccess -> IO Bool
+  wrongScaleMode texture = setTextureScaleMode texture AlphaBlend
+
+failing "Mismatch between"
+  wrongBlendHandle : Renderer -> IO Bool
+  wrongBlendHandle renderer = setTextureBlendMode renderer AlphaBlend
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

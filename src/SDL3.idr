@@ -21,6 +21,28 @@ data Surface = MkSurface AnyPtr
 public export
 data TextureAccess = StaticAccess | StreamingAccess | TargetAccess
 
+||| How source texture pixels combine with destination pixels.
+public export
+data BlendMode = NoBlend | AlphaBlend | PremultipliedAlphaBlend
+               | AdditiveBlend | PremultipliedAdditiveBlend | ModulateBlend | MultiplyBlend
+
+blendBits : BlendMode -> Bits32
+blendBits NoBlend = 0
+blendBits AlphaBlend = 1
+blendBits PremultipliedAlphaBlend = 0x10
+blendBits AdditiveBlend = 2
+blendBits PremultipliedAdditiveBlend = 0x20
+blendBits ModulateBlend = 4
+blendBits MultiplyBlend = 8
+
+||| Nearest selects a source pixel. Linear interpolates neighboring pixels.
+public export
+data ScaleMode = NearestScale | LinearScale
+
+scaleValue : ScaleMode -> Int
+scaleValue NearestScale = 0
+scaleValue LinearScale = 1
+
 ||| Owned texture. Its creating renderer must remain alive.
 ||| The access parameter prevents non-target textures from becoming render targets.
 export
@@ -136,6 +158,34 @@ createTargetTexture (MkRenderer ptr) width height =
 export
 destroyTexture : Texture access -> IO ()
 destroyTexture (MkTexture ptr) = primIO (prim__destroyTexture ptr)
+
+||| Multiply source RGB channels by r/255, g/255, and b/255 when drawing.
+||| 255 preserves a channel. Call on the main thread. Returns False on failure.
+export
+setTextureColorMod : Texture access -> Bits8 -> Bits8 -> Bits8 -> IO Bool
+setTextureColorMod (MkTexture ptr) r g b =
+  (/= 0) <$> primIO (prim__setTextureColorMod ptr r g b)
+
+||| Multiply source alpha by alpha/255 when drawing. Does not change stored pixels.
+||| Call on the main thread. Returns False on failure.
+export
+setTextureAlphaMod : Texture access -> Bits8 -> IO Bool
+setTextureAlphaMod (MkTexture ptr) alpha =
+  (/= 0) <$> primIO (prim__setTextureAlphaMod ptr alpha)
+
+||| Select texture blending on the main thread. Returns False on failure.
+||| SDL can select the closest supported mode when the requested mode fails.
+export
+setTextureBlendMode : Texture access -> BlendMode -> IO Bool
+setTextureBlendMode (MkTexture ptr) mode =
+  (/= 0) <$> primIO (prim__setTextureBlendMode ptr (blendBits mode))
+
+||| Select texture filtering on the main thread. Returns False on failure.
+||| SDL can select the closest supported mode. SDL's default is linear filtering.
+export
+setTextureScaleMode : Texture access -> ScaleMode -> IO Bool
+setTextureScaleMode (MkTexture ptr) mode =
+  (/= 0) <$> primIO (prim__setTextureScaleMode ptr (scaleValue mode))
 
 ||| Select an off-screen target. Nothing restores drawing to the window.
 ||| The texture must belong to this renderer. Call on the main thread.

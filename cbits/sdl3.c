@@ -8,6 +8,12 @@ _Static_assert(SDL_MOUSEWHEEL_NORMAL == 0 && SDL_MOUSEWHEEL_FLIPPED == 1, "Updat
 
 _Static_assert(SDLK_ESCAPE == 27, "Update SDL3.Events.escapeKey");
 
+_Static_assert(SDL_BLENDMODE_NONE == 0 && SDL_BLENDMODE_BLEND == 1 && SDL_BLENDMODE_BLEND_PREMULTIPLIED == 0x10 && SDL_BLENDMODE_ADD == 2 &&
+                   SDL_BLENDMODE_ADD_PREMULTIPLIED == 0x20 && SDL_BLENDMODE_MOD == 4 && SDL_BLENDMODE_MUL == 8,
+               "Update SDL3 blend mode constants");
+
+_Static_assert(SDL_SCALEMODE_NEAREST == 0 && SDL_SCALEMODE_LINEAR == 1, "Update SDL3 scale mode constants");
+
 _Static_assert(SDL_BUTTON_LEFT == 1 && SDL_BUTTON_MIDDLE == 2 && SDL_BUTTON_RIGHT == 3 && SDL_BUTTON_X1 == 4 && SDL_BUTTON_X2 == 5,
                "Update SDL3.Events mouse button constants");
 
@@ -37,6 +43,22 @@ SDL_Renderer* idris_sdl_create_renderer(SDL_Window* window) {
 
 SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, int height) {
     return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, width, height);
+}
+
+int idris_sdl_set_texture_color_mod(SDL_Texture* texture, Uint8 r, Uint8 g, Uint8 b) {
+    return SDL_SetTextureColorMod(texture, r, g, b);
+}
+
+int idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Uint8 alpha) {
+    return SDL_SetTextureAlphaMod(texture, alpha);
+}
+
+int idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode) {
+    return SDL_SetTextureBlendMode(texture, mode);
+}
+
+int idris_sdl_set_texture_scale_mode(SDL_Texture* texture, int mode) {
+    return SDL_SetTextureScaleMode(texture, (SDL_ScaleMode)mode);
 }
 
 int idris_sdl_set_render_target(SDL_Renderer* renderer, SDL_Texture* texture) {

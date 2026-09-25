@@ -8,6 +8,10 @@ int main(void) {
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
     assert(idris_sdl_create_target_texture(NULL, 16, 16) == NULL);
+    assert(idris_sdl_set_texture_color_mod(NULL, 255, 255, 255) == 0);
+    assert(idris_sdl_set_texture_alpha_mod(NULL, 255) == 0);
+    assert(idris_sdl_set_texture_blend_mode(NULL, SDL_BLENDMODE_BLEND) == 0);
+    assert(idris_sdl_set_texture_scale_mode(NULL, SDL_SCALEMODE_NEAREST) == 0);
     assert(idris_sdl_reset_render_target(NULL) == 0);
     assert(idris_sdl_set_render_target(NULL, NULL) == 0);
     assert(idris_sdl_render_texture(NULL, NULL) == 0);

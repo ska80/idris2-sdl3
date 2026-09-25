@@ -2,6 +2,8 @@
 
 #include <SDL3/SDL.h>
 
+int idris_test_pixel_near(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 tolerance);
+
 char* idris_test_make_bmp(void);
 int   idris_test_queue_event(int kind);
 int   idris_test_pixel(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a);

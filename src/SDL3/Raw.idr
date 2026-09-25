@@ -59,6 +59,22 @@ prim__createTargetTexture : AnyPtr -> Int -> Int -> PrimIO AnyPtr
 export
 prim__destroyTexture : AnyPtr -> PrimIO ()
 
+%foreign "C:idris_sdl_set_texture_color_mod, libidris2_sdl3, sdl3.h"
+export
+prim__setTextureColorMod : AnyPtr -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int
+
+%foreign "C:idris_sdl_set_texture_alpha_mod, libidris2_sdl3, sdl3.h"
+export
+prim__setTextureAlphaMod : AnyPtr -> Bits8 -> PrimIO Int
+
+%foreign "C:idris_sdl_set_texture_blend_mode, libidris2_sdl3, sdl3.h"
+export
+prim__setTextureBlendMode : AnyPtr -> Bits32 -> PrimIO Int
+
+%foreign "C:idris_sdl_set_texture_scale_mode, libidris2_sdl3, sdl3.h"
+export
+prim__setTextureScaleMode : AnyPtr -> Int -> PrimIO Int
+
 %foreign "C:idris_sdl_set_render_target, libidris2_sdl3, sdl3.h"
 export
 prim__setRenderTarget : AnyPtr -> AnyPtr -> PrimIO Int
