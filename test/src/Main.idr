@@ -22,15 +22,31 @@ render renderer = do
   end <- ticks
   require "Timer moved backward" (end >= start)
 
+%foreign "C:idris_test_text_input_area, libidris2_sdl3_test, fixtures.h"
+prim__textInputAreaMatches : Bits32 -> Int32 -> Int32 -> Int32 -> Int32 -> Int32 -> PrimIO Int
+
 textInputControls : Window -> IO (Either String ())
 textInputControls window = do
   False <- textInputActive window | True => pure (Left "Text input was active by default")
+  Right (MkWindowID identifier) <- getWindowID window | Left err => pure (Left err)
+  True <- setTextInputArea window (Just (MkTextInputArea (-10) 12 48 16 7))
+    | False => Left <$> getError
+  areaOK <- (== 1) <$> primIO (prim__textInputAreaMatches identifier (-10) 12 48 16 7)
   True <- startTextInput window | False => Left <$> getError
   active <- textInputActive window
-  -- Stop even if the state query did not return the expected result.
+  moved <- setTextInputArea window (Just (MkTextInputArea 14 (-8) 50 18 11))
+  movedOK <- (== 1) <$> primIO (prim__textInputAreaMatches identifier 14 (-8) 50 18 11)
+  cleared <- clearComposition window
+  stillActive <- textInputActive window
+  reset <- setTextInputArea window Nothing
+  resetOK <- (== 1) <$> primIO (prim__textInputAreaMatches identifier 0 0 0 0 0)
+  activeAfterReset <- textInputActive window
+  -- Stop even if an earlier query or control did not return the expected result.
   True <- stopTextInput window | False => Left <$> getError
   inactive <- not <$> textInputActive window
-  require "Text input controls did not change the window state" (active && inactive)
+  require "Text input controls or area values were incorrect"
+          (areaOK && active && moved && movedOK && cleared && stillActive &&
+           reset && resetOK && activeAfterReset && inactive)
 
 resources : Window -> IO (Either String ())
 resources window = do

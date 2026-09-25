@@ -79,6 +79,16 @@ Text input is disabled by default. Call `startTextInput window` when a text fiel
 main thread. `textInputActive window` reports the window's current text input state.  A `False`
 result from that query means inactive, not failure.
 
+`setTextInputArea window (Just area)` supplies the text field bounds and cursor position to SDL.
+Construct `area` with `MkTextInputArea x y width height cursorOffset`, using signed 32-bit window coordinates.
+The cursor offset is relative to `x`, not a character or byte index.
+Update the area when the field or cursor moves. The platform decides how to position the native input method window.
+Use `setTextInputArea window Nothing` to clear the area.
+
+`clearComposition window` dismisses native composition without disabling text input.
+Clear the application's composition display separately. Call both area controls and composition cancellation on the main thread.
+These calls return `False` on failure. Call `getError` immediately for details.
+
 `TextInputEvent` contains committed text and its window identifier. Use this event for character
 input instead of converting key codes.  An input method editor (IME) lets users compose characters.
 `TextEditingEvent` contains unfinished composition text, its window identifier, and the selection
@@ -89,8 +99,7 @@ text.
 The binding copies SDL's UTF-8 text into an Idris `String` before the next poll.  These strings
 remain valid after buffer reuse or destruction. `pollEvent` still returns only event types and does
 not copy text.  Starting text input can show a screen keyboard or activate an IME, which can consume
-key events.  Candidate lists, text input properties, and composition window positioning are not yet
-bound.
+key events. Candidate lists, text input properties, and querying the current text input area are not yet bound.
 
 `MouseMotionEvent` contains window and mouse identifiers, held button states, position, and relative
 motion.  `MouseButtonEvent` contains window and mouse identifiers, the button, press or release
@@ -125,7 +134,8 @@ installed headers.  Static assertions compare the exposed flag constants with th
 
 Allocate an event buffer once and reuse it in the event loop.  The adapter performs no heap
 allocation per draw or poll call. SDL and the Idris runtime can still allocate internally.
-Rectangle values use Idris `Double` and convert to SDL `float` values on the C stack.  Text events
+Rendering rectangle values use Idris `Double` and convert to SDL `float` values on the C stack.
+Text input areas use `Int32` fields and a stack-allocated SDL rectangle, with no extra native heap allocation.  Text events
 allocate Idris strings when `pollEventData` copies their text. The C adapter does not allocate an
 additional text buffer.
 
@@ -154,7 +164,8 @@ timestamps, and data retained after buffer reuse. Mouse tests cover fractional c
 motion, presses, releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover
 normal, flipped, and unknown directions, fractional values, pointer position, and signed 32-bit
 limits. Text tests cover Unicode, empty and long text, composition selections, string ownership, and
-per-window start and stop controls.  The test-only native library inserts known events into SDL's
+per-window start and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
+They also test area reset and composition cancellation without disabling text input.  The test-only native library inserts known events into SDL's
 queue. It is not part of the binding library.  The example builds in the test environment, but
 interactive display behavior needs a manual test.
 
@@ -162,6 +173,6 @@ With the current RefC version, use equality tests for wide numeric values instea
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes text input positioning, textures, audio streams, and scoped resource ownership.
+Next work includes textures, audio streams, and scoped resource ownership.
 Keep each addition close to SDL's API and test its failure paths.  Measure call overhead and
 allocations before adding performance claims or a larger abstraction layer.

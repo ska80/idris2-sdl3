@@ -20,6 +20,9 @@ IDRIS_SDL3 int           idris_sdl_fill_rect(SDL_Renderer* renderer, double x, d
 IDRIS_SDL3 int idris_sdl_start_text_input(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_stop_text_input(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_text_input_active(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_set_text_input_area(SDL_Window* window, Sint32 x, Sint32 y, Sint32 w, Sint32 h, Sint32 cursor);
+IDRIS_SDL3 int idris_sdl_clear_text_input_area(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_clear_composition(SDL_Window* window);
 
 IDRIS_SDL3 SDL_Event* idris_sdl_event_new(void);
 IDRIS_SDL3 void       idris_sdl_event_free(SDL_Event* event);

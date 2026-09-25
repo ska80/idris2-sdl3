@@ -42,6 +42,14 @@ failing "Mismatch between"
   wrongTextData : TextEditingData -> TextInputData
   wrongTextData composition = composition
 
+failing "Mismatch between"
+  wrongTextArea : Window -> TextEditingData -> IO Bool
+  wrongTextArea window composition = setTextInputArea window (Just composition)
+
+failing "Mismatch between"
+  wrongCompositionWindow : Renderer -> IO Bool
+  wrongCompositionWindow renderer = clearComposition renderer
+
 failing "Name SDL3.MkWindow is private"
   forgeWindow : AnyPtr -> Window
   forgeWindow = MkWindow

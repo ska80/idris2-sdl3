@@ -64,6 +64,19 @@ int idris_sdl_text_input_active(SDL_Window* window) {
     return SDL_TextInputActive(window);
 }
 
+int idris_sdl_set_text_input_area(SDL_Window* window, Sint32 x, Sint32 y, Sint32 w, Sint32 h, Sint32 cursor) {
+    const SDL_Rect rect = {x, y, w, h};
+    return SDL_SetTextInputArea(window, &rect, cursor);
+}
+
+int idris_sdl_clear_text_input_area(SDL_Window* window) {
+    return SDL_SetTextInputArea(window, NULL, 0);
+}
+
+int idris_sdl_clear_composition(SDL_Window* window) {
+    return SDL_ClearComposition(window);
+}
+
 SDL_Event* idris_sdl_event_new(void) {
     SDL_Event* event = SDL_calloc(1, sizeof(SDL_Event));
     if (!event) SDL_SetError("Cannot allocate SDL event buffer");

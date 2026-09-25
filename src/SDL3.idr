@@ -101,6 +101,33 @@ export
 fillRect : Renderer -> Double -> Double -> Double -> Double -> IO Bool
 fillRect (MkRenderer ptr) x y w h = (/= 0) <$> primIO (prim__fillRect ptr x y w h)
 
+||| Text field bounds in window coordinates. The cursor offset is relative to x.
+||| The cursor offset is a coordinate, not a character or byte index.
+public export
+record TextInputArea where
+  constructor MkTextInputArea
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  cursorOffset : Int32
+
+||| Set the area and cursor used to position native input method windows.
+||| Nothing clears the area. Call on the main thread. Returns False on failure.
+||| The C adapter uses a stack rectangle and does not retain this value.
+export
+setTextInputArea : Window -> Maybe TextInputArea -> IO Bool
+setTextInputArea (MkWindow ptr) Nothing =
+  (/= 0) <$> primIO (prim__clearTextInputArea ptr)
+setTextInputArea (MkWindow ptr) (Just (MkTextInputArea x y width height cursor)) =
+  (/= 0) <$> primIO (prim__setTextInputArea ptr x y width height cursor)
+
+||| Dismiss native composition without disabling text input. Call on the main thread.
+||| Returns False on failure. Clear the application's composition display separately.
+export
+clearComposition : Window -> IO Bool
+clearComposition (MkWindow ptr) = (/= 0) <$> primIO (prim__clearComposition ptr)
+
 ||| Enable text input for a live window on the main thread. Disabled by default.
 ||| This can show a screen keyboard. Pair with stopTextInput.
 export

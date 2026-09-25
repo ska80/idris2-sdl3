@@ -67,6 +67,18 @@ prim__stopTextInput : AnyPtr -> PrimIO Int
 export
 prim__textInputActive : AnyPtr -> PrimIO Int
 
+%foreign "C:idris_sdl_set_text_input_area, libidris2_sdl3, sdl3.h"
+export
+prim__setTextInputArea : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_clear_text_input_area, libidris2_sdl3, sdl3.h"
+export
+prim__clearTextInputArea : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_clear_composition, libidris2_sdl3, sdl3.h"
+export
+prim__clearComposition : AnyPtr -> PrimIO Int
+
 %foreign "C:idris_sdl_event_new, libidris2_sdl3, sdl3.h"
 export
 prim__eventNew : PrimIO AnyPtr

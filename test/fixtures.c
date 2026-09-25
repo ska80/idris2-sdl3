@@ -1,6 +1,14 @@
 #include "fixtures.h"
 #include <SDL3/SDL.h>
 
+int idris_test_text_input_area(Uint32 window_id, Sint32 x, Sint32 y, Sint32 w, Sint32 h, Sint32 cursor) {
+    SDL_Rect    area;
+    int         actual_cursor;
+    SDL_Window* window = SDL_GetWindowFromID(window_id);
+    if (!window || !SDL_GetTextInputArea(window, &area, &actual_cursor)) return 0;
+    return area.x == x && area.y == y && area.w == w && area.h == h && actual_cursor == cursor;
+}
+
 /* Test-only events. Keep these symbols out of the binding library. */
 int idris_test_queue_event(int kind) {
     static char text[256];

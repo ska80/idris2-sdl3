@@ -11,6 +11,9 @@ int main(void) {
     assert(idris_sdl_start_text_input(NULL) == 0);
     assert(idris_sdl_stop_text_input(NULL) == 0);
     assert(idris_sdl_text_input_active(NULL) == 0);
+    assert(idris_sdl_set_text_input_area(NULL, 0, 0, 40, 20, 5) == 0);
+    assert(idris_sdl_clear_text_input_area(NULL) == 0);
+    assert(idris_sdl_clear_composition(NULL) == 0);
 
     SDL_Event empty_text = {0};
     empty_text.type      = SDL_EVENT_TEXT_INPUT;
