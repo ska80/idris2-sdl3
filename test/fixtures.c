@@ -3,8 +3,11 @@
 
 /* Test-only events. Keep these symbols out of the binding library. */
 int idris_test_queue_event(int kind) {
-    SDL_Event event = {0};
+    static char text[256];
+    SDL_Event   event = {0};
     SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+    /* Invalidate text from the previous fixture to test Idris string ownership. */
+    text[0] = '\0';
 
     event.common.timestamp = SDL_UINT64_C(0x100000002);
 
@@ -75,6 +78,29 @@ int idris_test_queue_event(int kind) {
         event.wheel.mouse_y   = 99.25f;
         event.wheel.integer_x = kind == 12 ? SDL_MIN_SINT32 : kind == 11 ? 2 : -2;
         event.wheel.integer_y = kind == 12 ? SDL_MAX_SINT32 : kind == 11 ? -3 : 3;
+        break;
+
+    case 13:
+    case 15:
+    case 17:
+        event.type          = SDL_EVENT_TEXT_INPUT;
+        event.text.windowID = 0x80000001u;
+        if (kind == 13) SDL_strlcpy(text, "héllo 世界 🎮", sizeof(text));
+        if (kind == 17) {
+            SDL_memset(text, 'x', 200);
+            text[200] = '\0';
+        }
+        event.text.text = text;
+        break;
+
+    case 14:
+    case 16:
+        event.type          = SDL_EVENT_TEXT_EDITING;
+        event.edit.windowID = 0x80000001u;
+        if (kind == 14) SDL_strlcpy(text, "にほん", sizeof(text));
+        event.edit.text   = text;
+        event.edit.start  = kind == 14 ? 1 : -1;
+        event.edit.length = kind == 14 ? 2 : -1;
         break;
 
     default:

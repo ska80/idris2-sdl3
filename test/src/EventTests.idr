@@ -1,6 +1,7 @@
 module EventTests
 
 import SDL3
+import Data.List
 
 %default covering
 
@@ -11,6 +12,40 @@ fixture : EventBuffer -> Int -> IO (Maybe Event)
 fixture buffer kind = do
   1 <- primIO (prim__queueEvent kind) | _ => pure Nothing
   pollEventData buffer
+
+textTests : EventBuffer -> IO (Either String ())
+textTests buffer = do
+  Just (TextInputEvent inputTime committed) <- fixture buffer 13
+    | _ => pure (Left "Text input was not decoded")
+  Just (TextEditingEvent editTime composing) <- fixture buffer 14
+    | _ => pure (Left "Text composition was not decoded")
+  Just (TextInputEvent emptyTime (MkTextInputData emptyWindow "")) <- fixture buffer 15
+    | _ => pure (Left "Empty text input was not preserved")
+  Just (TextEditingEvent clearedTime (MkTextEditingData clearedWindow "" start length)) <- fixture buffer 16
+    | _ => pure (Left "Empty composition was not preserved")
+  Just (TextInputEvent longTime (MkTextInputData longWindow longText)) <- fixture buffer 17
+    | _ => pure (Left "Long text input was not decoded")
+  -- Subsequent fixtures overwrite both the event buffer and the native text storage.
+  let MkTextInputData inputWindow "héllo 世界 🎮" = committed
+    | _ => pure (Left "Committed Unicode text changed after buffer reuse")
+  let MkTextEditingData editWindow "にほん" 1 2 = composing
+    | _ => pure (Left "Composition text or selection changed after buffer reuse")
+  let valuesOK = all (== 0x100000002) [inputTime, editTime, emptyTime, clearedTime, longTime] &&
+                 all (== MkWindowID 0x80000001) [inputWindow, editWindow, emptyWindow, clearedWindow, longWindow] &&
+                 start == -1 && length == -1 && longText == pack (replicate 200 'x')
+  if not valuesOK then pure (Left "Text event data was incorrect") else do
+    1 <- primIO (prim__queueEvent 13) | _ => pure (Left "Cannot queue text input")
+    Just TextInput <- pollEvent buffer | _ => pure (Left "Text input type was incorrect")
+    1 <- primIO (prim__queueEvent 14) | _ => pure (Left "Cannot queue text composition")
+    Just TextEditing <- pollEvent buffer | _ => pure (Left "Text composition type was incorrect")
+    Nothing <- pollEventData buffer | _ => pure (Left "Text event queue was not empty")
+    Right temporary <- newEventBuffer | Left err => pure (Left err)
+    snapshot <- fixture temporary 13
+    freeEventBuffer temporary
+    _ <- fixture buffer 15
+    case snapshot of
+      Just (TextInputEvent _ (MkTextInputData _ "héllo 世界 🎮")) => pure (Right ())
+      _ => pure (Left "Text did not survive event buffer destruction")
 
 wheelTests : EventBuffer -> IO (Either String ())
 wheelTests buffer = do
@@ -38,7 +73,7 @@ wheelTests buffer = do
     1 <- primIO (prim__queueEvent 10) | _ => pure (Left "Cannot queue wheel event")
     Just MouseWheel <- pollEvent buffer | _ => pure (Left "Wheel event type was incorrect")
     Nothing <- pollEventData buffer | _ => pure (Left "Wheel event queue was not empty")
-    pure (Right ())
+    textTests buffer
 
 mouseTests : EventBuffer -> IO (Either String ())
 mouseTests buffer = do

@@ -52,6 +52,18 @@ int idris_sdl_fill_rect(SDL_Renderer* r, double x, double y, double w, double h)
     return SDL_RenderFillRect(r, &rect);
 }
 
+int idris_sdl_start_text_input(SDL_Window* window) {
+    return SDL_StartTextInput(window);
+}
+
+int idris_sdl_stop_text_input(SDL_Window* window) {
+    return SDL_StopTextInput(window);
+}
+
+int idris_sdl_text_input_active(SDL_Window* window) {
+    return SDL_TextInputActive(window);
+}
+
 SDL_Event* idris_sdl_event_new(void) {
     SDL_Event* event = SDL_calloc(1, sizeof(SDL_Event));
     if (!event) SDL_SetError("Cannot allocate SDL event buffer");
@@ -78,6 +90,10 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
     switch (event->type) {
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
         return event->window.windowID;
+    case SDL_EVENT_TEXT_INPUT:
+        return event->text.windowID;
+    case SDL_EVENT_TEXT_EDITING:
+        return event->edit.windowID;
     case SDL_EVENT_MOUSE_MOTION:
         return event->motion.windowID;
     case SDL_EVENT_MOUSE_WHEEL:
@@ -161,6 +177,20 @@ Sint32 idris_sdl_event_wheel_integer_y(const SDL_Event* event) {
     return event->wheel.integer_y;
 }
 
+/* Borrowed until the next poll. Idris copies this string and never writes to it. */
+char* idris_sdl_event_text(const SDL_Event* event) {
+    const char* text = event->type == SDL_EVENT_TEXT_INPUT ? event->text.text : event->edit.text;
+    return (char*)(text ? text : "");
+}
+
+Sint32 idris_sdl_event_edit_start(const SDL_Event* event) {
+    return event->edit.start;
+}
+
+Sint32 idris_sdl_event_edit_length(const SDL_Event* event) {
+    return event->edit.length;
+}
+
 int idris_sdl_event_kind(const SDL_Event* event) {
     switch (event->type) {
     case SDL_EVENT_QUIT:
@@ -179,6 +209,10 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 7;
     case SDL_EVENT_MOUSE_WHEEL:
         return 8;
+    case SDL_EVENT_TEXT_INPUT:
+        return 9;
+    case SDL_EVENT_TEXT_EDITING:
+        return 10;
     default:
         return 0;
     }

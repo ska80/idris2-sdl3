@@ -17,6 +17,10 @@ IDRIS_SDL3 int           idris_sdl_clear(SDL_Renderer* renderer);
 IDRIS_SDL3 int           idris_sdl_present(SDL_Renderer* renderer);
 IDRIS_SDL3 int           idris_sdl_fill_rect(SDL_Renderer* renderer, double x, double y, double w, double h);
 
+IDRIS_SDL3 int idris_sdl_start_text_input(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_stop_text_input(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_text_input_active(SDL_Window* window);
+
 IDRIS_SDL3 SDL_Event* idris_sdl_event_new(void);
 IDRIS_SDL3 void       idris_sdl_event_free(SDL_Event* event);
 IDRIS_SDL3 int        idris_sdl_poll(SDL_Event* event);
@@ -24,7 +28,7 @@ IDRIS_SDL3 Uint32     idris_sdl_event_type(const SDL_Event* event);
 IDRIS_SDL3 int        idris_sdl_event_kind(const SDL_Event* event);
 IDRIS_SDL3 Uint64     idris_sdl_event_timestamp(const SDL_Event* event);
 
-/* Window access requires a close, keyboard, mouse motion, mouse button, or mouse wheel event.
+/* Window access requires a close, keyboard, text input, text editing, or supported mouse event.
  * Key access requires a keyboard event. */
 IDRIS_SDL3 Uint32 idris_sdl_event_window(const SDL_Event* event);
 IDRIS_SDL3 Uint32 idris_sdl_event_scancode(const SDL_Event* event);
@@ -52,3 +56,9 @@ IDRIS_SDL3 double idris_sdl_event_wheel_y(const SDL_Event* event);
 IDRIS_SDL3 Uint32 idris_sdl_event_wheel_direction(const SDL_Event* event);
 IDRIS_SDL3 Sint32 idris_sdl_event_wheel_integer_x(const SDL_Event* event);
 IDRIS_SDL3 Sint32 idris_sdl_event_wheel_integer_y(const SDL_Event* event);
+
+/* Requires a text input or text editing event. Returns borrowed, read-only text. */
+IDRIS_SDL3 char*  idris_sdl_event_text(const SDL_Event* event);
+/* Requires a text editing event. */
+IDRIS_SDL3 Sint32 idris_sdl_event_edit_start(const SDL_Event* event);
+IDRIS_SDL3 Sint32 idris_sdl_event_edit_length(const SDL_Event* event);

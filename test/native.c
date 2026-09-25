@@ -8,6 +8,15 @@ int main(void) {
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
     assert(idris_sdl_get_error()[0] != '\0');
+    assert(idris_sdl_start_text_input(NULL) == 0);
+    assert(idris_sdl_stop_text_input(NULL) == 0);
+    assert(idris_sdl_text_input_active(NULL) == 0);
+
+    SDL_Event empty_text = {0};
+    empty_text.type      = SDL_EVENT_TEXT_INPUT;
+    assert(idris_sdl_event_text(&empty_text)[0] == '\0');
+    empty_text.type = SDL_EVENT_TEXT_EDITING;
+    assert(idris_sdl_event_text(&empty_text)[0] == '\0');
 
     SDL_Event* buffer = idris_sdl_event_new();
 

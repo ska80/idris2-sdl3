@@ -139,6 +139,23 @@ record MouseWheelData where
   integerX : Int32
   integerY : Int32
 
+||| Committed Unicode text. The Idris string owns a copy of SDL's UTF-8 text.
+public export
+record TextInputData where
+  constructor MkTextInputData
+  windowID : WindowID
+  text : String
+
+||| Composition text, not yet committed. Selection positions count characters.
+||| SDL uses -1 for an unset selection start or length. Empty text clears composition.
+public export
+record TextEditingData where
+  constructor MkTextEditingData
+  windowID : WindowID
+  text : String
+  start : Int32
+  length : Int32
+
 ||| Event data copied from the reusable buffer. Timestamps use nanoseconds.
 ||| Other types retain their numeric type and timestamp, but not their payload.
 public export
@@ -148,4 +165,6 @@ data Event = QuitEvent Bits64
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData
            | MouseWheelEvent Bits64 MouseWheelData
+           | TextInputEvent Bits64 TextInputData
+           | TextEditingEvent Bits64 TextEditingData
            | UnknownEvent Bits64 Bits32

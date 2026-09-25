@@ -55,6 +55,18 @@ prim__present : AnyPtr -> PrimIO Int
 export
 prim__fillRect : AnyPtr -> Double -> Double -> Double -> Double -> PrimIO Int
 
+%foreign "C:idris_sdl_start_text_input, libidris2_sdl3, sdl3.h"
+export
+prim__startTextInput : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_stop_text_input, libidris2_sdl3, sdl3.h"
+export
+prim__stopTextInput : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_text_input_active, libidris2_sdl3, sdl3.h"
+export
+prim__textInputActive : AnyPtr -> PrimIO Int
+
 %foreign "C:idris_sdl_event_new, libidris2_sdl3, sdl3.h"
 export
 prim__eventNew : PrimIO AnyPtr
@@ -79,7 +91,7 @@ prim__eventType : AnyPtr -> PrimIO Bits32
 export
 prim__eventTimestamp : AnyPtr -> PrimIO Bits64
 
-||| Requires a window-close, keyboard, mouse motion, mouse button, or mouse wheel event.
+||| Requires a window-close, keyboard, text input, text editing, or supported mouse event.
 %foreign "C:idris_sdl_event_window, libidris2_sdl3, sdl3.h"
 export
 prim__eventWindow : AnyPtr -> PrimIO Bits32
@@ -168,6 +180,21 @@ prim__eventWheelIntegerX : AnyPtr -> PrimIO Int32
 %foreign "C:idris_sdl_event_wheel_integer_y, libidris2_sdl3, sdl3.h"
 export
 prim__eventWheelIntegerY : AnyPtr -> PrimIO Int32
+
+||| Requires a text input or text editing event. Copies the UTF-8 text into Idris.
+%foreign "C:idris_sdl_event_text, libidris2_sdl3, sdl3.h"
+export
+prim__eventText : AnyPtr -> PrimIO String
+
+||| Requires a text editing event.
+%foreign "C:idris_sdl_event_edit_start, libidris2_sdl3, sdl3.h"
+export
+prim__eventEditStart : AnyPtr -> PrimIO Int32
+
+||| Requires a text editing event.
+%foreign "C:idris_sdl_event_edit_length, libidris2_sdl3, sdl3.h"
+export
+prim__eventEditLength : AnyPtr -> PrimIO Int32
 
 %foreign "C:SDL_GetTicks, libSDL3, SDL3/SDL.h"
 export

@@ -34,6 +34,14 @@ failing "Mismatch between"
   wrongWheelDirection : MouseAction -> WheelDirection
   wrongWheelDirection action = action
 
+failing "Mismatch between"
+  wrongTextWindow : Renderer -> IO Bool
+  wrongTextWindow renderer = startTextInput renderer
+
+failing "Mismatch between"
+  wrongTextData : TextEditingData -> TextInputData
+  wrongTextData composition = composition
+
 failing "Name SDL3.MkWindow is private"
   forgeWindow : AnyPtr -> Window
   forgeWindow = MkWindow

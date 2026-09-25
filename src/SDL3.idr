@@ -27,6 +27,8 @@ data EventType = QuitRequested
                | MouseButtonDown
                | MouseButtonUp
                | MouseWheel
+               | TextInput
+               | TextEditing
                | OtherEvent Bits32
 
 ||| Copy the current thread's SDL error. Read only after a failed call.
@@ -99,6 +101,22 @@ export
 fillRect : Renderer -> Double -> Double -> Double -> Double -> IO Bool
 fillRect (MkRenderer ptr) x y w h = (/= 0) <$> primIO (prim__fillRect ptr x y w h)
 
+||| Enable text input for a live window on the main thread. Disabled by default.
+||| This can show a screen keyboard. Pair with stopTextInput.
+export
+startTextInput : Window -> IO Bool
+startTextInput (MkWindow ptr) = (/= 0) <$> primIO (prim__startTextInput ptr)
+
+||| Disable text input on the main thread. Returns False on failure.
+export
+stopTextInput : Window -> IO Bool
+stopTextInput (MkWindow ptr) = (/= 0) <$> primIO (prim__stopTextInput ptr)
+
+||| Query a live window on the main thread. False means input is inactive.
+export
+textInputActive : Window -> IO Bool
+textInputActive (MkWindow ptr) = (/= 0) <$> primIO (prim__textInputActive ptr)
+
 export
 newEventBuffer : IO (Either String EventBuffer)
 newEventBuffer = owned MkEventBuffer prim__eventNew
@@ -124,6 +142,8 @@ pollEvent (MkEventBuffer ptr) = do
       6 => pure MouseButtonDown
       7 => pure MouseButtonUp
       8 => pure MouseWheel
+      9 => pure TextInput
+      10 => pure TextEditing
       _ => OtherEvent <$> primIO (prim__eventType ptr)
     pure (Just event)
 
@@ -174,6 +194,20 @@ mouseWheelData ptr = do
   integerY <- primIO (prim__eventWheelIntegerY ptr)
   pure (MkMouseWheelData window mouse x y direction mouseX mouseY integerX integerY)
 
+textInputData : AnyPtr -> IO TextInputData
+textInputData ptr = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  text <- primIO (prim__eventText ptr)
+  pure (MkTextInputData window text)
+
+textEditingData : AnyPtr -> IO TextEditingData
+textEditingData ptr = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  text <- primIO (prim__eventText ptr)
+  start <- primIO (prim__eventEditStart ptr)
+  length <- primIO (prim__eventEditLength ptr)
+  pure (MkTextEditingData window text start length)
+
 ||| Consume one event on the main thread. Nothing means the queue is empty.
 ||| Returned values remain valid after buffer reuse or destruction.
 ||| Do not call pollEvent first: each poll consumes a separate event.
@@ -195,6 +229,8 @@ pollEventData (MkEventBuffer ptr) = do
       6 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonPressed
       7 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonReleased
       8 => MouseWheelEvent timestamp <$> mouseWheelData ptr
+      9 => TextInputEvent timestamp <$> textInputData ptr
+      10 => TextEditingEvent timestamp <$> textEditingData ptr
       _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
     pure (Just event)
 

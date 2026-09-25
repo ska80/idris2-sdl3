@@ -1,8 +1,8 @@
 # SDL3 for Idris 2
 
 Thin bindings for games and multimedia applications. This initial version covers initialization,
-windows, basic 2D rendering, keyboard and mouse events, window-close events, and timers.  It does
-not yet bind textures, audio streams, text input, gamepads, or the GPU API.
+windows, basic 2D rendering, keyboard and mouse events, text input, window-close events, and timers.
+It does not yet bind textures, audio streams, gamepads, or the GPU API.
 
 The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the
 primary backend and the default for builds, examples, tests, and performance work.  RefC support is
@@ -56,9 +56,9 @@ Destroy each renderer before its window. Free each event buffer exactly once.  D
 resources before `quit`, and call `quit` even if initialization fails.  Do not use or destroy a
 handle after destruction. This can access freed memory.
 
-Creation calls copy the error into `Left` on failure.  Rendering and initialization return `Bool`,
-with `False` for failure.  Call `getError` immediately after failure, on the same thread, before
-another SDL call can replace the error.
+Creation calls copy the error into `Left` on failure.  Rendering, initialization, and text input
+start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
+failure, on the same thread, before another SDL call can replace the error.
 
 `pollEvent` returns only event types. `pollEventData` also returns timestamps and supported event
 data.  Both return `Nothing` for an empty queue. Each call consumes one event, so use one polling
@@ -73,6 +73,24 @@ associated window.
 layout key value, modifier bits, and repeat status.  `Scancode` represents a physical key
 position. `Keycode` represents a key value from the keyboard layout, not text input.  `escapeKey` is
 the Escape key value. `KeyModifiers` contains SDL's modifier bits, such as Shift and Ctrl.
+
+Text input is disabled by default. Call `startTextInput window` when a text field gains focus.  Call
+`stopTextInput window` when editing ends, before you destroy the window.  Both functions require the
+main thread. `textInputActive window` reports the window's current text input state.  A `False`
+result from that query means inactive, not failure.
+
+`TextInputEvent` contains committed text and its window identifier. Use this event for character
+input instead of converting key codes.  An input method editor (IME) lets users compose characters.
+`TextEditingEvent` contains unfinished composition text, its window identifier, and the selection
+start and length.  Selection positions count characters, not bytes. A value of `-1` means unset.
+Empty composition text clears the current composition. Do not append composition text to committed
+text.
+
+The binding copies SDL's UTF-8 text into an Idris `String` before the next poll.  These strings
+remain valid after buffer reuse or destruction. `pollEvent` still returns only event types and does
+not copy text.  Starting text input can show a screen keyboard or activate an IME, which can consume
+key events.  Candidate lists, text input properties, and composition window positioning are not yet
+bound.
 
 `MouseMotionEvent` contains window and mouse identifiers, held button states, position, and relative
 motion.  `MouseButtonEvent` contains window and mouse identifiers, the button, press or release
@@ -107,7 +125,9 @@ installed headers.  Static assertions compare the exposed flag constants with th
 
 Allocate an event buffer once and reuse it in the event loop.  The adapter performs no heap
 allocation per draw or poll call. SDL and the Idris runtime can still allocate internally.
-Rectangle values use Idris `Double` and convert to SDL `float` values on the C stack.
+Rectangle values use Idris `Double` and convert to SDL `float` values on the C stack.  Text events
+allocate Idris strings when `pollEventData` copies their text. The C adapter does not allocate an
+additional text buffer.
 
 No resource registry, finalizer, or automatic error-string copy runs on each successful rendering
 call.  Event polling uses multiple native calls and constructs Idris values.  There are no
@@ -133,14 +153,15 @@ forged window handles. Event tests cover keyboard data, repeat status, window id
 timestamps, and data retained after buffer reuse. Mouse tests cover fractional coordinates, relative
 motion, presses, releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover
 normal, flipped, and unknown directions, fractional values, pointer position, and signed 32-bit
-limits.  The test-only native library inserts known events into SDL's queue. It is not part of the
-binding library.  The example builds in the test environment, but interactive display behavior needs
-a manual test.
+limits. Text tests cover Unicode, empty and long text, composition selections, string ownership, and
+per-window start and stop controls.  The test-only native library inserts known events into SDL's
+queue. It is not part of the binding library.  The example builds in the test environment, but
+interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes text input, textures, audio streams, and scoped resource ownership.  Keep each
-addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
-before adding performance claims or a larger abstraction layer.
+Next work includes text input positioning, textures, audio streams, and scoped resource ownership.
+Keep each addition close to SDL's API and test its failure paths.  Measure call overhead and
+allocations before adding performance claims or a larger abstraction layer.

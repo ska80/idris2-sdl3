@@ -22,8 +22,19 @@ render renderer = do
   end <- ticks
   require "Timer moved backward" (end >= start)
 
+textInputControls : Window -> IO (Either String ())
+textInputControls window = do
+  False <- textInputActive window | True => pure (Left "Text input was active by default")
+  True <- startTextInput window | False => Left <$> getError
+  active <- textInputActive window
+  -- Stop even if the state query did not return the expected result.
+  True <- stopTextInput window | False => Left <$> getError
+  inactive <- not <$> textInputActive window
+  require "Text input controls did not change the window state" (active && inactive)
+
 resources : Window -> IO (Either String ())
 resources window = do
+  Right () <- textInputControls window | Left err => pure (Left err)
   Right (MkWindowID identifier) <- getWindowID window
     | Left err => pure (Left err)
   Right () <- require "Window identifier was zero" (identifier /= 0)
