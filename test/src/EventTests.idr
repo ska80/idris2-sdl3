@@ -12,6 +12,44 @@ fixture buffer kind = do
   1 <- primIO (prim__queueEvent kind) | _ => pure Nothing
   pollEventData buffer
 
+mouseTests : EventBuffer -> IO (Either String ())
+mouseTests buffer = do
+  Just (MouseMotionEvent motionTime motion) <- fixture buffer 6
+    | _ => pure (Left "Mouse motion was not decoded")
+  Just (MouseButtonEvent downTime down) <- fixture buffer 7
+    | _ => pure (Left "Mouse press was not decoded")
+  Just (MouseButtonEvent upTime up) <- fixture buffer 8
+    | _ => pure (Left "Mouse release was not decoded")
+  Just (MouseButtonEvent _ (MkMouseButtonData _ _ (MkMouseButton 200) ButtonPressed _ _ _)) <- fixture buffer 9
+    | _ => pure (Left "Unknown mouse button was not preserved")
+  -- All records below must survive reuse of the same native buffer.
+  let MkMouseMotionData motionWindow motionID buttons x y dx dy = motion
+  let MkMouseButtonData downWindow downID downButton ButtonPressed 2 downX downY = down
+    | _ => pure (Left "Mouse press action or click count was incorrect")
+  let MkMouseButtonData upWindow upID upButton ButtonReleased 2 upX upY = up
+    | _ => pure (Left "Mouse release action or click count was incorrect")
+  let valuesOK = all (== 0x100000002) [motionTime, downTime, upTime] &&
+                 all (== MkWindowID 0x80000001) [motionWindow, downWindow, upWindow] &&
+                 all (== MkMouseID 0xfffffffe) [motionID, downID, upID] &&
+                 downButton == rightButton && upButton == rightButton &&
+                 x == 12.5 && y == -7.25 && dx == -1.5 && dy == 2.75 &&
+                 downX == -0.5 && downY == 100.25 && upX == -0.5 && upY == 100.25
+  let buttonsOK = buttonHeld leftButton buttons && buttonHeld rightButton buttons &&
+                  not (buttonHeld middleButton buttons) &&
+                  not (buttonHeld x1Button buttons) && not (buttonHeld x2Button buttons) &&
+                  buttonHeld (MkMouseButton 32) buttons &&
+                  not (buttonHeld (MkMouseButton 0) buttons) &&
+                  not (buttonHeld (MkMouseButton 33) buttons)
+  if not (valuesOK && buttonsOK) then pure (Left "Mouse event data was incorrect") else do
+    1 <- primIO (prim__queueEvent 6) | _ => pure (Left "Cannot queue mouse motion")
+    Just MouseMotion <- pollEvent buffer | _ => pure (Left "Mouse motion type was incorrect")
+    1 <- primIO (prim__queueEvent 7) | _ => pure (Left "Cannot queue mouse press")
+    Just MouseButtonDown <- pollEvent buffer | _ => pure (Left "Mouse press type was incorrect")
+    1 <- primIO (prim__queueEvent 8) | _ => pure (Left "Cannot queue mouse release")
+    Just MouseButtonUp <- pollEvent buffer | _ => pure (Left "Mouse release type was incorrect")
+    Nothing <- pollEventData buffer | _ => pure (Left "Mouse event queue was not empty")
+    pure (Right ())
+
 export
 eventTests : EventBuffer -> IO (Either String ())
 eventTests buffer = do
@@ -45,4 +83,4 @@ eventTests buffer = do
           | _ => pure (Left "Cannot queue a test event")
         Just KeyDown <- pollEvent buffer
           | _ => pure (Left "Type-only polling changed behavior")
-        pure (Right ())
+        mouseTests buffer

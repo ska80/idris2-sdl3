@@ -22,6 +22,14 @@ failing "Mismatch between"
   wrongWindowID : WindowID -> IO ()
   wrongWindowID identifier = destroyWindow identifier
 
+failing "Mismatch between"
+  wrongMouseID : MouseID -> WindowID
+  wrongMouseID identifier = identifier
+
+failing "Mismatch between"
+  wrongMouseButton : MouseButtons -> Bool
+  wrongMouseButton buttons = buttonHeld buttons buttons
+
 failing "Name SDL3.MkWindow is private"
   forgeWindow : AnyPtr -> Window
   forgeWindow = MkWindow

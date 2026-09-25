@@ -1,8 +1,9 @@
 # SDL3 for Idris 2
 
 Thin bindings for games and multimedia applications. This initial version covers initialization,
-windows, basic 2D rendering, keyboard and window-close events, and timers.  It does not yet bind
-textures, audio streams, mouse data, text input, gamepads, or the GPU API.
+windows, basic 2D rendering, keyboard, mouse motion, mouse button, and window-close events, and
+timers.  It does not yet bind textures, audio streams, mouse wheel data, text input, gamepads, or
+the GPU API.
 
 The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the
 primary backend and the default for builds, examples, tests, and performance work.  RefC support is
@@ -73,6 +74,17 @@ layout key value, modifier bits, and repeat status.  `Scancode` represents a phy
 position. `Keycode` represents a key value from the keyboard layout, not text input.  `escapeKey` is
 the Escape key value. `KeyModifiers` contains SDL's modifier bits, such as Shift and Ctrl.
 
+`MouseMotionEvent` contains window and mouse identifiers, held button states, position, and relative
+motion.  `MouseButtonEvent` contains window and mouse identifiers, the button, press or release
+action, click count, and position.  Positions are relative to the window. Mouse coordinates preserve
+SDL's fractional values as Idris `Double` values.
+
+`MouseButton` stores a button index. `MouseButtons` stores a set of held buttons as bits.  Use
+`buttonHeld leftButton buttons` to test a motion event's button state.  Named buttons include
+`leftButton`, `middleButton`, `rightButton`, `x1Button`, and `x2Button`.  Unknown button indices and
+state bits are preserved. `buttonHeld` returns `False` for indices outside 1 through 32.  `MouseID`
+preserves SDL's device identifier, including synthetic touch and pen identifiers.
+
 Event timestamps use nanoseconds since SDL initialization. `ticks` still uses milliseconds.
 `UnknownEvent` preserves the timestamp and numeric type, but discards unsupported event data.
 Keyboard device identifiers and platform-specific key codes are not exposed yet.
@@ -108,14 +120,15 @@ library directories to `LIBRARY_PATH` and add `cbits` and the SDL include direct
 The tests cover native event classification, unknown events, empty queues, flag combinations, window
 creation, drawing, and timers.  Compile-time tests reject mixed handle types, mixed flag types, and
 forged window handles. Event tests cover keyboard data, repeat status, window identifiers,
-timestamps, and data retained after buffer reuse.  The test-only native library inserts known events
-into SDL's queue. It is not part of the binding library.  The example builds in the test
-environment, but interactive display behavior needs a manual test.
+timestamps, and data retained after buffer reuse. Mouse tests cover fractional coordinates, relative
+motion, presses, releases, click counts, unknown buttons, and button-state bits.  The test-only
+native library inserts known events into SDL's queue. It is not part of the binding library.  The
+example builds in the test environment, but interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes mouse data, text input, textures, audio streams, and scoped resource ownership.
-Keep each addition close to SDL's API and test its failure paths.  Measure call overhead and
-allocations before adding performance claims or a larger abstraction layer.
+Next work includes mouse wheel data, text input, textures, audio streams, and scoped resource
+ownership.  Keep each addition close to SDL's API and test its failure paths.  Measure call overhead
+and allocations before adding performance claims or a larger abstraction layer.

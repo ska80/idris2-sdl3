@@ -79,7 +79,7 @@ prim__eventType : AnyPtr -> PrimIO Bits32
 export
 prim__eventTimestamp : AnyPtr -> PrimIO Bits64
 
-||| Requires a window-close or keyboard event.
+||| Requires a window-close, keyboard, mouse motion, or mouse button event.
 %foreign "C:idris_sdl_event_window, libidris2_sdl3, sdl3.h"
 export
 prim__eventWindow : AnyPtr -> PrimIO Bits32
@@ -103,6 +103,46 @@ prim__eventModifiers : AnyPtr -> PrimIO Bits16
 %foreign "C:idris_sdl_event_repeat, libidris2_sdl3, sdl3.h"
 export
 prim__eventRepeat : AnyPtr -> PrimIO Int
+
+||| Requires a mouse motion or mouse button event.
+%foreign "C:idris_sdl_event_mouse_id, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseID : AnyPtr -> PrimIO Bits32
+
+||| Requires a mouse motion or mouse button event.
+%foreign "C:idris_sdl_event_mouse_x, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseX : AnyPtr -> PrimIO Double
+
+||| Requires a mouse motion or mouse button event.
+%foreign "C:idris_sdl_event_mouse_y, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseY : AnyPtr -> PrimIO Double
+
+||| Requires a mouse motion event.
+%foreign "C:idris_sdl_event_mouse_buttons, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseButtons : AnyPtr -> PrimIO Bits32
+
+||| Requires a mouse motion event.
+%foreign "C:idris_sdl_event_mouse_dx, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseDX : AnyPtr -> PrimIO Double
+
+||| Requires a mouse motion event.
+%foreign "C:idris_sdl_event_mouse_dy, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseDY : AnyPtr -> PrimIO Double
+
+||| Requires a mouse button event.
+%foreign "C:idris_sdl_event_mouse_button, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseButton : AnyPtr -> PrimIO Bits8
+
+||| Requires a mouse button event.
+%foreign "C:idris_sdl_event_mouse_clicks, libidris2_sdl3, sdl3.h"
+export
+prim__eventMouseClicks : AnyPtr -> PrimIO Bits8
 
 %foreign "C:SDL_GetTicks, libSDL3, SDL3/SDL.h"
 export

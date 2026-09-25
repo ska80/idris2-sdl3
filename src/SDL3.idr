@@ -19,7 +19,13 @@ export
 data EventBuffer = MkEventBuffer AnyPtr
 
 public export
-data EventType = QuitRequested | WindowCloseRequested | KeyDown | KeyUp
+data EventType = QuitRequested
+               | WindowCloseRequested
+               | KeyDown
+               | KeyUp
+               | MouseMotion
+               | MouseButtonDown
+               | MouseButtonUp
                | OtherEvent Bits32
 
 ||| Copy the current thread's SDL error. Read only after a failed call.
@@ -113,6 +119,9 @@ pollEvent (MkEventBuffer ptr) = do
       2 => pure WindowCloseRequested
       3 => pure KeyDown
       4 => pure KeyUp
+      5 => pure MouseMotion
+      6 => pure MouseButtonDown
+      7 => pure MouseButtonUp
       _ => OtherEvent <$> primIO (prim__eventType ptr)
     pure (Just event)
 
@@ -124,6 +133,27 @@ keyboardData ptr action = do
   mods <- MkKeyModifiers <$> primIO (prim__eventModifiers ptr)
   repeated <- (/= 0) <$> primIO (prim__eventRepeat ptr)
   pure (MkKeyboardData window action scan key mods repeated)
+
+mouseMotionData : AnyPtr -> IO MouseMotionData
+mouseMotionData ptr = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  mouse <- MkMouseID <$> primIO (prim__eventMouseID ptr)
+  buttons <- MkMouseButtons <$> primIO (prim__eventMouseButtons ptr)
+  x <- primIO (prim__eventMouseX ptr)
+  y <- primIO (prim__eventMouseY ptr)
+  dx <- primIO (prim__eventMouseDX ptr)
+  dy <- primIO (prim__eventMouseDY ptr)
+  pure (MkMouseMotionData window mouse buttons x y dx dy)
+
+mouseButtonData : AnyPtr -> MouseAction -> IO MouseButtonData
+mouseButtonData ptr action = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  mouse <- MkMouseID <$> primIO (prim__eventMouseID ptr)
+  button <- MkMouseButton <$> primIO (prim__eventMouseButton ptr)
+  clicks <- primIO (prim__eventMouseClicks ptr)
+  x <- primIO (prim__eventMouseX ptr)
+  y <- primIO (prim__eventMouseY ptr)
+  pure (MkMouseButtonData window mouse button action clicks x y)
 
 ||| Consume one event on the main thread. Nothing means the queue is empty.
 ||| Returned values remain valid after buffer reuse or destruction.
@@ -142,6 +172,9 @@ pollEventData (MkEventBuffer ptr) = do
         pure (WindowCloseEvent timestamp window)
       3 => KeyboardEvent timestamp <$> keyboardData ptr Pressed
       4 => KeyboardEvent timestamp <$> keyboardData ptr Released
+      5 => MouseMotionEvent timestamp <$> mouseMotionData ptr
+      6 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonPressed
+      7 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonReleased
       _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
     pure (Just event)
 

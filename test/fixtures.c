@@ -38,6 +38,30 @@ int idris_test_queue_event(int kind) {
 
         break;
 
+    case 6:
+        event.type            = SDL_EVENT_MOUSE_MOTION;
+        event.motion.windowID = 0x80000001u;
+        event.motion.which    = 0xfffffffeu;
+        event.motion.state    = 0x80000000u | SDL_BUTTON_LMASK | SDL_BUTTON_RMASK;
+        event.motion.x        = 12.5f;
+        event.motion.y        = -7.25f;
+        event.motion.xrel     = -1.5f;
+        event.motion.yrel     = 2.75f;
+        break;
+
+    case 7:
+    case 8:
+    case 9:
+        event.type            = kind == 8 ? SDL_EVENT_MOUSE_BUTTON_UP : SDL_EVENT_MOUSE_BUTTON_DOWN;
+        event.button.windowID = 0x80000001u;
+        event.button.which    = 0xfffffffeu;
+        event.button.button   = kind == 9 ? 200 : SDL_BUTTON_RIGHT;
+        event.button.down     = kind != 8;
+        event.button.clicks   = 2;
+        event.button.x        = -0.5f;
+        event.button.y        = 100.25f;
+        break;
+
     default:
         return 0;
     }
