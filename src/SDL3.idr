@@ -540,11 +540,43 @@ pollEventData (MkEventBuffer ptr) = do
       _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
     pure (Just event)
 
-||| Milliseconds since SDL initialization.
+||| Milliseconds since SDL initialization. Safe on any thread.
 export
 ticks : IO Bits64
 ticks = primIO prim__ticks
 
+||| Nanoseconds since SDL initialization. Safe on any thread.
+||| The clock's actual resolution depends on the platform.
+export
+ticksNS : IO Bits64
+ticksNS = primIO prim__ticksNS
+
+||| High-resolution counter. Only differences between samples are meaningful.
+||| Divide the difference by performanceFrequency to obtain seconds.
+||| Safe on any thread. This is not a wall-clock timestamp.
+export
+performanceCounter : IO Bits64
+performanceCounter = primIO prim__performanceCounter
+
+||| Counter increments per second, not necessarily nanoseconds. Safe on any thread.
+export
+performanceFrequency : IO Bits64
+performanceFrequency = primIO prim__performanceFrequency
+
+||| Wait at least this many milliseconds on the calling thread.
+||| The operating system can delay return beyond the requested time.
 export
 delay : Bits32 -> IO ()
 delay ms = primIO (prim__delay ms)
+
+||| Wait at least this many nanoseconds on the calling thread.
+||| Nanosecond units do not guarantee nanosecond scheduling accuracy.
+export
+delayNS : Bits64 -> IO ()
+delayNS ns = primIO (prim__delayNS ns)
+
+||| Attempt a precise wait in nanoseconds on the calling thread.
+||| SDL can busy-wait and consume CPU time. Return can still be late.
+export
+delayPrecise : Bits64 -> IO ()
+delayPrecise ns = primIO (prim__delayPrecise ns)

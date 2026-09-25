@@ -345,6 +345,26 @@ prim__eventEditLength : AnyPtr -> PrimIO Int32
 export
 prim__ticks : PrimIO Bits64
 
+%foreign "C:SDL_GetTicksNS, libSDL3, SDL3/SDL.h"
+export
+prim__ticksNS : PrimIO Bits64
+
+%foreign "C:SDL_GetPerformanceCounter, libSDL3, SDL3/SDL.h"
+export
+prim__performanceCounter : PrimIO Bits64
+
+%foreign "C:SDL_GetPerformanceFrequency, libSDL3, SDL3/SDL.h"
+export
+prim__performanceFrequency : PrimIO Bits64
+
+%foreign "C:SDL_DelayNS, libSDL3, SDL3/SDL.h"
+export
+prim__delayNS : Bits64 -> PrimIO ()
+
+%foreign "C:SDL_DelayPrecise, libSDL3, SDL3/SDL.h"
+export
+prim__delayPrecise : Bits64 -> PrimIO ()
+
 %foreign "C:SDL_Delay, libSDL3, SDL3/SDL.h"
 export
 prim__delay : Bits32 -> PrimIO ()

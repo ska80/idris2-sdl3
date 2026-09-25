@@ -1,9 +1,9 @@
 # SDL3 for Idris 2
 
 Thin bindings for games and multimedia applications. This initial version covers initialization,
-windows, 2D rendering, BMP loading, and static and render-target textures.  It also covers keyboard,
-mouse, text input, window-close events, and timers.  It does not yet bind streaming texture updates,
-other image formats, audio streams, gamepads, or the GPU API.
+windows, 2D rendering, BMP loading, and static, streaming, and render-target textures.  It also
+covers keyboard, mouse, text input, window-close events, and timers.  It does not yet bind other
+image formats, audio streams, gamepads, or the GPU API.
 
 The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the
 primary backend and the default for builds, examples, tests, and performance work.  RefC support is
@@ -288,9 +288,38 @@ For `WheelNormal`, positive X means rightward and positive Y means away from the
 `WheelFlipped`, negate the scroll values to convert to the normal direction.  The binding does not
 change the values automatically. `OtherWheelDirection` preserves unknown numeric directions.
 
-Event timestamps use nanoseconds since SDL initialization. `ticks` still uses milliseconds.
-`UnknownEvent` preserves the timestamp and numeric type, but discards unsupported event data.
-Keyboard device identifiers and platform-specific key codes are not exposed yet.
+Event timestamps use nanoseconds since SDL initialization. `ticksNS` uses the same units, while
+`ticks` uses milliseconds.  `UnknownEvent` preserves the timestamp and numeric type, but discards
+unsupported event data.  Keyboard device identifiers and platform-specific key codes are not exposed
+yet.
+
+## Timing and frame pacing
+
+Frame pacing controls the time between rendered frames.  `ticksNS : IO Bits64` returns nanoseconds
+since SDL initialization.  A nanosecond is one billionth of a second. The clock's actual resolution
+depends on the platform.  `ticks : IO Bits64` returns milliseconds instead. These values are not
+calendar timestamps.
+
+`performanceCounter : IO Bits64` reads SDL's high-resolution counter.  `performanceFrequency : IO
+Bits64` returns its increments per second.  Only differences between counter samples are
+meaningful. Do not compare counter values with `ticksNS` or event timestamps.  To calculate seconds,
+subtract counter samples first, then convert the difference and frequency to `Double` before
+division.  This avoids losing small differences when converting large absolute counter values.
+
+`delay ms` waits at least the requested milliseconds and takes `Bits32`.  `delayNS ns` waits at
+least the requested nanoseconds and takes `Bits64`.  `delayPrecise ns` also takes `Bits64` and
+attempts to wait close to the requested interval.  It can keep the CPU active while waiting. All
+delays can return late because of operating system scheduling.  Nanosecond units do not guarantee
+nanosecond scheduling accuracy.
+
+All timing functions are safe on any thread. Delays block only the calling thread.  Avoid long waits
+on the main thread. They stop event processing and drawing.  The example measures event handling and
+drawing time, then waits for the remainder of a 16,666,667-nanosecond frame budget.  This targets
+roughly 60 frames per second without a fixed extra delay after drawing.  It does not guarantee that
+rate or synchronize frames with the display.
+
+If a frame exceeds its time budget, skip the delay.  Subtracting a larger unsigned elapsed time from
+a smaller budget wraps to a large delay.  The example tests the elapsed time before subtraction.
 
 ## Performance and native code
 
@@ -330,34 +359,37 @@ library directories to `LIBRARY_PATH` and add `cbits` and the SDL include direct
 ## Tests and next steps
 
 The tests cover native event classification, unknown events, empty queues, flag combinations, window
-creation, drawing, and timers. Texture tests read pixels from off-screen and window targets.  They
-test destination rectangles, target reset, invalid dimensions, and rejection of textures from
-another renderer. BMP tests create temporary image files and remove them after each test.  They test
-missing and invalid files, pixel colors, source rectangles, and texture use after surface
-destruction. Renderer tests cover viewport origins, clipping, empty clip rectangles, per-target
-state, and shape alpha blending. They also test that `clear` ignores viewport and clip state.
-Scaling tests cover every logical presentation mode, independent axis scaling, and scale and logical
-state retained across target switches. Coordinate tests cover inverse conversion, scaling, viewport
-offsets, letterbox borders, combined transforms, and copied point lifetime.  Compile-time tests
-reject mixed point spaces and buffer types.  Streaming tests cover RGBA byte order, row padding,
-buffer reuse, and source data consumption.  They also cover short buffers, invalid pitch, size
-multiplication beyond 32 bits, and rejected upload preservation.  Partial upload tests cover source
-origin, padded rows, texture edges, and preservation of neighboring pixels.  They reject invalid
-rectangles, extreme coordinates, short buffers, and invalid pitch.  Compile-time tests reject
-floating-point upload rectangles and partial uploads to render-target textures.  Compile-time tests
-reject uploads to static textures and uploads from the wrong buffer type.  Pixel tests cover all
-exposed blend modes, color and alpha modulation, and nearest and linear filtering.  Tests allow
-small rounding differences for fractional blending and interpolation.  Compile-time tests reject
-mixed handle types, mixed flag types, forged handles, and static textures used as render
-targets. Event tests cover keyboard data, repeat status, window identifiers, timestamps, and data
-retained after buffer reuse. Mouse tests cover fractional coordinates, relative motion, presses,
-releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover normal, flipped,
-and unknown directions, fractional values, pointer position, and signed 32-bit limits. Text tests
-cover Unicode, empty and long text, composition selections, string ownership, and per-window start
-and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
-They also test area reset and composition cancellation without disabling text input.  The test-only
-native library inserts known events into SDL's queue. It is not part of the binding library.  The
-example builds in the test environment, but interactive display behavior needs a manual test.
+creation, drawing, and timers.  Timing tests cover clock units, counter frequency, zero delays, and
+clock progress during nanosecond delays.  They enforce no upper duration limit because scheduling
+can resume the test late.  These tests are not timing-accuracy benchmarks.  Texture tests read
+pixels from off-screen and window targets.  They test destination rectangles, target reset, invalid
+dimensions, and rejection of textures from another renderer. BMP tests create temporary image files
+and remove them after each test.  They test missing and invalid files, pixel colors, source
+rectangles, and texture use after surface destruction. Renderer tests cover viewport origins,
+clipping, empty clip rectangles, per-target state, and shape alpha blending. They also test that
+`clear` ignores viewport and clip state.  Scaling tests cover every logical presentation mode,
+independent axis scaling, and scale and logical state retained across target switches. Coordinate
+tests cover inverse conversion, scaling, viewport offsets, letterbox borders, combined transforms,
+and copied point lifetime.  Compile-time tests reject mixed point spaces and buffer types.
+Streaming tests cover RGBA byte order, row padding, buffer reuse, and source data consumption.  They
+also cover short buffers, invalid pitch, size multiplication beyond 32 bits, and rejected upload
+preservation.  Partial upload tests cover source origin, padded rows, texture edges, and
+preservation of neighboring pixels.  They reject invalid rectangles, extreme coordinates, short
+buffers, and invalid pitch.  Compile-time tests reject floating-point upload rectangles and partial
+uploads to render-target textures.  Compile-time tests reject uploads to static textures and uploads
+from the wrong buffer type.  Pixel tests cover all exposed blend modes, color and alpha modulation,
+and nearest and linear filtering.  Tests allow small rounding differences for fractional blending
+and interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles,
+and static textures used as render targets. Event tests cover keyboard data, repeat status, window
+identifiers, timestamps, and data retained after buffer reuse. Mouse tests cover fractional
+coordinates, relative motion, presses, releases, click counts, unknown buttons, and button-state
+bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer
+position, and signed 32-bit limits. Text tests cover Unicode, empty and long text, composition
+selections, string ownership, and per-window start and stop controls. Area tests compare the stored
+SDL rectangle and cursor against the Idris values.  They also test area reset and composition
+cancellation without disabling text input.  The test-only native library inserts known events into
+SDL's queue. It is not part of the binding library.  The example builds in the test environment, but
+interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32

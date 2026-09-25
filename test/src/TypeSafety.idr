@@ -127,6 +127,14 @@ failing "Mismatch between"
   wrongPartialRect : Texture StreamingAccess -> Buffer -> IO Bool
   wrongPartialRect texture buffer = updateTextureRegionRGBA texture (MkFRect 0 0 1 1) buffer 4
 
+failing "Mismatch between"
+  wrongNanoDelayWidth : Bits32 -> IO ()
+  wrongNanoDelayWidth = delayNS
+
+failing "Mismatch between"
+  signedPreciseDelay : Int64 -> IO ()
+  signedPreciseDelay = delayPrecise
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

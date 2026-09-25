@@ -54,10 +54,15 @@ drain window renderer coordinates buffer = do
 
 loop : WindowID -> Renderer -> Texture TargetAccess -> CoordinateBuffer -> EventBuffer -> IO (Either String ())
 loop window renderer texture coordinates buffer = do
+  start <- ticksNS
   Right stop <- drain window renderer coordinates buffer | Left err => pure (Left err)
   if stop then pure (Right ()) else do
     Right () <- frame renderer texture | Left err => pure (Left err)
-    delay 16
+    end <- ticksNS
+    let elapsed = end - start
+    -- Target roughly 60 frames per second, including event and drawing work.
+    -- Guard subtraction: Bits64 would wrap if this frame exceeded its budget.
+    if elapsed < 16666667 then delayNS (16666667 - elapsed) else pure ()
     loop window renderer texture coordinates buffer
 
 runRenderer : WindowID -> Renderer -> IO (Either String ())
