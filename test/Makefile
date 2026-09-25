@@ -1,5 +1,6 @@
 CC         ?= cc
 PKG_CONFIG ?= pkg-config
+MKDIR      ?= mkdir
 CFLAGS     ?= -O2
 
 
