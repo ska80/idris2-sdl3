@@ -550,6 +550,25 @@ textEditingData ptr = do
   length <- primIO (prim__eventEditLength ptr)
   pure (MkTextEditingData window text start length)
 
+eventData : AnyPtr -> IO Event
+eventData ptr = do
+  kind <- primIO (prim__eventKind ptr)
+  timestamp <- primIO (prim__eventTimestamp ptr)
+  case kind of
+    1 => pure (QuitEvent timestamp)
+    2 => do
+      window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+      pure (WindowCloseEvent timestamp window)
+    3 => KeyboardEvent timestamp <$> keyboardData ptr Pressed
+    4 => KeyboardEvent timestamp <$> keyboardData ptr Released
+    5 => MouseMotionEvent timestamp <$> mouseMotionData ptr
+    6 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonPressed
+    7 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonReleased
+    8 => MouseWheelEvent timestamp <$> mouseWheelData ptr
+    9 => TextInputEvent timestamp <$> textInputData ptr
+    10 => TextEditingEvent timestamp <$> textEditingData ptr
+    _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
+
 ||| Consume one event on the main thread. Nothing means the queue is empty.
 ||| Returned values remain valid after buffer reuse or destruction.
 ||| Do not call pollEvent first: each poll consumes a separate event.
@@ -557,24 +576,29 @@ export
 pollEventData : EventBuffer -> IO (Maybe Event)
 pollEventData (MkEventBuffer ptr) = do
   ready <- primIO (prim__poll ptr)
-  if ready == 0 then pure Nothing else do
-    kind <- primIO (prim__eventKind ptr)
-    timestamp <- primIO (prim__eventTimestamp ptr)
-    event <- case kind of
-      1 => pure (QuitEvent timestamp)
-      2 => do
-        window <- MkWindowID <$> primIO (prim__eventWindow ptr)
-        pure (WindowCloseEvent timestamp window)
-      3 => KeyboardEvent timestamp <$> keyboardData ptr Pressed
-      4 => KeyboardEvent timestamp <$> keyboardData ptr Released
-      5 => MouseMotionEvent timestamp <$> mouseMotionData ptr
-      6 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonPressed
-      7 => MouseButtonEvent timestamp <$> mouseButtonData ptr ButtonReleased
-      8 => MouseWheelEvent timestamp <$> mouseWheelData ptr
-      9 => TextInputEvent timestamp <$> textInputData ptr
-      10 => TextEditingEvent timestamp <$> textEditingData ptr
-      _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
-    pure (Just event)
+  if ready == 0 then pure Nothing else Just <$> eventData ptr
+
+||| Wait indefinitely for one event on the main thread that initialized video.
+||| Consumes that event and copies its data. Failure returns a copied SDL error.
+||| Reuse the buffer. Returned data survives buffer reuse or destruction.
+export
+waitEventData : EventBuffer -> IO (Either String Event)
+waitEventData (MkEventBuffer ptr) = do
+  ready <- primIO (prim__waitEvent ptr)
+  if ready == 0 then Left <$> getError else Right <$> eventData ptr
+
+||| Wait up to timeoutMS milliseconds on the main thread that initialized video.
+||| Valid timeouts range from 0 through 2147483647. Zero does not wait.
+||| Clears SDL's error before waiting. No event and no error returns Right Nothing.
+||| An SDL error without an event returns Left. Actual waits can exceed the timeout.
+||| Consumes at most one event. Copied data survives buffer reuse or destruction.
+export
+waitEventDataTimeout : EventBuffer -> Bits32 -> IO (Either String (Maybe Event))
+waitEventDataTimeout (MkEventBuffer ptr) timeoutMS = do
+  status <- primIO (prim__waitEventTimeout ptr timeoutMS)
+  if status < 0 then Left <$> getError
+     else if status == 0 then pure (Right Nothing)
+             else Right . Just <$> eventData ptr
 
 ||| Milliseconds since SDL initialization. Safe on any thread.
 export

@@ -143,6 +143,14 @@ failing "Mismatch between"
   wrongVSyncHandle : Window -> IO (Either String VSyncMode)
   wrongVSyncHandle window = getRenderVSync window
 
+failing "Mismatch between"
+  wrongWaitBuffer : CoordinateBuffer -> IO (Either String Event)
+  wrongWaitBuffer buffer = waitEventData buffer
+
+failing "Mismatch between"
+  signedWaitTimeout : EventBuffer -> Int32 -> IO (Either String (Maybe Event))
+  signedWaitTimeout buffer timeout = waitEventDataTimeout buffer timeout
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

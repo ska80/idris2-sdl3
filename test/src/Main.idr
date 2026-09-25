@@ -11,6 +11,7 @@ import CoordinateTests
 import StreamingTests
 import TimerTests
 import VSyncTests
+import WaitTests
 
 %default covering
 
@@ -67,6 +68,7 @@ resources window = do
     Right buffer <- newEventBuffer | Left err => pure (Left err)
     result <- do
       Right () <- eventTests buffer | Left err => pure (Left err)
+      Right () <- waitTests | Left err => pure (Left err)
       Right () <- textureTests window renderer | Left err => pure (Left err)
       Right () <- renderTests window renderer | Left err => pure (Left err)
       Right () <- scalingTests window renderer | Left err => pure (Left err)

@@ -56,6 +56,25 @@ int idris_test_pixel(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, 
     return idris_test_pixel_near(window_id, x, y, r, g, b, a, 0);
 }
 
+static Uint32 SDLCALL queue_delayed_quit(void* userdata, SDL_TimerID timer, Uint32 interval) {
+    (void)userdata;
+    (void)timer;
+    (void)interval;
+    SDL_Event event = {0};
+    event.type      = SDL_EVENT_QUIT;
+    SDL_PushEvent(&event);
+    return 0;
+}
+
+Uint32 idris_test_schedule_quit(void) {
+    SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+    return SDL_AddTimer(10, queue_delayed_quit, NULL);
+}
+
+void idris_test_cancel_timer(Uint32 timer) {
+    SDL_RemoveTimer(timer);
+}
+
 /* Test-only events. Keep these symbols out of the binding library. */
 int idris_test_queue_event(int kind) {
     static char text[256];

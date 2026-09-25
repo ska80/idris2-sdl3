@@ -268,6 +268,26 @@ int idris_sdl_poll(SDL_Event* event) {
     return SDL_PollEvent(event);
 }
 
+int idris_sdl_wait_event(SDL_Event* event) {
+    if (!event) return SDL_SetError("Event buffer must not be null");
+
+    return SDL_WaitEvent(event);
+}
+
+int idris_sdl_wait_event_timeout(SDL_Event* event, Uint32 timeout_ms) {
+    if (!event || timeout_ms > 2147483647) {
+        SDL_SetError("Event buffer or wait timeout is invalid");
+        return -1;
+    }
+
+    /* SDL reports both timeout and failure as false. Do not use a stale error. */
+    SDL_ClearError();
+
+    if (SDL_WaitEventTimeout(event, (Sint32)timeout_ms)) return 1;
+
+    return SDL_GetError()[0] ? -1 : 0;
+}
+
 Uint32 idris_sdl_event_type(const SDL_Event* event) {
     return event->type;
 }

@@ -65,6 +65,13 @@ int main(void) {
     SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
 
     assert(idris_sdl_poll(buffer) == 0);
+    assert(idris_sdl_wait_event(NULL) == 0);
+    assert(idris_sdl_wait_event_timeout(NULL, 0) == -1);
+    assert(idris_sdl_wait_event_timeout(buffer, 0x80000000u) == -1);
+    SDL_SetError("Stale error before a timed wait");
+    assert(idris_sdl_wait_event_timeout(buffer, 0) == 0);
+    assert(SDL_GetError()[0] == '\0');
+    assert(idris_sdl_wait_event_timeout(buffer, 1) == 0);
 
     const Uint32 types[] = {SDL_EVENT_QUIT, SDL_EVENT_WINDOW_CLOSE_REQUESTED, SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP, SDL_EVENT_USER};
 
@@ -76,6 +83,12 @@ int main(void) {
         assert(idris_sdl_poll(buffer) == 1);
         assert(idris_sdl_event_type(buffer) == types[i]);
         assert(idris_sdl_event_kind(buffer) == (i == 4 ? 0 : i + 1));
+        assert(SDL_PushEvent(&event));
+        assert(idris_sdl_wait_event(buffer) == 1);
+        assert(idris_sdl_event_type(buffer) == types[i]);
+        assert(SDL_PushEvent(&event));
+        assert(idris_sdl_wait_event_timeout(buffer, 0) == 1);
+        assert(idris_sdl_event_type(buffer) == types[i]);
 
         SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
     }

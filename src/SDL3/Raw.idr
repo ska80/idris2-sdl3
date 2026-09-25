@@ -234,6 +234,17 @@ prim__eventFree : AnyPtr -> PrimIO ()
 export
 prim__poll : AnyPtr -> PrimIO Int
 
+||| Requires a live event buffer. Returns 1 on success, 0 on failure.
+%foreign "C:idris_sdl_wait_event, libidris2_sdl3, sdl3.h"
+export
+prim__waitEvent : AnyPtr -> PrimIO Int
+
+||| Returns 1 for an event, 0 for timeout, or -1 for an error.
+||| Clears SDL's error before waiting. Requires a live event buffer.
+%foreign "C:idris_sdl_wait_event_timeout, libidris2_sdl3, sdl3.h"
+export
+prim__waitEventTimeout : AnyPtr -> Bits32 -> PrimIO Int
+
 %foreign "C:idris_sdl_event_kind, libidris2_sdl3, sdl3.h"
 export
 prim__eventKind : AnyPtr -> PrimIO Int

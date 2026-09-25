@@ -230,6 +230,24 @@ data.  Both return `Nothing` for an empty queue. Each call consumes one event, s
 function, not both for the same event.  Returned data remains valid after buffer reuse or
 destruction.
 
+`waitEventData buffer` blocks until an event arrives, then returns `Either String Event`.  Use it
+when the application has no work to do until the next event.  `waitEventDataTimeout buffer
+timeoutMS` returns `Either String (Maybe Event)`.  It returns `Right (Just event)` for an event and
+`Right Nothing` when the wait ends without an event or SDL error.  The timeout uses `Bits32`
+milliseconds, from 0 through 2147483647. Zero does not wait.  Larger values return `Left` without
+consuming an event. Use `waitEventData` for an indefinite wait.
+
+Timed waits clear SDL's error before calling SDL.  If SDL returns no event and reports an error, the
+binding copies that error into `Left`.  Read any earlier SDL error before starting a timed wait.
+Actual waits can exceed the timeout because of operating system scheduling.
+
+Both waits use the existing `EventBuffer` and copy data through the same decoder as `pollEventData`.
+Reuse the buffer, then free it exactly once during cleanup. Returned data survives buffer reuse or
+destruction.  Each successful wait consumes one event. Poll afterward only to receive further
+events, not to decode the event already returned.  Call waits on the main thread that initializes
+video. Do not share the buffer between threads.  Waiting blocks drawing on that thread, so keep
+polling when the application must render continuously.
+
 `WindowCloseEvent` contains a window identifier. Use `getWindowID` to match it to a live window.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
@@ -356,7 +374,8 @@ Allocate an event buffer once and reuse it in the event loop.  The adapter perfo
 allocation per draw or poll call. SDL and the Idris runtime can still allocate internally.
 Rendering rectangle values use Idris `Double` and convert to SDL `float` values on the C stack.
 Text input areas use `Int32` fields and a stack-allocated SDL rectangle, with no extra native heap
-allocation.  Text events allocate Idris strings when `pollEventData` copies their text. The C
+allocation. Event waits also reuse the caller-owned buffer without a new native allocation in the
+adapter.  Text events allocate Idris strings when polling or waiting copies their text. The C
 adapter does not allocate an additional text buffer.
 
 Create textures outside the frame loop and reuse them. Texture destination rectangles use stack
@@ -407,16 +426,18 @@ render-target textures.  Compile-time tests reject uploads to static textures an
 wrong buffer type.  Pixel tests cover all exposed blend modes, color and alpha modulation, and
 nearest and linear filtering.  Tests allow small rounding differences for fractional blending and
 interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
-static textures used as render targets. Event tests cover keyboard data, repeat status, window
-identifiers, timestamps, and data retained after buffer reuse. Mouse tests cover fractional
-coordinates, relative motion, presses, releases, click counts, unknown buttons, and button-state
-bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer
-position, and signed 32-bit limits. Text tests cover Unicode, empty and long text, composition
-selections, string ownership, and per-window start and stop controls. Area tests compare the stored
-SDL rectangle and cursor against the Idris values.  They also test area reset and composition
-cancellation without disabling text input.  The test-only native library inserts known events into
-SDL's queue. It is not part of the binding library.  The example builds in the test environment, but
-interactive display behavior needs a manual test.
+static textures used as render targets.  Wait tests cover queued and delayed events, zero and
+expired timeouts, timeout bounds, old SDL errors, and copied text lifetime.  A test-only C timer
+queues delayed events without calling Idris from another thread.  Event tests cover keyboard data,
+repeat status, window identifiers, timestamps, and data retained after buffer reuse. Mouse tests
+cover fractional coordinates, relative motion, presses, releases, click counts, unknown buttons, and
+button-state bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values,
+pointer position, and signed 32-bit limits. Text tests cover Unicode, empty and long text,
+composition selections, string ownership, and per-window start and stop controls. Area tests compare
+the stored SDL rectangle and cursor against the Idris values.  They also test area reset and
+composition cancellation without disabling text input.  The test-only native library inserts known
+events into SDL's queue. It is not part of the binding library.  The example builds in the test
+environment, but interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32

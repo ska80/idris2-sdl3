@@ -69,6 +69,9 @@ IDRIS_SDL3 int idris_sdl_clear_composition(SDL_Window* window);
 IDRIS_SDL3 SDL_Event* idris_sdl_event_new(void);
 IDRIS_SDL3 void       idris_sdl_event_free(SDL_Event* event);
 IDRIS_SDL3 int        idris_sdl_poll(SDL_Event* event);
+IDRIS_SDL3 int        idris_sdl_wait_event(SDL_Event* event);
+/* 1: event, 0: no event and no error, -1: error. Clears SDL error before waiting. */
+IDRIS_SDL3 int        idris_sdl_wait_event_timeout(SDL_Event* event, Uint32 timeout_ms);
 IDRIS_SDL3 Uint32     idris_sdl_event_type(const SDL_Event* event);
 IDRIS_SDL3 int        idris_sdl_event_kind(const SDL_Event* event);
 IDRIS_SDL3 Uint64     idris_sdl_event_timestamp(const SDL_Event* event);
