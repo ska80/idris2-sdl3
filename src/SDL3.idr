@@ -208,6 +208,18 @@ updateTextureRGBA (MkTexture ptr) buffer pitch = do
   size <- rawSize buffer
   (/= 0) <$> primIO (prim__updateTextureRGBA ptr buffer (cast size) pitch)
 
+||| Upload a positive rectangle entirely inside the texture, in texture pixels.
+||| Buffer byte zero is the region's top-left pixel, not the texture's origin.
+||| Requires pitch >= region width * 4 and buffer size >= pitch * region height.
+||| Includes final-row padding. No clipping or source offset is applied.
+||| Call on the main thread. Do not modify the buffer concurrently.
+||| SDL consumes the bytes during the call. Returns False on failure.
+export
+updateTextureRegionRGBA : Texture StreamingAccess -> Rect -> Buffer -> Int32 -> IO Bool
+updateTextureRegionRGBA (MkTexture ptr) (MkRect x y width height) buffer pitch = do
+  size <- rawSize buffer
+  (/= 0) <$> primIO (prim__updateTextureRegionRGBA ptr x y width height buffer (cast size) pitch)
+
 ||| Destroy on the main thread, before the creating renderer.
 ||| Switch away from this texture as a render target first. Do not reuse the handle.
 export

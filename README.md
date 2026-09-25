@@ -148,6 +148,18 @@ at least `pitch * height` bytes.  This requirement includes padding after the fi
 adapter rejects short rows and buffers before SDL reads pixels.  The call returns `False` on
 failure. Call `getError` immediately after failure.
 
+`updateTextureRegionRGBA texture region pixels pitch` uploads only a rectangular part of a streaming
+texture.  The `region` is a `Rect` in texture pixel coordinates, independent of rendering scale or
+viewport state.  Its dimensions must be positive, and the whole rectangle must fit inside the
+texture.  The binding rejects empty rectangles and rectangles outside the texture instead of
+clipping them.  Pixels outside the rectangle remain unchanged.
+
+Buffer byte zero supplies the rectangle's top-left pixel. The destination coordinates do not shift
+the source pointer.  Pitch must be at least `region.width * 4`.  The buffer must contain at least
+`pitch * region.height` bytes, including final-row padding.  For example, a one-pixel region needs
+four bytes with pitch `4`, even in a large texture.  Partial uploads use the same main-thread,
+buffer ownership, and error rules as full uploads.
+
 Allocate the buffer once, initialize its contents, and reuse it for later uploads.  Keep all buffer
 writes within its capacity. The write functions in `Data.Buffer` do not enforce bounds.  Call
 uploads on the main thread. Do not modify the buffer concurrently with an upload.  SDL consumes the
@@ -329,25 +341,28 @@ state retained across target switches. Coordinate tests cover inverse conversion
 offsets, letterbox borders, combined transforms, and copied point lifetime.  Compile-time tests
 reject mixed point spaces and buffer types.  Streaming tests cover RGBA byte order, row padding,
 buffer reuse, and source data consumption.  They also cover short buffers, invalid pitch, size
-multiplication beyond 32 bits, and rejected upload preservation.  Compile-time tests reject uploads
-to static textures and uploads from the wrong buffer type.  Pixel tests cover all exposed blend
-modes, color and alpha modulation, and nearest and linear filtering.  Tests allow small rounding
-differences for fractional blending and interpolation.  Compile-time tests reject mixed handle
-types, mixed flag types, forged handles, and static textures used as render targets. Event tests
-cover keyboard data, repeat status, window identifiers, timestamps, and data retained after buffer
-reuse. Mouse tests cover fractional coordinates, relative motion, presses, releases, click counts,
-unknown buttons, and button-state bits.  Wheel tests cover normal, flipped, and unknown directions,
-fractional values, pointer position, and signed 32-bit limits. Text tests cover Unicode, empty and
-long text, composition selections, string ownership, and per-window start and stop controls. Area
-tests compare the stored SDL rectangle and cursor against the Idris values.  They also test area
-reset and composition cancellation without disabling text input.  The test-only native library
-inserts known events into SDL's queue. It is not part of the binding library.  The example builds in
-the test environment, but interactive display behavior needs a manual test.
+multiplication beyond 32 bits, and rejected upload preservation.  Partial upload tests cover source
+origin, padded rows, texture edges, and preservation of neighboring pixels.  They reject invalid
+rectangles, extreme coordinates, short buffers, and invalid pitch.  Compile-time tests reject
+floating-point upload rectangles and partial uploads to render-target textures.  Compile-time tests
+reject uploads to static textures and uploads from the wrong buffer type.  Pixel tests cover all
+exposed blend modes, color and alpha modulation, and nearest and linear filtering.  Tests allow
+small rounding differences for fractional blending and interpolation.  Compile-time tests reject
+mixed handle types, mixed flag types, forged handles, and static textures used as render
+targets. Event tests cover keyboard data, repeat status, window identifiers, timestamps, and data
+retained after buffer reuse. Mouse tests cover fractional coordinates, relative motion, presses,
+releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover normal, flipped,
+and unknown directions, fractional values, pointer position, and signed 32-bit limits. Text tests
+cover Unicode, empty and long text, composition selections, string ownership, and per-window start
+and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
+They also test area reset and composition cancellation without disabling text input.  The test-only
+native library inserts known events into SDL's queue. It is not part of the binding library.  The
+example builds in the test environment, but interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes texture locking, partial pixel updates, audio streams, and scoped resource
-ownership.  Keep each addition close to SDL's API and test its failure paths.  Measure call overhead
-and allocations before adding performance claims or a larger abstraction layer.
+Next work includes texture locking, audio streams, and scoped resource ownership.  Keep each
+addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
+before adding performance claims or a larger abstraction layer.

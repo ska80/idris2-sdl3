@@ -11,6 +11,8 @@ int main(void) {
     assert(idris_sdl_create_streaming_texture(NULL, 2, 2) == NULL);
     const Uint8 pixels[16] = {0};
     assert(idris_sdl_update_texture_rgba(NULL, pixels, sizeof(pixels), 8) == 0);
+    assert(idris_sdl_update_texture_region_rgba(NULL, 0, 0, 1, 1, pixels, sizeof(pixels), 4) == 0);
+    assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_set_texture_color_mod(NULL, 255, 255, 255) == 0);
     assert(idris_sdl_set_texture_alpha_mod(NULL, 255) == 0);
     assert(idris_sdl_set_texture_blend_mode(NULL, SDL_BLENDMODE_BLEND) == 0);

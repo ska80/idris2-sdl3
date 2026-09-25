@@ -119,6 +119,14 @@ failing "Mismatch between"
   wrongUploadBuffer : Texture StreamingAccess -> CoordinateBuffer -> IO Bool
   wrongUploadBuffer texture buffer = updateTextureRGBA texture buffer 8
 
+failing "Mismatch between"
+  wrongPartialAccess : Texture TargetAccess -> Buffer -> IO Bool
+  wrongPartialAccess texture buffer = updateTextureRegionRGBA texture (MkRect 0 0 1 1) buffer 4
+
+failing "Mismatch between"
+  wrongPartialRect : Texture StreamingAccess -> Buffer -> IO Bool
+  wrongPartialRect texture buffer = updateTextureRegionRGBA texture (MkFRect 0 0 1 1) buffer 4
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

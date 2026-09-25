@@ -11,7 +11,7 @@ prim__pixel : Bits32 -> Int -> Int -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO
 pixel : Bits32 -> Int -> Int -> Bits8 -> Bits8 -> Bits8 -> IO Bool
 pixel window x y r g b = (== 1) <$> primIO (prim__pixel window x y r g b 255)
 
--- All offsets below refer to known positions in a 24-byte test buffer.
+-- Callers use known pixel positions within their test buffers.
 writePixel : Buffer -> Int -> Bits8 -> Bits8 -> Bits8 -> IO ()
 writePixel buffer offset r g b = do
   setBits8 buffer offset r
@@ -45,6 +45,53 @@ invalidUploads renderer texture buffer = do
   Right () <- expectFailure texture buffer 2147483647 | Left err => pure (Left err)
   overflowUpload renderer buffer
 
+expectRegionFailure : Texture StreamingAccess -> Rect -> Buffer -> Int32 -> IO (Either String ())
+expectRegionFailure texture rect buffer pitch = do
+  False <- updateTextureRegionRGBA texture rect buffer pitch
+    | True => pure (Left "Invalid partial upload was accepted")
+  err <- getError
+  if err == "" then pure (Left "Rejected partial upload produced no error") else pure (Right ())
+
+invalidRegions : Texture StreamingAccess -> Buffer -> List Rect -> IO (Either String ())
+invalidRegions texture buffer [] = pure (Right ())
+invalidRegions texture buffer (rect :: rest) = do
+  Right () <- expectRegionFailure texture rect buffer 12 | Left err => pure (Left err)
+  invalidRegions texture buffer rest
+
+invalidPartialUploads : Texture StreamingAccess -> Buffer -> IO (Either String ())
+invalidPartialUploads texture buffer = do
+  Right () <- invalidRegions texture buffer
+    [ MkRect (-1) 0 1 1, MkRect 0 (-1) 1 1, MkRect 2 0 1 1, MkRect 0 2 1 1
+    , MkRect 0 0 0 1, MkRect 0 0 1 0, MkRect 0 0 (-1) 1, MkRect 0 0 1 (-1)
+    , MkRect 1 0 2 1, MkRect 0 1 1 2, MkRect (-2147483648) 0 1 1
+    , MkRect 2147483647 0 2147483647 1, MkRect 0 2147483647 1 2147483647 ]
+    | Left err => pure (Left err)
+  Just short <- newBuffer 23 | Nothing => pure (Left "Cannot allocate short patch buffer")
+  Right () <- expectRegionFailure texture (MkRect 1 0 1 2) short 12 | Left err => pure (Left err)
+  Right () <- expectRegionFailure texture (MkRect 1 0 1 2) buffer 3 | Left err => pure (Left err)
+  Right () <- expectRegionFailure texture (MkRect 1 0 1 2) buffer (-1) | Left err => pure (Left err)
+  expectRegionFailure texture (MkRect 1 0 1 2) buffer 2147483647
+
+partialPixels : Bits32 -> Renderer -> Texture StreamingAccess -> Buffer -> IO (Either String ())
+partialPixels window renderer texture buffer = do
+  writePixel buffer 0 180 20 190
+  writePixel buffer 12 240 230 10
+  True <- updateTextureRegionRGBA texture (MkRect 1 0 1 2) buffer 12 | False => Left <$> getError
+  writePixel buffer 0 0 0 0
+  Right () <- invalidPartialUploads texture buffer | Left err => pure (Left err)
+  True <- renderTexture renderer texture Nothing | False => Left <$> getError
+  True <- pixel window 16 16 0 255 255 | False => pure (Left "Partial upload changed pixels outside its rectangle")
+  True <- pixel window 16 48 30 40 220 | False => pure (Left "Partial upload changed the other column")
+  True <- pixel window 48 16 180 20 190 | False => pure (Left "Partial upload used the wrong source origin or retained its pointer")
+  True <- pixel window 48 48 240 230 10 | False => pure (Left "Partial upload ignored source row pitch")
+  Just single <- newBuffer 4 | Nothing => pure (Left "Cannot allocate single pixel buffer")
+  writePixel single 0 5 15 25
+  True <- updateTextureRegionRGBA texture (MkRect 0 1 1 1) single 4 | False => Left <$> getError
+  True <- renderTexture renderer texture Nothing | False => Left <$> getError
+  True <- pixel window 16 48 5 15 25 | False => pure (Left "Single pixel upload failed at the bottom edge")
+  True <- pixel window 48 48 240 230 10 | False => pure (Left "Single pixel upload changed its neighbor")
+  pure (Right ())
+
 uploadedPixels : Bits32 -> Renderer -> Texture StreamingAccess -> Buffer -> IO (Either String ())
 uploadedPixels window renderer texture buffer = do
   True <- setTextureScaleMode texture NearestScale | False => Left <$> getError
@@ -62,7 +109,7 @@ uploadedPixels window renderer texture buffer = do
   True <- updateTextureRGBA texture buffer 12 | False => Left <$> getError
   True <- renderTexture renderer texture Nothing | False => Left <$> getError
   True <- pixel window 16 16 0 255 255 | False => pure (Left "Reusing the upload buffer did not update the texture")
-  pure (Right ())
+  partialPixels window renderer texture buffer
 
 export
 streamingTests : Window -> Renderer -> IO (Either String ())

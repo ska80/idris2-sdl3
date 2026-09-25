@@ -24,6 +24,10 @@ IDRIS_SDL3 int          idris_sdl_reset_render_target(SDL_Renderer* renderer);
 IDRIS_SDL3 int          idris_sdl_render_texture(SDL_Renderer* renderer, SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h);
 
+/* Size is the actual capacity. Pixels start at the source region, not the texture origin. */
+IDRIS_SDL3 int idris_sdl_update_texture_region_rgba(SDL_Texture* texture, Sint32 x, Sint32 y, Sint32 w, Sint32 h, const void* pixels,
+                                                    Uint64 size, Sint32 pitch);
+
 IDRIS_SDL3 int idris_sdl_render_texture_source(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h);
 IDRIS_SDL3 int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture, double sx, double sy, double sw, double sh,
                                                double dx, double dy, double dw, double dh);

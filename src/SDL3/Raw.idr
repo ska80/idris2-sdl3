@@ -66,6 +66,11 @@ prim__createStreamingTexture : AnyPtr -> Int -> Int -> PrimIO AnyPtr
 export
 prim__updateTextureRGBA : AnyPtr -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 
+||| Size must be the actual buffer capacity. Pixels start at the source region.
+%foreign "C:idris_sdl_update_texture_region_rgba, libidris2_sdl3, sdl3.h"
+export
+prim__updateTextureRegionRGBA : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> Buffer -> Bits64 -> Int32 -> PrimIO Int
+
 %foreign "C:SDL_DestroyTexture, libSDL3, SDL3/SDL.h"
 export
 prim__destroyTexture : AnyPtr -> PrimIO ()
