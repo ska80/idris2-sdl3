@@ -1,6 +1,7 @@
 module TypeSafety
 
 import SDL3
+import SDL3.Scoped
 import Data.Buffer
 
 failing "Mismatch between"
@@ -150,6 +151,14 @@ failing "Mismatch between"
 failing "Mismatch between"
   signedWaitTimeout : EventBuffer -> Int32 -> IO (Either String (Maybe Event))
   signedWaitTimeout buffer timeout = waitEventDataTimeout buffer timeout
+
+failing "Mismatch between"
+  wrongScopedCallback : IO (Either String WindowID)
+  wrongScopedCallback = withEventBuffer getWindowID
+
+failing "Mismatch between"
+  wrongScopedResult : IO (Either String Bits64)
+  wrongScopedResult = withEventBuffer (\_ => ticks)
 
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess

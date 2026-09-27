@@ -37,9 +37,10 @@ run the example with RefC.  This target is a shortcut for `make run CG=refc`.
 
 ## API and safety
 
-Import `SDL3` for the typed API. `examples/Main.idr` shows an event loop and explicit cleanup.
-`SDL3.Raw` is the unsafe foreign-function interface, which calls native C functions.  Do not use the
-raw module unless you can enforce its pointer and lifetime requirements.
+Import `SDL3` for the typed API. `examples/Main.idr` shows an event loop, callback-based cleanup,
+and explicit texture destruction.  `SDL3.Raw` is the unsafe foreign-function interface, which calls
+native C functions.  Do not use the raw module unless you can enforce its pointer and lifetime
+requirements.
 
 The typed API provides these guarantees:
 
@@ -66,6 +67,34 @@ access freed memory.
 Creation calls copy the error into `Left` on failure.  Rendering, initialization, and text input
 start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
 failure, on the same thread, before another SDL call can replace the error.
+
+Import `SDL3.Scoped` for optional cleanup helpers. A callback is the function that receives the
+resource.  Each helper creates a resource, calls your function, and releases the resource after the
+function returns.  The available helpers are:
+
+- `withWindow title width height flags action` creates and destroys a window.
+- `withRenderer window action` creates and destroys a renderer.
+- `withEventBuffer action` allocates and frees an event buffer.
+- `withCoordinateBuffer action` allocates and frees a coordinate buffer.
+- `withBMP path action` loads and destroys a BMP surface.
+
+The callback returns `IO (Either String a)`. Cleanup runs after both `Right` and `Left`, and the
+helper preserves the callback's result.  If creation fails, the helper returns `Left` without
+running the callback.  Copy SDL errors with `getError` inside the callback, before cleanup can
+replace them.  Runtime exceptions, process exit, and callbacks that never return do not guarantee
+cleanup.  These helpers do not catch exceptions or enforce resource lifetimes in the type system.
+
+Do not destroy the supplied resource yourself or retain it after the callback returns.  Do not
+return functions or store references that use the resource after cleanup. They can access freed
+memory.  Destroy dependent resources before returning. Nest renderer helpers inside window helpers,
+and destroy textures before the renderer callback returns.  Call `quit` only after all resource
+helpers return. The original thread rules still apply.  Copied events and points, and textures
+copied from a surface, can outlive the corresponding buffer or surface helper.
+
+Keep buffer helpers around the event loop, not inside each frame or event handler.  Each helper
+entry creates a new resource. Helpers do not cache resources or restore rendering state.  Texture
+cleanup remains explicit in the example. Texture and render-target state helpers are not yet
+provided.
 
 A logical resolution is a fixed coordinate size for drawing.  `setRenderLogicalPresentation renderer
 width height mode` fits that size to the current target.  Use positive `Int32` dimensions for
@@ -182,13 +211,14 @@ thread. Do not access a surface concurrently with conversion or destruction.
 For example, this function loads a texture and releases its temporary surface:
 
 ```idris
+import SDL3
+import SDL3.Scoped
+
 loadImage : Renderer -> String -> IO (Either String (Texture StaticAccess))
-loadImage renderer path = do
-  Right surface <- loadBMP path | Left err => pure (Left err)
-  result <- createTextureFromSurface renderer surface
-  destroySurface surface
-  pure result
+loadImage renderer path = withBMP path (createTextureFromSurface renderer)
 ```
+
+The caller owns the returned texture and must destroy it before its renderer.
 
 `renderTextureRegion renderer texture source destination` draws part of a texture.  The `source` is
 an `FRect` in texture pixel coordinates. The `destination` is a `Maybe FRect` in the current
@@ -403,46 +433,49 @@ library directories to `LIBRARY_PATH` and add `cbits` and the SDL include direct
 ## Tests and next steps
 
 The tests cover native event classification, unknown events, empty queues, flag combinations, window
-creation, drawing, and timers.  Timing tests cover clock units, counter frequency, zero delays, and
-clock progress during nanosecond delays.  They enforce no upper duration limit because scheduling
-can resume the test late.  These tests are not timing-accuracy benchmarks.  Texture tests read
-pixels from off-screen and window targets.  They test destination rectangles, target reset, invalid
-dimensions, and rejection of textures from another renderer. BMP tests create temporary image files
-and remove them after each test.  They test missing and invalid files, pixel colors, source
-rectangles, and texture use after surface destruction. VSync tests cover mode queries,
-supported-mode selection, unsupported-mode errors, and interval bounds.  They restore disabled
-synchronization before presenting another frame.  Renderer tests cover viewport origins, clipping,
-empty clip rectangles, per-target state, and shape alpha blending. They also test that `clear`
-ignores viewport and clip state.  Scaling tests cover every logical presentation mode, independent
-axis scaling, and scale and logical state retained across target switches. Coordinate tests cover
-inverse conversion, scaling, viewport offsets, letterbox borders, combined transforms, and copied
-point lifetime.  Compile-time tests reject mixed point spaces and buffer types.  Streaming tests
-cover RGBA byte order, row padding, buffer reuse, and source data consumption.  They also cover
-short buffers, invalid pitch, size multiplication beyond 32 bits, and rejected upload preservation.
-Partial upload tests cover source origin, padded rows, texture edges, and preservation of
-neighboring pixels.  They reject invalid rectangles, extreme coordinates, short buffers, and invalid
-pitch.  Compile-time tests reject floating-point upload rectangles and partial uploads to
-render-target textures.  Compile-time tests reject uploads to static textures and uploads from the
-wrong buffer type.  Pixel tests cover all exposed blend modes, color and alpha modulation, and
-nearest and linear filtering.  Tests allow small rounding differences for fractional blending and
-interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
-static textures used as render targets.  Wait tests cover queued and delayed events, zero and
-expired timeouts, timeout bounds, old SDL errors, and copied text lifetime.  A test-only C timer
-queues delayed events without calling Idris from another thread.  Event tests cover keyboard data,
-repeat status, window identifiers, timestamps, and data retained after buffer reuse. Mouse tests
-cover fractional coordinates, relative motion, presses, releases, click counts, unknown buttons, and
-button-state bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values,
-pointer position, and signed 32-bit limits. Text tests cover Unicode, empty and long text,
-composition selections, string ownership, and per-window start and stop controls. Area tests compare
-the stored SDL rectangle and cursor against the Idris values.  They also test area reset and
-composition cancellation without disabling text input.  The test-only native library inserts known
-events into SDL's queue. It is not part of the binding library.  The example builds in the test
-environment, but interactive display behavior needs a manual test.
+creation, drawing, and timers.  Cleanup tests cover skipped callbacks after creation failure,
+preserved results, and nested cleanup after successful and failed callbacks.  They inspect window
+and renderer state through window identifiers, without using destroyed handles.  They also test
+copied events, points, and textures after their source resources are released.  Timing tests cover
+clock units, counter frequency, zero delays, and clock progress during nanosecond delays.  They
+enforce no upper duration limit because scheduling can resume the test late.  These tests are not
+timing-accuracy benchmarks.  Texture tests read pixels from off-screen and window targets.  They
+test destination rectangles, target reset, invalid dimensions, and rejection of textures from
+another renderer. BMP tests create temporary image files and remove them after each test.  They test
+missing and invalid files, pixel colors, source rectangles, and texture use after surface
+destruction. VSync tests cover mode queries, supported-mode selection, unsupported-mode errors, and
+interval bounds.  They restore disabled synchronization before presenting another frame.  Renderer
+tests cover viewport origins, clipping, empty clip rectangles, per-target state, and shape alpha
+blending. They also test that `clear` ignores viewport and clip state.  Scaling tests cover every
+logical presentation mode, independent axis scaling, and scale and logical state retained across
+target switches. Coordinate tests cover inverse conversion, scaling, viewport offsets, letterbox
+borders, combined transforms, and copied point lifetime.  Compile-time tests reject mixed point
+spaces and buffer types.  Streaming tests cover RGBA byte order, row padding, buffer reuse, and
+source data consumption.  They also cover short buffers, invalid pitch, size multiplication beyond
+32 bits, and rejected upload preservation.  Partial upload tests cover source origin, padded rows,
+texture edges, and preservation of neighboring pixels.  They reject invalid rectangles, extreme
+coordinates, short buffers, and invalid pitch.  Compile-time tests reject floating-point upload
+rectangles and partial uploads to render-target textures.  Compile-time tests reject uploads to
+static textures and uploads from the wrong buffer type.  Pixel tests cover all exposed blend modes,
+color and alpha modulation, and nearest and linear filtering.  Tests allow small rounding
+differences for fractional blending and interpolation.  Compile-time tests reject mixed handle
+types, mixed flag types, forged handles, and static textures used as render targets.  Wait tests
+cover queued and delayed events, zero and expired timeouts, timeout bounds, old SDL errors, and
+copied text lifetime.  A test-only C timer queues delayed events without calling Idris from another
+thread.  Event tests cover keyboard data, repeat status, window identifiers, timestamps, and data
+retained after buffer reuse. Mouse tests cover fractional coordinates, relative motion, presses,
+releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover normal, flipped,
+and unknown directions, fractional values, pointer position, and signed 32-bit limits. Text tests
+cover Unicode, empty and long text, composition selections, string ownership, and per-window start
+and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
+They also test area reset and composition cancellation without disabling text input.  The test-only
+native library inserts known events into SDL's queue. It is not part of the binding library.  The
+example builds in the test environment, but interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
 
-Next work includes texture locking, audio streams, and scoped resource ownership.  Keep each
-addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
-before adding performance claims or a larger abstraction layer.
+Next work includes texture locking, audio streams, and cleanup helpers for textures and
+render-target state.  Keep each addition close to SDL's API and test its failure paths.  Measure
+call overhead and allocations before adding performance claims or a larger abstraction layer.

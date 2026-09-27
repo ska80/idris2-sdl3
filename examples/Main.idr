@@ -1,6 +1,7 @@
 module Main
 
 import SDL3
+import SDL3.Scoped
 import System
 
 %default covering
@@ -72,32 +73,19 @@ runRenderer identifier renderer = do
   Right texture <- createTargetTexture renderer 200 180 | Left err => pure (Left err)
   result <- do
     Right () <- prepareTexture renderer texture | Left err => pure (Left err)
-    Right coordinates <- newCoordinateBuffer | Left err => pure (Left err)
-    result <- do
-      Right buffer <- newEventBuffer | Left err => pure (Left err)
-      result <- loop identifier renderer texture coordinates buffer
-      freeEventBuffer buffer
-      pure result
-    freeCoordinateBuffer coordinates
-    pure result
+    withCoordinateBuffer $ \coordinates =>
+      withEventBuffer $ \buffer =>
+        loop identifier renderer texture coordinates buffer
   destroyTexture texture
   pure result
 
 runWindow : Window -> IO (Either String ())
 runWindow window = do
   Right identifier <- getWindowID window | Left err => pure (Left err)
-  Right renderer <- createRenderer window | Left err => pure (Left err)
-  result <- runRenderer identifier renderer
-  destroyRenderer renderer
-  pure result
+  withRenderer window (runRenderer identifier)
 
 run : IO (Either String ())
-run = do
-  Right window <- createWindow "Idris 2 + SDL3" 640 480 resizable
-    | Left err => pure (Left err)
-  result <- runWindow window
-  destroyWindow window
-  pure result
+run = withWindow "Idris 2 + SDL3" 640 480 resizable runWindow
 
 main : IO ()
 main = do

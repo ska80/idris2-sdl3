@@ -60,19 +60,32 @@ static Uint32 SDLCALL queue_delayed_quit(void* userdata, SDL_TimerID timer, Uint
     (void)userdata;
     (void)timer;
     (void)interval;
+
     SDL_Event event = {0};
     event.type      = SDL_EVENT_QUIT;
+
     SDL_PushEvent(&event);
+
     return 0;
 }
 
 Uint32 idris_test_schedule_quit(void) {
     SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+
     return SDL_AddTimer(10, queue_delayed_quit, NULL);
 }
 
 void idris_test_cancel_timer(Uint32 timer) {
     SDL_RemoveTimer(timer);
+}
+
+/* Query by identifier, without dereferencing a destroyed handle. */
+int idris_test_window_state(Uint32 identifier) {
+    SDL_Window* window = SDL_GetWindowFromID(identifier);
+
+    if (!window) return 0;
+
+    return SDL_GetRenderer(window) ? 2 : 1;
 }
 
 /* Test-only events. Keep these symbols out of the binding library. */

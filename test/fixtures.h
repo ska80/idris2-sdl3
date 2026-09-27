@@ -4,6 +4,9 @@
 
 int idris_test_pixel_near(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 tolerance);
 
+/* 0: no window, 1: window without renderer, 2: window with renderer. */
+int idris_test_window_state(Uint32 identifier);
+
 Uint32 idris_test_schedule_quit(void);
 void   idris_test_cancel_timer(Uint32 timer);
 

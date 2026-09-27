@@ -1,6 +1,7 @@
 module TextureTests
 
 import SDL3
+import SDL3.Scoped
 import System.File
 
 %default covering
@@ -116,10 +117,9 @@ textureControls window renderer texture = do
 
 bmpFile : Bits32 -> Renderer -> String -> IO (Either String ())
 bmpFile window renderer path = do
-  Right surface <- loadBMP path | Left err => pure (Left err)
-  textureResult <- createTextureFromSurface renderer surface
-  destroySurface surface
-  Right texture <- pure textureResult | Left err => pure (Left err)
+  Left "surface callback failure" <- withBMP path (\_ => pure (the (Either String ()) (Left "surface callback failure")))
+    | _ => pure (Left "Scoped surface lost the callback error")
+  Right texture <- withBMP path (createTextureFromSurface renderer) | Left err => pure (Left err)
   -- Pixel tests must pass after the source surface is destroyed.
   result <- do
     Right () <- drawImage window renderer texture | Left err => pure (Left err)
@@ -141,10 +141,8 @@ bmpTests window renderer = do
     removed <- removeFile path
     Right () <- pure result | Left err => pure (Left err)
     Right () <- pure removed | Left _ => pure (Left "Cannot remove BMP fixture")
-    Left err <- loadBMP path
-      | Right surface => do
-          destroySurface surface
-          pure (Left "Missing BMP file was accepted")
+    Left err <- withBMP path (\_ => pure (Right ()))
+      | Right () => pure (Left "Missing BMP file was accepted")
     if err == "" then pure (Left "Missing BMP file produced no error") else pure (Right ())
 
 draw : Bits32 -> Renderer -> Texture TargetAccess -> IO (Either String ())

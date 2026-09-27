@@ -12,6 +12,7 @@ import StreamingTests
 import TimerTests
 import VSyncTests
 import WaitTests
+import ScopedTests
 
 %default covering
 
@@ -84,6 +85,7 @@ resources window = do
 smoke : IO (Either String ())
 smoke = do
   Right () <- timerTests | Left err => pure (Left err)
+  Right () <- scopedTests | Left err => pure (Left err)
   Right () <- require "Init flags lost bits" (initBits (video <+> audio) == 0x30)
     | Left err => pure (Left err)
   Right () <- require "Window flags lost bits" (windowBits (hidden <+> resizable) == 0x28)

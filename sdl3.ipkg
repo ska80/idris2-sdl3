@@ -22,5 +22,6 @@ modules = SDL3
         , SDL3.Events
         , SDL3.Flags
         , SDL3.Raw
+        , SDL3.Scoped
 
 prebuild = "make -C cbits"
