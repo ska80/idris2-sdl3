@@ -51,7 +51,17 @@ rendererScopes window identifier = do
   result <- withRenderer window $ \renderer => do
     Right () <- expectState identifier 2 | Left err => pure (Left err)
     Right () <- bufferScopes renderer | Left err => pure (Left err)
-    pure (Right (the Bits64 0x100000002))
+    Left "streaming callback failure" <- withStreamingTexture renderer 2 2
+      (\_ => pure (the (Either String ()) (Left "streaming callback failure")))
+      | _ => pure (Left "Streaming texture scope lost the callback error")
+    called <- newIORef False
+    rejected <- withStreamingTexture renderer 0 2 $ \_ => do
+      writeIORef called True
+      pure (Right ())
+    ran <- readIORef called
+    Left _ <- pure rejected | Right () => pure (Left "Scoped streaming texture accepted zero width")
+    if ran then pure (Left "Failed texture creation ran its callback")
+           else pure (Right (the Bits64 0x100000002))
   Right value <- pure result | Left err => pure (Left err)
   if value /= 0x100000002 then pure (Left "Scoped result changed") else do
     Right () <- expectState identifier 1 | Left err => pure (Left err)

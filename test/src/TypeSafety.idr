@@ -160,6 +160,16 @@ failing "Mismatch between"
   wrongScopedResult : IO (Either String Bits64)
   wrongScopedResult = withEventBuffer (\_ => ticks)
 
+failing "Mismatch between"
+  wrongScopedTarget : Renderer -> Texture StaticAccess -> IO (Either String ())
+  wrongScopedTarget renderer texture = withRenderTarget renderer (Just texture) (pure (Right ()))
+
+failing "Mismatch between"
+  wrongScopedTextureAccess : Renderer -> IO (Either String ())
+  wrongScopedTextureAccess renderer = withStreamingTexture renderer 1 1 $ \texture => do
+    _ <- setRenderTarget renderer (Just texture)
+    pure (Right ())
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

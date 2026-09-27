@@ -119,6 +119,13 @@ bmpFile : Bits32 -> Renderer -> String -> IO (Either String ())
 bmpFile window renderer path = do
   Left "surface callback failure" <- withBMP path (\_ => pure (the (Either String ()) (Left "surface callback failure")))
     | _ => pure (Left "Scoped surface lost the callback error")
+  scoped <- withBMP path $ \surface => do
+    Left "static callback failure" <- withTextureFromSurface renderer surface
+      (\_ => pure (the (Either String ()) (Left "static callback failure")))
+      | _ => pure (Left "Static texture scope lost the callback error")
+    -- Reuse the same caller-owned surface after the first texture is destroyed.
+    withTextureFromSurface renderer surface (drawImage window renderer)
+  Right () <- pure scoped | Left err => pure (Left err)
   Right texture <- withBMP path (createTextureFromSurface renderer) | Left err => pure (Left err)
   -- Pixel tests must pass after the source surface is destroyed.
   result <- do

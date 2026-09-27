@@ -13,6 +13,7 @@ import TimerTests
 import VSyncTests
 import WaitTests
 import ScopedTests
+import TargetScopeTests
 
 %default covering
 
@@ -72,6 +73,7 @@ resources window = do
       Right () <- waitTests | Left err => pure (Left err)
       Right () <- textureTests window renderer | Left err => pure (Left err)
       Right () <- renderTests window renderer | Left err => pure (Left err)
+      Right () <- targetScopeTests window renderer | Left err => pure (Left err)
       Right () <- scalingTests window renderer | Left err => pure (Left err)
       Right () <- coordinateTests renderer | Left err => pure (Left err)
       Right () <- streamingTests window renderer | Left err => pure (Left err)

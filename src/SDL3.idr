@@ -299,6 +299,25 @@ setRenderTarget (MkRenderer renderer) Nothing =
 setRenderTarget (MkRenderer renderer) (Just (MkTexture texture)) =
   (/= 0) <$> primIO (prim__setRenderTarget renderer texture)
 
+||| Select a target for an action, then attempt to restore the previous target.
+||| Call on the main thread. Keep the renderer and both targets alive throughout.
+||| Selection failure skips the action. Right and Left returns both trigger restoration.
+||| Selection or action errors take precedence over restoration errors.
+||| If restoration alone fails, return its copied SDL error. State is then uncertain.
+||| Only the selected target is restored, not draw color or changes to target state.
+||| Runtime exceptions, process exit, and non-returning actions do not guarantee restoration.
+export
+withRenderTarget : Renderer -> Maybe (Texture TargetAccess) ->
+                   IO (Either String a) -> IO (Either String a)
+withRenderTarget {a} renderer@(MkRenderer ptr) target action = do
+  previous <- primIO (prim__getRenderTarget ptr)
+  selected <- setRenderTarget renderer target
+  result <- the (IO (Either String a)) (if selected then action else Left <$> getError)
+  restored <- primIO (prim__setRenderTarget ptr previous)
+  case result of
+    Left err => pure (Left err)
+    Right value => if restored /= 0 then pure (Right value) else Left <$> getError
+
 ||| Draw the whole texture into the destination rectangle, or the whole target.
 ||| The texture must belong to this renderer and must not be the current target.
 ||| Call on the main thread. Nothing uses SDL's default destination rectangle.

@@ -2,6 +2,7 @@ module StreamingTests
 
 import Data.Buffer
 import SDL3
+import SDL3.Scoped
 
 %default covering
 
@@ -126,7 +127,5 @@ streamingTests window renderer = do
   writePixel buffer 12 30 40 220
   writePixel buffer 16 200 180 160
   setBits32 buffer 20 0x55667788
-  Right texture <- createStreamingTexture renderer 2 2 | Left err => pure (Left err)
-  result <- uploadedPixels identifier renderer texture buffer
-  destroyTexture texture
-  pure result
+  withStreamingTexture renderer 2 2 $ \texture =>
+    uploadedPixels identifier renderer texture buffer

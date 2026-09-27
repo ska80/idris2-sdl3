@@ -12,15 +12,9 @@ require action = do
   pure (Right ())
 
 prepareTexture : Renderer -> Texture TargetAccess -> IO (Either String ())
-prepareTexture renderer texture = do
-  Right () <- require (setRenderTarget renderer (Just texture)) | Left err => pure (Left err)
-  result <- do
-    Right () <- require (setDrawColor renderer 80 180 255 255) | Left err => pure (Left err)
-    require (clear renderer)
-  restored <- require (setRenderTarget renderer Nothing)
-  case result of
-    Left err => pure (Left err)
-    Right () => pure restored
+prepareTexture renderer texture = withRenderTarget renderer (Just texture) $ do
+  Right () <- require (setDrawColor renderer 80 180 255 255) | Left err => pure (Left err)
+  require (clear renderer)
 
 frame : Renderer -> Texture TargetAccess -> IO (Either String ())
 frame renderer texture = do

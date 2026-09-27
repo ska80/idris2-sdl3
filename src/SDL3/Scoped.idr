@@ -33,6 +33,26 @@ export
 withRenderer : Window -> (Renderer -> IO (Either String a)) -> IO (Either String a)
 withRenderer window = withResource (createRenderer window) destroyRenderer
 
+||| Create a streaming texture for the callback and destroy it on Right or Left.
+||| Call on the main thread. Keep the renderer alive throughout the callback.
+||| Do not destroy or retain the texture. Creation failure skips the callback.
+||| Runtime exceptions and process exit do not guarantee cleanup.
+export
+withStreamingTexture : Renderer -> Int -> Int ->
+                       (Texture StreamingAccess -> IO (Either String a)) -> IO (Either String a)
+withStreamingTexture renderer width height =
+  withResource (createStreamingTexture renderer width height) destroyTexture
+
+||| Copy a surface into a static texture, then destroy the texture on Right or Left.
+||| Call on the main thread. The caller still owns the surface.
+||| Keep the renderer alive. Do not destroy or retain the supplied texture.
+||| Creation failure skips the callback. Runtime exceptions do not guarantee cleanup.
+export
+withTextureFromSurface : Renderer -> Surface ->
+                         (Texture StaticAccess -> IO (Either String a)) -> IO (Either String a)
+withTextureFromSurface renderer surface =
+  withResource (createTextureFromSurface renderer surface) destroyTexture
+
 ||| Allocate one event buffer for the callback and free it on Right or Left.
 ||| Poll or wait on the main thread. Do not share, free, or retain the buffer.
 ||| Copied events can outlive the callback. Runtime exceptions do not guarantee cleanup.

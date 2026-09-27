@@ -91,6 +91,12 @@ prim__setTextureBlendMode : AnyPtr -> Bits32 -> PrimIO Int
 export
 prim__setTextureScaleMode : AnyPtr -> Int -> PrimIO Int
 
+||| Borrowed pointer to the current target. Null means the window target.
+||| Requires a live renderer on the main thread. Does not transfer ownership.
+%foreign "C:SDL_GetRenderTarget, libSDL3, SDL3/SDL.h"
+export
+prim__getRenderTarget : AnyPtr -> PrimIO AnyPtr
+
 %foreign "C:idris_sdl_set_render_target, libidris2_sdl3, sdl3.h"
 export
 prim__setRenderTarget : AnyPtr -> AnyPtr -> PrimIO Int
