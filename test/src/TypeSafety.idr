@@ -190,6 +190,14 @@ failing "Mismatch between"
   integerOutline : Renderer -> Rect -> IO Bool
   integerOutline renderer rect = drawRect renderer (Just rect)
 
+failing "Mismatch between"
+  mixedSizeUnits : Bits64 -> PixelSizeData -> Event
+  mixedSizeUnits timestamp dimensions = WindowResizedEvent timestamp dimensions
+
+failing "Mismatch between"
+  mixedPixelUnits : Bits64 -> WindowSizeData -> Event
+  mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

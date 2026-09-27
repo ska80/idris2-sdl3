@@ -136,6 +136,8 @@ data EventBuffer = MkEventBuffer AnyPtr
 public export
 data EventType = QuitRequested
                | WindowCloseRequested
+               | WindowResized
+               | WindowPixelSizeChanged
                | KeyDown
                | KeyUp
                | MouseMotion
@@ -576,6 +578,8 @@ pollEvent (MkEventBuffer ptr) = do
       8 => pure MouseWheel
       9 => pure TextInput
       10 => pure TextEditing
+      11 => pure WindowResized
+      12 => pure WindowPixelSizeChanged
       _ => OtherEvent <$> primIO (prim__eventType ptr)
     pure (Just event)
 
@@ -640,6 +644,20 @@ textEditingData ptr = do
   length <- primIO (prim__eventEditLength ptr)
   pure (MkTextEditingData window text start length)
 
+windowSizeData : AnyPtr -> IO WindowSizeData
+windowSizeData ptr = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  width <- primIO (prim__eventWindowData1 ptr)
+  height <- primIO (prim__eventWindowData2 ptr)
+  pure (MkWindowSizeData window width height)
+
+pixelSizeData : AnyPtr -> IO PixelSizeData
+pixelSizeData ptr = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  width <- primIO (prim__eventWindowData1 ptr)
+  height <- primIO (prim__eventWindowData2 ptr)
+  pure (MkPixelSizeData window width height)
+
 eventData : AnyPtr -> IO Event
 eventData ptr = do
   kind <- primIO (prim__eventKind ptr)
@@ -657,6 +675,8 @@ eventData ptr = do
     8 => MouseWheelEvent timestamp <$> mouseWheelData ptr
     9 => TextInputEvent timestamp <$> textInputData ptr
     10 => TextEditingEvent timestamp <$> textEditingData ptr
+    11 => WindowResizedEvent timestamp <$> windowSizeData ptr
+    12 => WindowPixelSizeChangedEvent timestamp <$> pixelSizeData ptr
     _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
 
 ||| Consume one event on the main thread. Nothing means the queue is empty.

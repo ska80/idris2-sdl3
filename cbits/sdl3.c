@@ -328,6 +328,8 @@ Uint64 idris_sdl_event_timestamp(const SDL_Event* event) {
 Uint32 idris_sdl_event_window(const SDL_Event* event) {
     switch (event->type) {
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+    case SDL_EVENT_WINDOW_RESIZED:
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
         return event->window.windowID;
     case SDL_EVENT_TEXT_INPUT:
         return event->text.windowID;
@@ -343,6 +345,14 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
     default:
         return event->key.windowID;
     }
+}
+
+Sint32 idris_sdl_event_window_data1(const SDL_Event* event) {
+    return event->window.data1;
+}
+
+Sint32 idris_sdl_event_window_data2(const SDL_Event* event) {
+    return event->window.data2;
 }
 
 Uint32 idris_sdl_event_scancode(const SDL_Event* event) {
@@ -452,6 +462,10 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 9;
     case SDL_EVENT_TEXT_EDITING:
         return 10;
+    case SDL_EVENT_WINDOW_RESIZED:
+        return 11;
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        return 12;
     default:
         return 0;
     }

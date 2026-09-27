@@ -113,9 +113,37 @@ mouseTests buffer = do
     Nothing <- pollEventData buffer | _ => pure (Left "Mouse event queue was not empty")
     wheelTests buffer
 
+sizeTests : EventBuffer -> IO (Either String ())
+sizeTests buffer = do
+  Just (WindowResizedEvent windowTime windowSize) <- fixture buffer 18
+    | _ => pure (Left "Window-coordinate resize was not decoded")
+  1 <- primIO (prim__queueEvent 19) | _ => pure (Left "Cannot queue a pixel size event")
+  Right (Just (WindowPixelSizeChangedEvent pixelTime pixelSize)) <- waitEventDataTimeout buffer 0
+    | _ => pure (Left "Wait did not decode the pixel size event")
+  Just (WindowPixelSizeChangedEvent _ (MkPixelSizeData _ zeroWidth zeroHeight)) <- fixture buffer 20
+    | _ => pure (Left "Zero pixel dimensions were not decoded")
+  Just (WindowPixelSizeChangedEvent _ (MkPixelSizeData _ minWidth maxHeight)) <- fixture buffer 21
+    | _ => pure (Left "Signed pixel dimensions were not decoded")
+  -- Earlier values must survive subsequent reuse of the native event buffer.
+  let MkWindowSizeData windowID width height = windowSize
+  let MkPixelSizeData pixelID pixelWidth pixelHeight = pixelSize
+  if windowTime /= 0x100000002 || pixelTime /= 0x100000002 ||
+     windowID /= MkWindowID 0x80000001 || pixelID /= windowID ||
+     width /= 800 || height /= 600 || pixelWidth /= 1600 || pixelHeight /= 1200 ||
+     zeroWidth /= 0 || zeroHeight /= 0 || minWidth /= -2147483648 || maxHeight /= 2147483647
+     then pure (Left "Resize event values changed or lost bits")
+     else do
+       1 <- primIO (prim__queueEvent 18) | _ => pure (Left "Cannot queue window resize type")
+       Just WindowResized <- pollEvent buffer | _ => pure (Left "Window resize type was incorrect")
+       1 <- primIO (prim__queueEvent 19) | _ => pure (Left "Cannot queue pixel size type")
+       Just WindowPixelSizeChanged <- pollEvent buffer | _ => pure (Left "Pixel size event type was incorrect")
+       Nothing <- pollEventData buffer | _ => pure (Left "Resize events were not consumed")
+       pure (Right ())
+
 export
 eventTests : EventBuffer -> IO (Either String ())
 eventTests buffer = do
+  Right () <- sizeTests buffer | Left err => pure (Left err)
   Just (QuitEvent quitTime) <- fixture buffer 1
     | _ => pure (Left "Quit event was not decoded")
   Just (WindowCloseEvent closeTime target) <- fixture buffer 2

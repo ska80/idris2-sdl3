@@ -88,6 +88,9 @@ IDRIS_SDL3 Uint64     idris_sdl_event_timestamp(const SDL_Event* event);
 /* Window access requires a close, keyboard, text input, text editing, or supported mouse event.
  * Key access requires a keyboard event. */
 IDRIS_SDL3 Uint32 idris_sdl_event_window(const SDL_Event* event);
+/* Require a window event. Size events store width and height in data1 and data2. */
+IDRIS_SDL3 Sint32 idris_sdl_event_window_data1(const SDL_Event* event);
+IDRIS_SDL3 Sint32 idris_sdl_event_window_data2(const SDL_Event* event);
 IDRIS_SDL3 Uint32 idris_sdl_event_scancode(const SDL_Event* event);
 IDRIS_SDL3 Uint32 idris_sdl_event_keycode(const SDL_Event* event);
 IDRIS_SDL3 Uint16 idris_sdl_event_modifiers(const SDL_Event* event);

@@ -284,6 +284,16 @@ export
 prim__eventTimestamp : AnyPtr -> PrimIO Bits64
 
 ||| Requires a window-close, keyboard, text input, text editing, or supported mouse event.
+||| Requires a window event. For size events, data1 is width and data2 is height.
+%foreign "C:idris_sdl_event_window_data1, libidris2_sdl3, sdl3.h"
+export
+prim__eventWindowData1 : AnyPtr -> PrimIO Int32
+
+||| Requires a window event. For size events, data1 is width and data2 is height.
+%foreign "C:idris_sdl_event_window_data2, libidris2_sdl3, sdl3.h"
+export
+prim__eventWindowData2 : AnyPtr -> PrimIO Int32
+
 %foreign "C:idris_sdl_event_window, libidris2_sdl3, sdl3.h"
 export
 prim__eventWindow : AnyPtr -> PrimIO Bits32

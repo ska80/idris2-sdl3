@@ -190,6 +190,16 @@ int idris_test_queue_event(int kind) {
         event.edit.length = kind == 14 ? 2 : -1;
         break;
 
+    case 18:
+    case 19:
+    case 20:
+    case 21:
+        event.type            = kind == 18 ? SDL_EVENT_WINDOW_RESIZED : SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED;
+        event.window.windowID = 0x80000001u;
+        event.window.data1    = kind == 18 ? 800 : kind == 19 ? 1600 : kind == 20 ? 0 : SDL_MIN_SINT32;
+        event.window.data2    = kind == 18 ? 600 : kind == 19 ? 1200 : kind == 20 ? 0 : SDL_MAX_SINT32;
+        break;
+
     default:
         return 0;
     }

@@ -156,11 +156,31 @@ record TextEditingData where
   start : Int32
   length : Int32
 
+||| Window dimensions in window coordinates, not necessarily physical pixels.
+||| Dimensions are copied without validation. The identifier does not own the window.
+public export
+record WindowSizeData where
+  constructor MkWindowSizeData
+  windowID : WindowID
+  width : Int32
+  height : Int32
+
+||| Window dimensions in physical pixels, distinct from window-coordinate dimensions.
+||| Dimensions are copied without validation. The identifier does not own the window.
+public export
+record PixelSizeData where
+  constructor MkPixelSizeData
+  windowID : WindowID
+  width : Int32
+  height : Int32
+
 ||| Event data copied from the reusable buffer. Timestamps use nanoseconds.
 ||| Other types retain their numeric type and timestamp, but not their payload.
 public export
 data Event = QuitEvent Bits64
            | WindowCloseEvent Bits64 WindowID
+           | WindowResizedEvent Bits64 WindowSizeData
+           | WindowPixelSizeChangedEvent Bits64 PixelSizeData
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData
