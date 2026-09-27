@@ -22,6 +22,8 @@ frame renderer texture = do
   Right () <- require (clear renderer) | Left err => pure (Left err)
   Right () <- require (renderTexture renderer texture (Just (MkFRect 220 150 200 180)))
     | Left err => pure (Left err)
+  Right () <- require (setDrawColor renderer 230 240 255 255) | Left err => pure (Left err)
+  Right () <- require (drawRect renderer (Just (MkFRect 220 150 200 180))) | Left err => pure (Left err)
   require (present renderer)
 
 clickedRectangle : Renderer -> CoordinateBuffer -> Double -> Double -> IO (Either String Bool)

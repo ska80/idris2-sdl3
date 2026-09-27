@@ -484,6 +484,28 @@ export
 fillRect : Renderer -> Double -> Double -> Double -> Double -> IO Bool
 fillRect (MkRenderer ptr) x y w h = (/= 0) <$> primIO (prim__fillRect ptr x y w h)
 
+||| Draw a point in render coordinates using the current drawing color and blend mode.
+||| Call on the main thread. Coordinates convert to SDL float. False means failure.
+export
+drawPoint : Renderer -> Point RenderSpace -> IO Bool
+drawPoint (MkRenderer ptr) (MkPoint x y) = (/= 0) <$> primIO (prim__drawPoint ptr x y)
+
+||| Draw a line between render-coordinate points using the current color and blend mode.
+||| Call on the main thread. Coordinates convert to SDL float. False means failure.
+export
+drawLine : Renderer -> Point RenderSpace -> Point RenderSpace -> IO Bool
+drawLine (MkRenderer ptr) (MkPoint x1 y1) (MkPoint x2 y2) =
+  (/= 0) <$> primIO (prim__drawLine ptr x1 y1 x2 y2)
+
+||| Draw a rectangle outline using the current drawing color and blend mode.
+||| Nothing outlines the entire current target. Just uses an FRect in drawing coordinates.
+||| Call on the main thread. Coordinates convert to SDL float. False means failure.
+export
+drawRect : Renderer -> Maybe FRect -> IO Bool
+drawRect (MkRenderer ptr) Nothing = (/= 0) <$> primIO (prim__drawRect ptr 0 0 0 0 0)
+drawRect (MkRenderer ptr) (Just (MkFRect x y width height)) =
+  (/= 0) <$> primIO (prim__drawRect ptr 1 x y width height)
+
 ||| Text field bounds in window coordinates. The cursor offset is relative to x.
 ||| The cursor offset is a coordinate, not a character or byte index.
 public export

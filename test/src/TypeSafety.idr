@@ -178,6 +178,18 @@ failing "Mismatch between"
   wrongRotationCenter : Renderer -> Texture StaticAccess -> Point RenderSpace -> IO Bool
   wrongRotationCenter renderer texture center = renderTextureRotated renderer texture Nothing Nothing 0 (Just center) NoFlip
 
+failing "Mismatch between"
+  windowPointDrawing : Renderer -> Point WindowSpace -> IO Bool
+  windowPointDrawing renderer point = drawPoint renderer point
+
+failing "Mismatch between"
+  windowLineDrawing : Renderer -> Point RenderSpace -> Point WindowSpace -> IO Bool
+  windowLineDrawing renderer start end = drawLine renderer start end
+
+failing "Mismatch between"
+  integerOutline : Renderer -> Rect -> IO Bool
+  integerOutline renderer rect = drawRect renderer (Just rect)
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

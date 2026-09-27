@@ -31,6 +31,11 @@ int main(void) {
     assert(idris_sdl_set_render_logical_presentation(NULL, 320, 240, SDL_LOGICAL_PRESENTATION_LETTERBOX) == 0);
     assert(idris_sdl_reset_render_target(NULL) == 0);
     assert(idris_sdl_set_render_target(NULL, NULL) == 0);
+    assert(idris_sdl_draw_point(NULL, 1.25, 2.5) == 0);
+    assert(idris_sdl_draw_line(NULL, 1.25, 2.5, 3.75, 4.5) == 0);
+    assert(idris_sdl_draw_rect(NULL, 1, 1.25, 2.5, 3.75, 4.5) == 0);
+    assert(idris_sdl_draw_rect(NULL, 0, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_render_texture(NULL, NULL) == 0);
     assert(idris_sdl_render_texture_rotated(NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 0, 0) == 0);
     assert(idris_sdl_render_texture_rotated(NULL, NULL, 31, 0, 0, 8, 8, 2, 3, 16, 16, 45, 4, 5) == 0);

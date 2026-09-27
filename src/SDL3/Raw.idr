@@ -207,6 +207,19 @@ prim__getRenderVSync : AnyPtr -> PrimIO Int32
 export
 prim__present : AnyPtr -> PrimIO Int
 
+%foreign "C:idris_sdl_draw_point, libidris2_sdl3, sdl3.h"
+export
+prim__drawPoint : AnyPtr -> Double -> Double -> PrimIO Int
+
+%foreign "C:idris_sdl_draw_line, libidris2_sdl3, sdl3.h"
+export
+prim__drawLine : AnyPtr -> Double -> Double -> Double -> Double -> PrimIO Int
+
+||| A zero presence flag passes NULL to SDL_RenderRect.
+%foreign "C:idris_sdl_draw_rect, libidris2_sdl3, sdl3.h"
+export
+prim__drawRect : AnyPtr -> Int32 -> Double -> Double -> Double -> Double -> PrimIO Int
+
 %foreign "C:idris_sdl_fill_rect, libidris2_sdl3, sdl3.h"
 export
 prim__fillRect : AnyPtr -> Double -> Double -> Double -> Double -> PrimIO Int

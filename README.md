@@ -28,7 +28,7 @@ The package build hook compiles `cbits/libidris2_sdl3.so`.  `--no-prompt` permit
 hook without an interactive question.  The Makefile uses `pack` for all Idris builds and sets native
 library search paths.
 
-`make run` creates a blue texture once and draws it in a fixed 640 by 480 scene.  Resizing preserves
+`make run` creates a blue texture once and draws it with a pale outline in a fixed 640 by 480 scene.  Resizing preserves
 the scene's width-to-height ratio and adds borders where needed.  Close the window, press Escape, or
 left-click the blue rectangle to exit.  The example converts click positions into scene coordinates,
 including after resizing.  `make test` uses SDL's dummy video driver, so it does not need a display.
@@ -144,6 +144,20 @@ drawing origin.  An empty clip rectangle blocks all drawing. `setRenderClipRect 
 disables this extra clipping, but does not remove viewport clipping.  Each render target retains its
 own viewport and clip rectangle when you switch targets.  `clear` ignores both areas and clears the
 entire current target. Use `fillRect` to clear only a drawing region.
+
+`drawPoint renderer (MkPoint x y)` draws one point. The point type is `Point RenderSpace`.
+`drawLine renderer start end` draws a line between two points in the same coordinate space.
+Window-coordinate points must first be converted with `renderCoordinatesFromWindow`.
+
+`drawRect renderer (Just (MkFRect x y width height))` draws a rectangle outline, not a filled rectangle.
+Pass `Nothing` to use SDL's default rectangle for a full-target outline.
+`fillRect renderer x y width height` remains the filled-rectangle call.
+
+These shapes use the current drawing color and blend mode.
+Viewport, clipping, drawing scale, and logical presentation also apply.
+Coordinates convert from `Double` to SDL `float`. Exact fractional pixel coverage depends on SDL's rendering backend.
+Each call requires the main thread and returns `False` on failure. Read `getError` immediately after failure.
+The adapters allocate no native heap memory. Batched point, line, and rectangle drawing are not yet bound.
 
 `setDrawBlendMode renderer mode` selects blending for shapes such as filled rectangles, using the
 same `BlendMode` type as textures.  It does not change texture blending. Use `setTextureBlendMode`
@@ -492,7 +506,11 @@ invalid dimensions, and rejection of textures from another renderer. BMP tests c
 image files and remove them after each test.  They test missing and invalid files, pixel colors,
 source rectangles, and texture use after surface destruction. VSync tests cover mode queries,
 supported-mode selection, unsupported-mode errors, and interval bounds.  They restore disabled
-synchronization before presenting another frame.  Renderer tests cover viewport origins, clipping,
+synchronization before presenting another frame.
+Shape tests cover point placement, line endpoints, outline edges, unfilled interiors, clipping, scaling, and alpha blending.
+They also cover a default outline on a target texture.
+Compile-time tests reject window-coordinate points and integer outline rectangles.
+Renderer tests cover viewport origins, clipping,
 empty clip rectangles, per-target state, and shape alpha blending. They also test that `clear`
 ignores viewport and clip state.  Scaling tests cover every logical presentation mode, independent
 axis scaling, and scale and logical state retained across target switches. Coordinate tests cover

@@ -240,6 +240,19 @@ int idris_sdl_present(SDL_Renderer* r) {
     return SDL_RenderPresent(r);
 }
 
+int idris_sdl_draw_point(SDL_Renderer* renderer, double x, double y) {
+    return SDL_RenderPoint(renderer, (float)x, (float)y);
+}
+
+int idris_sdl_draw_line(SDL_Renderer* renderer, double x1, double y1, double x2, double y2) {
+    return SDL_RenderLine(renderer, (float)x1, (float)y1, (float)x2, (float)y2);
+}
+
+int idris_sdl_draw_rect(SDL_Renderer* renderer, Sint32 has_rect, double x, double y, double w, double h) {
+    const SDL_FRect rect = {(float)x, (float)y, (float)w, (float)h};
+    return SDL_RenderRect(renderer, has_rect ? &rect : NULL);
+}
+
 int idris_sdl_fill_rect(SDL_Renderer* r, double x, double y, double w, double h) {
     const SDL_FRect rect = {(float)x, (float)y, (float)w, (float)h};
     return SDL_RenderFillRect(r, &rect);
