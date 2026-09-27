@@ -61,6 +61,24 @@ scaleValue : ScaleMode -> Int
 scaleValue NearestScale = 0
 scaleValue LinearScale = 1
 
+||| Mirror texture pixels horizontally, vertically, or on both axes.
+public export
+data TextureFlip = NoFlip | FlipHorizontal | FlipVertical | FlipBoth
+
+flipValue : TextureFlip -> Bits32
+flipValue NoFlip = 0
+flipValue FlipHorizontal = 1
+flipValue FlipVertical = 2
+flipValue FlipBoth = 3
+
+||| Rotation center relative to the destination rectangle's top-left corner.
+||| Values use destination drawing units and convert to SDL float in C.
+public export
+record RotationCenter where
+  constructor MkRotationCenter
+  x : Double
+  y : Double
+
 ||| How a fixed logical resolution fits the current render target.
 public export
 data LogicalPresentation = PresentationDisabled | PresentationStretch
@@ -338,6 +356,37 @@ renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw 
 renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw sh)
                     (Just (MkFRect dx dy dw dh)) =
   (/= 0) <$> primIO (prim__renderTextureRegion renderer texture sx sy sw sh dx dy dw dh)
+
+rotatedTexture : AnyPtr -> AnyPtr -> Int32 -> Double -> Double -> Double -> Double ->
+                 Int32 -> Double -> Double -> Double -> Double -> Double ->
+                 Maybe RotationCenter -> TextureFlip -> IO Bool
+rotatedTexture renderer texture source sx sy sw sh destination dx dy dw dh angle Nothing flip =
+  (/= 0) <$> primIO (prim__renderTextureRotated renderer texture
+                     (cast source + 2 * cast destination + 8 * flipValue flip)
+                     sx sy sw sh dx dy dw dh angle 0 0)
+rotatedTexture renderer texture source sx sy sw sh destination dx dy dw dh angle (Just (MkRotationCenter cx cy)) flip =
+  (/= 0) <$> primIO (prim__renderTextureRotated renderer texture
+                     (cast source + 2 * cast destination + 4 + 8 * flipValue flip)
+                     sx sy sw sh dx dy dw dh angle cx cy)
+
+||| Draw with clockwise rotation in degrees and optional mirroring, on the main thread.
+||| Source uses texture pixels. Nothing selects the whole texture.
+||| Destination uses drawing coordinates. Nothing fills the current target.
+||| The center is relative to the destination's top-left corner. Nothing uses its midpoint.
+||| Rectangles and center convert to float. The angle remains double precision.
+||| Use the creating renderer, keep both handles alive, and do not draw a target into itself.
+||| Returns False on failure. Read getError immediately after failure.
+export
+renderTextureRotated : Renderer -> Texture access -> Maybe FRect -> Maybe FRect ->
+                       Double -> Maybe RotationCenter -> TextureFlip -> IO Bool
+renderTextureRotated (MkRenderer renderer) (MkTexture texture) Nothing Nothing angle center flip =
+  rotatedTexture renderer texture 0 0 0 0 0 0 0 0 0 0 angle center flip
+renderTextureRotated (MkRenderer renderer) (MkTexture texture) (Just (MkFRect sx sy sw sh)) Nothing angle center flip =
+  rotatedTexture renderer texture 1 sx sy sw sh 0 0 0 0 0 angle center flip
+renderTextureRotated (MkRenderer renderer) (MkTexture texture) Nothing (Just (MkFRect dx dy dw dh)) angle center flip =
+  rotatedTexture renderer texture 0 0 0 0 0 1 dx dy dw dh angle center flip
+renderTextureRotated (MkRenderer renderer) (MkTexture texture) (Just (MkFRect sx sy sw sh)) (Just (MkFRect dx dy dw dh)) angle center flip =
+  rotatedTexture renderer texture 1 sx sy sw sh 1 dx dy dw dh angle center flip
 
 ||| Allocate once and reuse for coordinate conversions. Do not share between threads.
 export

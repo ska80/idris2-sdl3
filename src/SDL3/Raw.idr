@@ -122,6 +122,13 @@ export
 prim__renderTextureRegion : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double ->
                            Double -> Double -> Double -> Double -> PrimIO Int
 
+||| Option bits 0, 1, 2 select source, destination, and center structs, or NULL.
+||| Bits 3 and 4 encode SDL flip flags. Packing avoids RefC's large-arity FFI limit.
+%foreign "C:idris_sdl_render_texture_rotated, libidris2_sdl3, sdl3.h"
+export
+prim__renderTextureRotated : AnyPtr -> AnyPtr -> Bits32 -> Double -> Double -> Double -> Double ->
+                            Double -> Double -> Double -> Double -> Double -> Double -> Double -> PrimIO Int
+
 %foreign "C:idris_sdl_coordinate_new, libidris2_sdl3, sdl3.h"
 export
 prim__coordinateNew : PrimIO AnyPtr

@@ -247,6 +247,29 @@ target's rendering coordinates.  Pass `Nothing` as the destination to fill the c
 supports sprite sheets, images that contain several smaller images, without copying each sprite into
 a new texture.
 
+`renderTextureRotated renderer texture source destination angle center flip` adds rotation and
+mirroring.  The source is a `Maybe FRect` in texture pixels. `Nothing` selects the whole texture.
+The destination is a `Maybe FRect` in drawing coordinates. `Nothing` fills the current target.  The
+angle uses degrees, with positive values rotating clockwise.
+
+The center is a `Maybe RotationCenter`. `Nothing` rotates around the destination rectangle's
+midpoint.  `Just (MkRotationCenter x y)` gives offsets from the destination's top-left corner before
+rotation.  These offsets use destination drawing units, not source texture pixels or absolute window
+coordinates.  Rectangle and center values convert to SDL `float`. The angle remains a `Double`.
+
+The `TextureFlip` values are:
+
+- `NoFlip` preserves pixel orientation.
+- `FlipHorizontal` mirrors left and right.
+- `FlipVertical` mirrors top and bottom.
+- `FlipBoth` mirrors both axes, not diagonally.
+
+Mirroring and rotation do not modify the texture's stored pixels.  Call on the main thread with the
+texture's creating renderer. Do not draw a target texture into itself.  The call returns `False` on
+failure. Read `getError` immediately after failure.  The C adapter uses stack rectangles and a
+point, with no native heap allocation in the adapter.  `test/src/RotationTests.idr` shows source
+rectangles, combined transformations, and a custom center.
+
 Color modulation multiplies each source color channel during drawing.  `setTextureColorMod texture r
 g b` uses byte values, with 255 preserving a channel and zero removing it.  `setTextureAlphaMod
 texture alpha` multiplies source alpha, which controls opacity, by `alpha / 255`.  These controls do
@@ -481,25 +504,30 @@ Partial upload tests cover source origin, padded rows, texture edges, and preser
 neighboring pixels.  They reject invalid rectangles, extreme coordinates, short buffers, and invalid
 pitch.  Compile-time tests reject floating-point upload rectangles and partial uploads to
 render-target textures.  Compile-time tests reject uploads to static textures and uploads from the
-wrong buffer type.  Pixel tests cover all exposed blend modes, color and alpha modulation, and
-nearest and linear filtering.  Tests allow small rounding differences for fractional blending and
-interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
-static textures used as render targets.  Wait tests cover queued and delayed events, zero and
-expired timeouts, timeout bounds, old SDL errors, and copied text lifetime.  A test-only C timer
-queues delayed events without calling Idris from another thread.  Event tests cover keyboard data,
-repeat status, window identifiers, timestamps, and data retained after buffer reuse. Mouse tests
-cover fractional coordinates, relative motion, presses, releases, click counts, unknown buttons, and
-button-state bits.  Wheel tests cover normal, flipped, and unknown directions, fractional values,
-pointer position, and signed 32-bit limits. Text tests cover Unicode, empty and long text,
-composition selections, string ownership, and per-window start and stop controls. Area tests compare
-the stored SDL rectangle and cursor against the Idris values.  They also test area reset and
-composition cancellation without disabling text input.  The test-only native library inserts known
-events into SDL's queue. It is not part of the binding library.  The example builds in the test
-environment, but interactive display behavior needs a manual test.
+wrong buffer type.  Rotation tests cover every flip mode, clockwise and counterclockwise rotation,
+combined rotation and mirroring, source rectangles, and default destinations.  They also cover
+custom centers and unchanged pixels outside the destination.  Compile-time tests reject unrelated
+flip modes and absolute points used as rotation centers.  Pixel tests cover all exposed blend modes,
+color and alpha modulation, and nearest and linear filtering.  Tests allow small rounding
+differences for fractional blending and interpolation.  Compile-time tests reject mixed handle
+types, mixed flag types, forged handles, and static textures used as render targets.  Wait tests
+cover queued and delayed events, zero and expired timeouts, timeout bounds, old SDL errors, and
+copied text lifetime.  A test-only C timer queues delayed events without calling Idris from another
+thread.  Event tests cover keyboard data, repeat status, window identifiers, timestamps, and data
+retained after buffer reuse. Mouse tests cover fractional coordinates, relative motion, presses,
+releases, click counts, unknown buttons, and button-state bits.  Wheel tests cover normal, flipped,
+and unknown directions, fractional values, pointer position, and signed 32-bit limits. Text tests
+cover Unicode, empty and long text, composition selections, string ownership, and per-window start
+and stop controls. Area tests compare the stored SDL rectangle and cursor against the Idris values.
+They also test area reset and composition cancellation without disabling text input.  The test-only
+native library inserts known events into SDL's queue. It is not part of the binding library.  The
+example builds in the test environment, but interactive display behavior needs a manual test.
 
 With the current RefC version, use equality tests for wide numeric values instead of numeric case
 patterns.  Its generated case code can truncate those values. The event tests use values above 32
 bits to test timestamp preservation.
+The rotation adapter packs its option flags into one argument to avoid a large-argument foreign-call failure in the current RefC backend.
+It still makes one native call and needs no caller-owned conversion buffer.
 
 Next work includes texture locking, audio streams, and target-texture cleanup helpers.  Keep each
 addition close to SDL's API and test its failure paths.  Measure call overhead and allocations

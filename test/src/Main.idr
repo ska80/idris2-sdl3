@@ -14,6 +14,7 @@ import VSyncTests
 import WaitTests
 import ScopedTests
 import TargetScopeTests
+import RotationTests
 
 %default covering
 
@@ -77,6 +78,7 @@ resources window = do
       Right () <- scalingTests window renderer | Left err => pure (Left err)
       Right () <- coordinateTests renderer | Left err => pure (Left err)
       Right () <- streamingTests window renderer | Left err => pure (Left err)
+      Right () <- rotationTests window renderer | Left err => pure (Left err)
       Right () <- vsyncTests renderer | Left err => pure (Left err)
       render renderer
     freeEventBuffer buffer

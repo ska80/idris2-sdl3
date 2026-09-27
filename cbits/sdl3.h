@@ -32,6 +32,11 @@ IDRIS_SDL3 int idris_sdl_render_texture_source(SDL_Renderer* renderer, SDL_Textu
 IDRIS_SDL3 int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture, double sx, double sy, double sw, double sh,
                                                double dx, double dy, double dw, double dh);
 
+/* Bits 0/1/2 select source/destination/center. Bits 3/4 encode SDL flip flags. */
+IDRIS_SDL3 int idris_sdl_render_texture_rotated(SDL_Renderer* renderer, SDL_Texture* texture, Uint32 options, double sx, double sy,
+                                                double sw, double sh, double dx, double dy, double dw, double dh, double angle, double cx,
+                                                double cy);
+
 IDRIS_SDL3 SDL_FPoint* idris_sdl_coordinate_new(void);
 IDRIS_SDL3 void        idris_sdl_coordinate_free(SDL_FPoint* point);
 /* Read coordinates only after a successful conversion into this buffer. */

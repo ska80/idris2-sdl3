@@ -8,6 +8,8 @@ _Static_assert(SDL_MOUSEWHEEL_NORMAL == 0 && SDL_MOUSEWHEEL_FLIPPED == 1, "Updat
 
 _Static_assert(SDLK_ESCAPE == 27, "Update SDL3.Events.escapeKey");
 
+_Static_assert(SDL_FLIP_NONE == 0 && SDL_FLIP_HORIZONTAL == 1 && SDL_FLIP_VERTICAL == 2, "Update SDL3 texture flip constants");
+
 _Static_assert(SDL_RENDERER_VSYNC_DISABLED == 0 && SDL_RENDERER_VSYNC_ADAPTIVE == -1, "Update SDL3 VSync constants");
 
 _Static_assert(SDL_LOGICAL_PRESENTATION_DISABLED == 0 && SDL_LOGICAL_PRESENTATION_STRETCH == 1 && SDL_LOGICAL_PRESENTATION_LETTERBOX == 2 &&
@@ -126,6 +128,7 @@ int idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, 
 
 int idris_sdl_render_texture_source(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h) {
     const SDL_FRect source = {(float)x, (float)y, (float)w, (float)h};
+
     return SDL_RenderTexture(renderer, texture, &source, NULL);
 }
 
@@ -133,12 +136,25 @@ int idris_sdl_render_texture_region(SDL_Renderer* renderer, SDL_Texture* texture
                                     double dy, double dw, double dh) {
     const SDL_FRect source      = {(float)sx, (float)sy, (float)sw, (float)sh};
     const SDL_FRect destination = {(float)dx, (float)dy, (float)dw, (float)dh};
+
     return SDL_RenderTexture(renderer, texture, &source, &destination);
+}
+
+int idris_sdl_render_texture_rotated(SDL_Renderer* renderer, SDL_Texture* texture, Uint32 options, double sx, double sy, double sw,
+                                     double sh, double dx, double dy, double dw, double dh, double angle, double cx, double cy) {
+    const SDL_FRect  source      = {(float)sx, (float)sy, (float)sw, (float)sh};
+    const SDL_FRect  destination = {(float)dx, (float)dy, (float)dw, (float)dh};
+    const SDL_FPoint center      = {(float)cx, (float)cy};
+
+    return SDL_RenderTextureRotated(renderer, texture, (options & 1) ? &source : NULL, (options & 2) ? &destination : NULL, angle,
+                                    (options & 4) ? &center : NULL, (SDL_FlipMode)((options >> 3) & 3));
 }
 
 SDL_FPoint* idris_sdl_coordinate_new(void) {
     SDL_FPoint* point = SDL_calloc(1, sizeof(SDL_FPoint));
+
     if (!point) SDL_SetError("Cannot allocate coordinate buffer");
+
     return point;
 }
 

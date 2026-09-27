@@ -170,6 +170,14 @@ failing "Mismatch between"
     _ <- setRenderTarget renderer (Just texture)
     pure (Right ())
 
+failing "Mismatch between"
+  wrongTextureFlip : Renderer -> Texture StaticAccess -> IO Bool
+  wrongTextureFlip renderer texture = renderTextureRotated renderer texture Nothing Nothing 0 Nothing AlphaBlend
+
+failing "Mismatch between"
+  wrongRotationCenter : Renderer -> Texture StaticAccess -> Point RenderSpace -> IO Bool
+  wrongRotationCenter renderer texture center = renderTextureRotated renderer texture Nothing Nothing 0 (Just center) NoFlip
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture
