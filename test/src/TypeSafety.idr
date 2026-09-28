@@ -234,6 +234,22 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererBorderControl : Renderer -> IO Bool
+  rendererBorderControl renderer = setWindowBordered renderer True
+
+failing "Mismatch between"
+  flagsAsResizableState : Window -> WindowFlags -> IO Bool
+  flagsAsResizableState window flags = setWindowResizable window flags
+
+failing "Mismatch between"
+  textureBorderQuery : Texture access -> IO Bool
+  textureBorderQuery texture = isWindowBordered texture
+
+failing "Mismatch between"
+  rendererResizableQuery : Renderer -> IO Bool
+  rendererResizableQuery renderer = isWindowResizable renderer
+
+failing "Mismatch between"
   rendererShowWindow : Renderer -> IO Bool
   rendererShowWindow renderer = showWindow renderer
 

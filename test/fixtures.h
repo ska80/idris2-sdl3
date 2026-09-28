@@ -5,6 +5,7 @@
 /* Fabricated public layout for field tests only. Never pass this object to SDL. */
 SDL_Texture* idris_test_texture_fields(Sint32 width, Sint32 height);
 SDL_Texture* idris_test_null_texture(void);
+int idris_test_window_style(Uint32 identifier, int bordered, int resizable);
 Uint32 idris_test_compose_blend(int slot, int choice);
 void idris_test_size_fields(IdrisSDLSize* size, Sint32 width, Sint32 height);
 

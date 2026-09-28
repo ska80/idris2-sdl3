@@ -347,6 +347,40 @@ export
 setWindowTitle : Window -> String -> IO Bool
 setWindowTitle (MkWindow ptr _) title = (/= 0) <$> primIO (prim__setWindowTitle ptr title)
 
+||| Request a window border change on the main thread. True requests a border.
+||| SDL cannot change fullscreen window borders. Repeating the current state does nothing.
+||| Some backends accept requests without changing the flags. Query the reported state afterward.
+||| Keep the window alive. Read getError immediately after a False result.
+export
+setWindowBordered : Window -> Bool -> IO Bool
+setWindowBordered (MkWindow ptr _) bordered =
+  (/= 0) <$> primIO (prim__setWindowBordered ptr (if bordered then 1 else 0))
+
+||| Read the absence of SDL_WINDOW_BORDERLESS on the main thread, while the window is alive.
+||| This reports SDL state, not whether the window manager draws visible decorations.
+export
+isWindowBordered : Window -> IO Bool
+isWindowBordered (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  pure ((flags .&. windowBits borderless) == 0)
+
+||| Request user resizing on the main thread. True allows it. Does not request a new size.
+||| SDL cannot change fullscreen window resizability. Repeating the current state does nothing.
+||| Some backends accept requests without changing the flags. Query the reported state afterward.
+||| Keep the window alive. Read getError immediately after a False result.
+export
+setWindowResizable : Window -> Bool -> IO Bool
+setWindowResizable (MkWindow ptr _) enabled =
+  (/= 0) <$> primIO (prim__setWindowResizable ptr (if enabled then 1 else 0))
+
+||| Read SDL_WINDOW_RESIZABLE on the main thread, while the window is alive.
+||| This reports user-resizing policy, not the ability to call setWindowSize.
+export
+isWindowResizable : Window -> IO Bool
+isWindowResizable (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  pure ((flags .&. windowBits resizable) /= 0)
+
 ||| Show a live window on the main thread. Read getError immediately after False.
 ||| Does not guarantee keyboard focus or that other windows will not cover it.
 export

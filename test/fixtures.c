@@ -15,6 +15,16 @@ SDL_Texture* idris_test_null_texture(void) {
     return NULL;
 }
 
+int idris_test_window_style(Uint32 identifier, int bordered, int resizable) {
+    SDL_Window* window = SDL_GetWindowFromID(identifier);
+
+    if (!window) return 0;
+
+    SDL_WindowFlags flags = SDL_GetWindowFlags(window);
+
+    return ((flags & SDL_WINDOW_BORDERLESS) == 0) == (bordered != 0) && ((flags & SDL_WINDOW_RESIZABLE) != 0) == (resizable != 0);
+}
+
 Uint32 idris_test_compose_blend(int slot, int choice) {
     static const SDL_BlendFactor    factors[]    = {SDL_BLENDFACTOR_ZERO,      SDL_BLENDFACTOR_ONE,
                                                     SDL_BLENDFACTOR_SRC_COLOR, SDL_BLENDFACTOR_ONE_MINUS_SRC_COLOR,

@@ -13,6 +13,8 @@ IDRIS_SDL3 char* idris_sdl_get_error(void);
 IDRIS_SDL3 int idris_sdl_set_window_size(SDL_Window* window, Sint32 width, Sint32 height);
 IDRIS_SDL3 int idris_sdl_sync_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_set_window_title(SDL_Window* window, const char* title);
+IDRIS_SDL3 int idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered);
+IDRIS_SDL3 int idris_sdl_set_window_resizable(SDL_Window* window, Sint32 resizable);
 IDRIS_SDL3 int idris_sdl_show_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_hide_window(SDL_Window* window);
 

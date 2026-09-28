@@ -28,6 +28,7 @@ import RectBatchTests
 import SizeTests
 import WindowTitleTests
 import WindowVisibilityTests
+import WindowStyleTests
 
 %default covering
 
@@ -116,6 +117,7 @@ smoke = do
   Right () <- scopedTests | Left err => pure (Left err)
   Right () <- windowTitleTests | Left err => pure (Left err)
   Right () <- windowVisibilityTests | Left err => pure (Left err)
+  Right () <- windowStyleTests | Left err => pure (Left err)
   Right () <- require "Init flags lost bits" (initBits (video <+> audio) == 0x30)
     | Left err => pure (Left err)
   Right () <- require "Window flags lost bits" (windowBits (hidden <+> resizable) == 0x28)

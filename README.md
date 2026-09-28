@@ -578,6 +578,27 @@ The hidden-state query binds directly to `SDL_GetWindowFlags` and tests one bit 
 The show/hide adapters only convert SDL boolean results to C integers. These bindings allocate no
 native output storage, but SDL and the window system can perform work internally.
 
+`setWindowBordered window enabled` requests a border when `enabled` is `True` and removes it when
+`False`. `setWindowResizable window enabled` requests whether the user can resize the window.
+Neither call requests new client-area dimensions. Use `setWindowSize` for a programmatic size
+request, even when user resizing is disabled. SDL cannot change these styles for fullscreen windows.
+Repeating the current state does nothing.
+
+Both setters require a live window on the main thread and return `Bool`. Read `getError` immediately
+after `False`. A `True` result does not prove that a backend applied the change. In our dummy-driver
+tests, SDL accepts both requests without changing the corresponding flags. The binding preserves
+that behavior rather than storing the requested state itself.
+
+`isWindowBordered window` tests that `SDL_WINDOW_BORDERLESS` is absent.  `isWindowResizable window`
+tests that `SDL_WINDOW_RESIZABLE` is present. Both query SDL's current flags on the main
+thread. Their boolean results are states, not success indicators. Border state does not guarantee
+visible window-manager decorations, and resizability does not guarantee that a specific size request
+will be granted.
+
+The setter adapters convert an integer input to a C boolean and the C boolean result to an integer.
+Queries use the direct flag binding. No adapter output buffer is allocated. Keep the window alive
+throughout these calls and destroy its renderer and textures before destroying the window.
+
 `getWindowTitle window` returns `IO String`. It copies SDL's UTF-8 title into an Idris string.  An
 empty result is valid for an untitled window, not an error marker. The copy remains valid after
 later title changes or window destruction. The getter binds directly to SDL, with no C adapter.
@@ -994,6 +1015,13 @@ cached actions, independent windows, copied state, and stable identity, title, a
 pixel test uses an existing renderer and texture after hide/show. Native tests cover null-window
 failures. Compile-time tests reject wrong handles and flag values used as windows. The dummy driver
 tests SDL state, not focus, occlusion, minimization, or physical display behavior.
+
+Window-style tests cover creation flags, repeated requests, cached actions, independent windows, and
+queries compared with SDL's actual flags. They also cover programmatic resizing with user resizing
+disabled, stable identifiers and titles, and use with an active texture target.  Native tests cover
+null windows and zero/nonzero input conversion. Compile-time tests reject wrong handles and flag
+values used instead of booleans. The dummy driver does not apply style changes.  Actual border
+changes, interactive resizing, and fullscreen restrictions need manual testing.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

@@ -71,6 +71,14 @@ int idris_sdl_is_null(const void* ptr) {
     return ptr == NULL;
 }
 
+int idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered) {
+    return SDL_SetWindowBordered(window, bordered != 0);
+}
+
+int idris_sdl_set_window_resizable(SDL_Window* window, Sint32 resizable) {
+    return SDL_SetWindowResizable(window, resizable != 0);
+}
+
 int idris_sdl_show_window(SDL_Window* window) {
     return SDL_ShowWindow(window);
 }

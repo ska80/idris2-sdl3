@@ -13,6 +13,12 @@ static void size_tests(void) {
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) == 0);
     assert(idris_sdl_hide_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
+    /* The dummy driver accepts style requests without applying them. */
+    assert(idris_sdl_set_window_bordered(window, 0) == 1);
+    assert(idris_sdl_set_window_bordered(window, -1) == 1);
+    assert(idris_sdl_set_window_resizable(window, 2) == 1);
+    assert(idris_sdl_set_window_resizable(window, 0) == 1);
+    assert((SDL_GetWindowFlags(window) & (SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE)) == 0);
     assert(idris_sdl_set_window_title(window, "native title") == 1);
     assert(SDL_strcmp(SDL_GetWindowTitle(window), "native title") == 0);
     assert(idris_sdl_set_window_title(window, "") == 1);
@@ -102,6 +108,10 @@ int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
+    assert(idris_sdl_set_window_bordered(NULL, 1) == 0);
+    assert(SDL_GetError()[0] != '\0');
+    assert(idris_sdl_set_window_resizable(NULL, 0) == 0);
+    assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_show_window(NULL) == 0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_hide_window(NULL) == 0);
