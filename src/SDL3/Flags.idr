@@ -67,6 +67,11 @@ export
 resizable : WindowFlags
 resizable = MkWindowFlags 0x20
 
+||| Request always-on-top placement. Actual stacking depends on the window system.
+export
+alwaysOnTop : WindowFlags
+alwaysOnTop = MkWindowFlags 0x10000
+
 export
 highPixelDensity : WindowFlags
 highPixelDensity = MkWindowFlags 0x2000

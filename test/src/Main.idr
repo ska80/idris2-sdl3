@@ -33,6 +33,7 @@ import WindowScaleTests
 import FullscreenTests
 import WindowFocusTests
 import WindowStateControlTests
+import AlwaysOnTopTests
 
 %default covering
 
@@ -126,6 +127,7 @@ smoke = do
   Right () <- fullscreenTests | Left err => pure (Left err)
   Right () <- windowFocusTests | Left err => pure (Left err)
   Right () <- windowStateControlTests | Left err => pure (Left err)
+  Right () <- alwaysOnTopTests | Left err => pure (Left err)
   Right () <- require "Init flags lost bits" (initBits (video <+> audio) == 0x30)
     | Left err => pure (Left err)
   Right () <- require "Window flags lost bits" (windowBits (hidden <+> resizable) == 0x28)

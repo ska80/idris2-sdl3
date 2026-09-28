@@ -564,6 +564,26 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+`alwaysOnTop` is a `WindowFlags` value that requests always-on-top placement at creation.  Combine
+it with other window flags, for example `hidden <+> alwaysOnTop`.  `setWindowAlwaysOnTop window
+enabled` returns `IO Bool`. With `enabled = True`, it requests that the window stay above
+others. With `enabled = False`, it requests removal of that setting. This differs from
+`raiseWindow`, which makes a one-time request to raise the window and gain keyboard focus.
+
+Call the setter on the main thread with a live window. If it returns `False`, read `getError`
+immediately. A `True` result does not prove that the backend changed the flag or actual placement.
+The dummy driver preserves the creation-time flag but accepts later requests without changing it.
+The binding does not store the requested state separately from SDL.
+
+`isWindowAlwaysOnTop window` returns `IO Bool` from SDL's `SDL_WINDOW_ALWAYS_ON_TOP` flag.  Call it
+on the main thread while the window is alive. It reports a state, not success, visibility, keyboard
+focus, or guaranteed placement above every other window. Desktop stacking policy determines actual
+placement. Its copied result survives window destruction but does not track later changes.
+
+The setter adapter converts the boolean input and result for C. The query uses the direct flag
+binding, with the mask checked against SDL headers during the native build. Neither allocates native
+output storage. Normal cleanup order still applies: textures, renderer, then window.
+
 Keyboard focus identifies the window that receives keyboard input.  `raiseWindow window` requests
 that SDL raise a window above others and give it keyboard focus.  It returns `IO Bool`. Call it on
 the main thread with a live window. If it returns `False`, read `getError`
@@ -1300,6 +1320,14 @@ of an existing renderer and texture target after rejected requests. Compile-time
 handles and identifiers. Successful requests, true state flags, real state-change events, and
 window-manager restrictions remain manual-test cases because the dummy driver lacks these
 operations.
+
+Always-on-top tests cover both creation states, mixed window flags, repeated requests, cached
+actions, independent windows, and copied booleans after cleanup. They preserve the dummy driver's
+unchanged flags after requests. Tests also cover stable identifiers, titles, dimensions, hidden
+state, and drawing with an existing texture target. Native tests cover null-window failure and
+zero/nonzero inputs. Compile-time tests reject wrong handles, flags used as booleans, and window
+flags used for initialization. Actual desktop stacking and successful flag changes need manual
+tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

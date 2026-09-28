@@ -30,6 +30,20 @@ static void size_tests(void) {
     assert(idris_sdl_get_window_pixel_density(window) == 1.0);
     assert(idris_sdl_get_window_display_scale(window) == 1.0);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
+
+    /* The dummy driver accepts changes but retains the creation-time topmost flag. */
+    assert(idris_sdl_set_window_always_on_top(window, -1) == 1);
+    assert(idris_sdl_set_window_always_on_top(window, 0) == 1);
+    assert((SDL_GetWindowFlags(window) & SDL_WINDOW_ALWAYS_ON_TOP) == 0);
+
+    SDL_Window* top = SDL_CreateWindow("on top", 16, 16, SDL_WINDOW_HIDDEN | SDL_WINDOW_ALWAYS_ON_TOP);
+    assert(top);
+    assert(idris_sdl_set_window_always_on_top(top, 2) == 1);
+    assert(idris_sdl_set_window_always_on_top(top, 0) == 1);
+    assert((SDL_GetWindowFlags(top) & SDL_WINDOW_ALWAYS_ON_TOP) != 0);
+
+    SDL_DestroyWindow(top);
+
     assert(idris_sdl_raise_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
     assert(idris_sdl_show_window(window) == 1);
@@ -43,6 +57,7 @@ static void size_tests(void) {
     assert(idris_sdl_set_window_fullscreen(window, 0) == 1);
     assert(idris_sdl_sync_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
+
     /* The dummy driver accepts style requests without applying them. */
     assert(idris_sdl_set_window_bordered(window, 0) == 1);
     assert(idris_sdl_set_window_bordered(window, -1) == 1);
@@ -141,6 +156,9 @@ int main(void) {
     assert(idris_sdl_get_window_pixel_density(NULL) == 0.0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_get_window_display_scale(NULL) == 0.0);
+    assert(SDL_GetError()[0] != '\0');
+    SDL_ClearError();
+    assert(idris_sdl_set_window_always_on_top(NULL, 1) == 0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_raise_window(NULL) == 0);
     assert(SDL_GetError()[0] != '\0');

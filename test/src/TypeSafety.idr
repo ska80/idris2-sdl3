@@ -234,6 +234,22 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererAlwaysOnTopRequest : Renderer -> IO Bool
+  rendererAlwaysOnTopRequest renderer = setWindowAlwaysOnTop renderer True
+
+failing "Mismatch between"
+  flagsAlwaysOnTopRequest : Window -> IO Bool
+  flagsAlwaysOnTopRequest window = setWindowAlwaysOnTop window alwaysOnTop
+
+failing "Mismatch between"
+  textureAlwaysOnTopQuery : Texture access -> IO Bool
+  textureAlwaysOnTopQuery texture = isWindowAlwaysOnTop texture
+
+failing "Mismatch between"
+  alwaysOnTopInit : IO Bool
+  alwaysOnTopInit = init alwaysOnTop
+
+failing "Mismatch between"
   rendererMinimizeRequest : Renderer -> IO Bool
   rendererMinimizeRequest renderer = minimizeWindow renderer
 

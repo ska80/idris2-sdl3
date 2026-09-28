@@ -397,6 +397,22 @@ isWindowMaximized (MkWindow ptr _) = do
   flags <- primIO (prim__getWindowFlags ptr)
   pure ((flags .&. 0x80) /= 0)
 
+||| Request always-on-top placement (True) or remove it (False) on the main thread.
+||| Keep the window alive. Read getError immediately after False.
+||| Some backends accept requests without changing the flag. Actual stacking depends on the window system.
+export
+setWindowAlwaysOnTop : Window -> Bool -> IO Bool
+setWindowAlwaysOnTop (MkWindow ptr _) enabled =
+  (/= 0) <$> primIO (prim__setWindowAlwaysOnTop ptr (if enabled then 1 else 0))
+
+||| Read SDL_WINDOW_ALWAYS_ON_TOP on the main thread, while the window is alive.
+||| Returns a state, not a success indicator or a guarantee of visibility or focus.
+export
+isWindowAlwaysOnTop : Window -> IO Bool
+isWindowAlwaysOnTop (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  pure ((flags .&. windowBits alwaysOnTop) /= 0)
+
 ||| Request that a live window be raised and gain keyboard focus on the main thread.
 ||| Window-manager policy can deny focus. True does not prove that focus changed.
 ||| Read getError immediately after False. Use showWindow separately for a hidden window.

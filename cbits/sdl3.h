@@ -19,6 +19,7 @@ IDRIS_SDL3 double idris_sdl_get_window_display_scale(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_minimize_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_maximize_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_restore_window(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_set_window_always_on_top(SDL_Window* window, Sint32 enabled);
 IDRIS_SDL3 int idris_sdl_raise_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_set_window_fullscreen(SDL_Window* window, Sint32 fullscreen);
 IDRIS_SDL3 int idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered);
