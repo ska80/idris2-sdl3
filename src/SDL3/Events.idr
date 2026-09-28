@@ -183,6 +183,9 @@ data Event = QuitEvent Bits64
            | WindowPixelSizeChangedEvent Bits64 PixelSizeData
            -- Notification only. Query the live window for its current scale.
            | WindowDisplayScaleChangedEvent Bits64 WindowID
+           -- Keyboard focus notifications, not mouse entry or visibility changes.
+           | WindowFocusGainedEvent Bits64 WindowID
+           | WindowFocusLostEvent Bits64 WindowID
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData

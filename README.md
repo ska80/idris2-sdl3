@@ -564,6 +564,22 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+Keyboard focus identifies the window that receives keyboard input.  `WindowFocusGainedEvent
+timestamp identifier` and `WindowFocusLostEvent timestamp identifier` report changes in that
+focus. Their copied values contain a nanosecond timestamp and `WindowID`.  They do not report mouse
+entry, mouse exit, window visibility, or minimization.
+
+Match the identifier to your window before changing application input state.  On lost focus, you can
+clear your application's held-key state or pause keyboard-driven actions.  The binding does not
+maintain that state or pause your application. A queued notification describes a past change, not a
+query of current focus. Its identifier does not keep a window alive.
+
+`pollEvent` returns `WindowFocusGained` or `WindowFocusLost` without payload data.  `pollEventData`,
+`waitEventData`, and `waitEventDataTimeout` decode both payload constructors.  Call these functions
+on the main thread and reuse the caller-owned event buffer.  Copied notifications survive buffer
+reuse and destruction. No new native storage is allocated for each notification. Update exhaustive
+matches for the two new type-only and two new payload constructors.
+
 `showWindow window` and `hideWindow window` return `IO Bool`. Call them on the main thread while the
 window is alive, and read `getError` immediately after `False`. Hiding does not destroy the window,
 renderer, or textures. Keep their normal cleanup order and show the same window again when
@@ -1073,6 +1089,13 @@ identifiers with high bits or zero, and timestamps above 32 bits. They also cove
 after buffer reuse and destruction. Unused integer payload fields contain extreme values to catch
 accidental size or scale decoding. Native tests cover classification and window access.
 Compile-time tests reject size records or owned windows used instead of event identifiers.
+
+Keyboard-focus tests cover both notifications through payload polling, type-only polling, timed
+waits, and blocking waits. They preserve wide timestamps, distinct window identifiers, zero
+identifiers, and copied values after buffer cleanup. Native tests cover the SDL event constants and
+window fields. Compile-time tests reject owned windows or keycodes used as focus-event identifiers.
+Synthetic events do not establish window-manager focus behavior. Actual focus transfers between
+windows or applications need manual testing.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

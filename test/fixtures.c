@@ -329,6 +329,16 @@ int idris_test_queue_event(int kind) {
         event.edit.length = kind == 14 ? 2 : -1;
         break;
 
+    case 24:
+    case 25:
+    case 26:
+    case 27:
+        event.type = (kind == 24 || kind == 26) ? SDL_EVENT_WINDOW_FOCUS_GAINED : SDL_EVENT_WINDOW_FOCUS_LOST;
+        event.window.windowID = kind >= 26 ? 0 : kind == 24 ? 0x80000001u : 0xffffffffu;
+        event.window.data1 = SDL_MIN_SINT32;
+        event.window.data2 = SDL_MAX_SINT32;
+        break;
+
     case 22:
     case 23:
         event.type = SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;

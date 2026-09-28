@@ -2,6 +2,7 @@ module EventTests
 
 import SDL3
 import SDL3.Scoped
+import FocusEventTests
 import Data.List
 
 %default covering
@@ -171,6 +172,7 @@ eventTests : EventBuffer -> IO (Either String ())
 eventTests buffer = do
   Right () <- sizeTests buffer | Left err => pure (Left err)
   Right () <- displayScaleTests buffer | Left err => pure (Left err)
+  Right () <- focusEventTests buffer | Left err => pure (Left err)
   Just (QuitEvent quitTime) <- fixture buffer 1
     | _ => pure (Left "Quit event was not decoded")
   Just (WindowCloseEvent closeTime target) <- fixture buffer 2

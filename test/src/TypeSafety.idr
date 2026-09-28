@@ -234,6 +234,14 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  windowAsFocusIdentifier : Bits64 -> Window -> Event
+  windowAsFocusIdentifier timestamp window = WindowFocusGainedEvent timestamp window
+
+failing "Mismatch between"
+  keyAsFocusIdentifier : Bits64 -> Keycode -> Event
+  keyAsFocusIdentifier timestamp key = WindowFocusLostEvent timestamp key
+
+failing "Mismatch between"
   sizeAsScaleNotification : Bits64 -> PixelSizeData -> Event
   sizeAsScaleNotification timestamp dimensions = WindowDisplayScaleChangedEvent timestamp dimensions
 
