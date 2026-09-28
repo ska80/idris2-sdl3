@@ -64,11 +64,24 @@ blendBits MultiplyBlend = 8
 
 ||| Nearest selects a source pixel. Linear interpolates neighboring pixels.
 public export
-data ScaleMode = NearestScale | LinearScale
+data ScaleMode = NearestScale | LinearScale | OtherScaleMode Int32
 
 scaleValue : ScaleMode -> Int
 scaleValue NearestScale = 0
 scaleValue LinearScale = 1
+scaleValue (OtherScaleMode code) = cast code
+
+||| Compare SDL mode codes, including alternate representations of named modes.
+public export
+Eq ScaleMode where
+  NearestScale == NearestScale = True
+  LinearScale == LinearScale = True
+  OtherScaleMode x == OtherScaleMode y = x == y
+  NearestScale == OtherScaleMode x = x == 0
+  OtherScaleMode x == NearestScale = x == 0
+  LinearScale == OtherScaleMode x = x == 1
+  OtherScaleMode x == LinearScale = x == 1
+  _ == _ = False
 
 ||| Mirror texture pixels horizontally, vertically, or on both axes.
 public export
@@ -392,6 +405,18 @@ export
 setTextureScaleMode : Texture access -> ScaleMode -> IO Bool
 setTextureScaleMode (MkTexture ptr) mode =
   (/= 0) <$> primIO (prim__setTextureScaleMode ptr (scaleValue mode))
+
+||| Copy the current texture filtering mode on the main thread. Keep the texture and renderer alive.
+||| Unknown SDL codes are preserved as OtherScaleMode, not treated as query failures.
+export
+getTextureScaleMode : Texture access -> IO (Either String ScaleMode)
+getTextureScaleMode (MkTexture ptr) = do
+  value <- primIO (prim__getTextureScaleMode ptr)
+  if value == -2147483649 then Left <$> getError else
+    pure (Right (case value of
+      0 => NearestScale
+      1 => LinearScale
+      other => OtherScaleMode (cast other)))
 
 ||| Select an off-screen target. Nothing restores drawing to the window.
 ||| The texture must belong to this renderer. Call on the main thread.

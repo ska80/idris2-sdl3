@@ -23,6 +23,8 @@ IDRIS_SDL3 int          idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Ui
 IDRIS_SDL3 int          idris_sdl_get_texture_alpha_mod(SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode);
 IDRIS_SDL3 int          idris_sdl_set_texture_scale_mode(SDL_Texture* texture, int mode);
+/* Signed 32-bit mode code, or -2147483649 on failure. */
+IDRIS_SDL3 Sint64       idris_sdl_get_texture_scale_mode(SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_set_render_target(SDL_Renderer* renderer, SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_reset_render_target(SDL_Renderer* renderer);
 IDRIS_SDL3 int          idris_sdl_render_texture(SDL_Renderer* renderer, SDL_Texture* texture);

@@ -81,6 +81,23 @@ withTextureAlphaMod {a} texture alpha action = do
     Left err => pure (Left err)
     Right value => if restored then pure (Right value) else Left <$> getError
 
+||| Temporarily set texture filtering, then attempt to restore the previous mode.
+||| Keep the texture and renderer alive on the main thread. This does not own either resource.
+||| Query or setting failure skips the action. A failed setting still triggers restoration.
+||| Setting or action errors take precedence over restoration errors. Left does not guarantee restoration.
+||| Restores only filtering, including unknown saved codes. SDL can select the closest supported mode.
+||| Runtime exceptions, process exit, and non-returning actions do not guarantee restoration.
+export
+withTextureScaleMode : Texture access -> ScaleMode -> IO (Either String a) -> IO (Either String a)
+withTextureScaleMode {a} texture mode action = do
+  Right previous <- getTextureScaleMode texture | Left err => pure (Left err)
+  changed <- setTextureScaleMode texture mode
+  result <- the (IO (Either String a)) (if changed then action else Left <$> getError)
+  restored <- setTextureScaleMode texture previous
+  case result of
+    Left err => pure (Left err)
+    Right value => if restored then pure (Right value) else Left <$> getError
+
 ||| Allocate one event buffer for the callback and free it on Right or Left.
 ||| Poll or wait on the main thread. Do not share, free, or retain the buffer.
 ||| Copied events can outlive the callback. Runtime exceptions do not guarantee cleanup.

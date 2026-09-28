@@ -138,6 +138,11 @@ prim__setTextureBlendMode : NativeTexture -> Bits32 -> PrimIO Int
 export
 prim__setTextureScaleMode : NativeTexture -> Int -> PrimIO Int
 
+||| A signed 32-bit mode code, or -2147483649 on failure. The marker is outside the code range.
+%foreign "C:idris_sdl_get_texture_scale_mode, libidris2_sdl3, sdl3.h"
+export
+prim__getTextureScaleMode : NativeTexture -> PrimIO Int64
+
 ||| Borrowed pointer to the current target. Null means the window target.
 ||| Requires a live renderer on the main thread. Does not transfer ownership.
 %foreign "C:SDL_GetRenderTarget, libSDL3, SDL3/SDL.h"

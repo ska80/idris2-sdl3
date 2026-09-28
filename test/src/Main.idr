@@ -7,6 +7,7 @@ import EventTests
 import TextureTests
 import TextureSizeTests
 import TextureAlphaTests
+import TextureScaleTests
 import RenderTests
 import ScalingTests
 import CoordinateTests
@@ -82,6 +83,7 @@ resources window = do
       Right () <- textureTests window renderer | Left err => pure (Left err)
       Right () <- textureSizeTests renderer | Left err => pure (Left err)
       Right () <- textureAlphaTests window renderer | Left err => pure (Left err)
+      Right () <- textureScaleTests window renderer | Left err => pure (Left err)
       Right () <- renderTests window renderer | Left err => pure (Left err)
       Right () <- shapeTests window renderer | Left err => pure (Left err)
       Right () <- batchTests window renderer | Left err => pure (Left err)

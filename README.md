@@ -425,7 +425,34 @@ NearestScale` selects individual pixels, which suits pixel art.  `LinearScale` i
 neighboring pixels and is SDL's default.  All four texture controls require the main thread and
 return `False` on failure.  Call `getError` immediately after failure. SDL can choose the closest
 supported blend or scale mode, so failure does not guarantee unchanged state.  Custom blend modes
-and queries for color modulation, blending, and filtering are not yet exposed.
+and queries for color modulation and blending are not yet exposed.
+
+`getTextureScaleMode texture` returns `IO (Either String ScaleMode)` for every texture access type.
+It reports the current filtering mode on the main thread, with the texture and renderer alive.  The
+copied value survives texture destruction. The adapter uses one stack enum, with no native heap
+allocation for output storage. It returns a signed 32-bit code through a 64-bit integer.  The
+failure marker, -2147483649, lies outside that code range.
+
+`ScaleMode` now includes `OtherScaleMode Int32` for SDL codes without named constructors.  Update
+exhaustive matches to handle it. Passing an unknown code to `setTextureScaleMode` does not guarantee
+support. SDL can reject it or choose a supported mode. `Eq ScaleMode` compares SDL codes, so
+`OtherScaleMode 0` equals `NearestScale` and `OtherScaleMode 1` equals `LinearScale`.  This keeps
+SDL 3.2.12 as the minimum version while preserving modes reported by newer versions.
+
+`withTextureScaleMode texture mode action`, exported by `SDL3.Scoped`, saves the current filtering
+mode and attempts restoration after the action returns `Right` or `Left`. It restores only
+filtering, not alpha, color modulation, blending, or target selection. Nested scopes save their own
+entry mode, including unknown codes. Keep the texture and renderer alive on the main thread.  The
+helper does not own them.
+
+A failed query skips the action. A failed setting also skips the action, but still triggers a
+restoration attempt. Setting and action errors take precedence over restoration errors. If only
+restoration fails, the helper returns that SDL error. A `Left` result does not guarantee
+restoration, and SDL can select the closest supported mode. Runtime exceptions, process exit, and
+actions that never return do not guarantee restoration.
+
+A successful scope makes three foreign state calls, in addition to its action, without native heap
+storage for the saved mode.
 
 `pollEvent` returns only event types. `pollEventData` also returns timestamps and supported event
 data.  Both return `Nothing` for an empty queue. Each call consumes one event, so use one polling
@@ -774,6 +801,13 @@ nested scopes, action errors, preserved results, independent textures, and rende
 tests show that restoration changes only alpha, not color modulation. Native and raw tests cover
 null-query failure. Compile-time tests reject wrong handles, result types, and wide alpha
 arguments. The software renderer does not exercise unsupported modulation or restoration failures.
+
+Texture-filtering tests cover defaults, cached queries, all texture access types, nested scopes,
+action errors, invalid-mode rejection, skipped actions, and preservation of unrelated alpha state.
+Pixel tests compare scoped linear filtering with restored nearest filtering. Tests also try a newer
+mode and restore the actual code that SDL reports. Native and raw tests cover null-query failure.
+Compile-time tests reject wrong handles, result types, and blend modes used as filtering modes.
+Restoration failures and differences between hardware renderers still need separate testing.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

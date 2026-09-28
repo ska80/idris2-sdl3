@@ -96,6 +96,8 @@ int main(void) {
     assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_create_target_texture(NULL, 16, 16) == NULL);
     assert(idris_sdl_create_streaming_texture(NULL, 2, 2) == NULL);
+    assert(idris_sdl_get_texture_scale_mode(NULL) == -2147483649LL);
+    assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_get_texture_alpha_mod(NULL) == -1);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_get_texture_size(NULL) == 0);
