@@ -45,6 +45,26 @@ int idris_sdl_is_null(const void* ptr) {
     return ptr == NULL;
 }
 
+static Uint64 pack_size(int width, int height) {
+    if (width < 0 || height < 0) {
+        SDL_SetError("SDL returned negative dimensions");
+        return SDL_MAX_UINT64;
+    }
+    return ((Uint64)(Uint32)width << 32) | (Uint32)height;
+}
+
+Uint64 idris_sdl_get_window_size(SDL_Window* window) {
+    int w, h;
+    if (!SDL_GetWindowSize(window, &w, &h)) return SDL_MAX_UINT64;
+    return pack_size(w, h);
+}
+
+Uint64 idris_sdl_get_window_size_pixels(SDL_Window* window) {
+    int w, h;
+    if (!SDL_GetWindowSizeInPixels(window, &w, &h)) return SDL_MAX_UINT64;
+    return pack_size(w, h);
+}
+
 SDL_Renderer* idris_sdl_create_renderer(SDL_Window* window) {
     return SDL_CreateRenderer(window, NULL);
 }

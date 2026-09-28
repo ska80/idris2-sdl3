@@ -198,6 +198,14 @@ failing "Mismatch between"
   mixedPixelUnits : Bits64 -> WindowSizeData -> Event
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
+failing "Mismatch between"
+  wrongSizeUnits : Window -> IO (Either String (Size PixelUnits))
+  wrongSizeUnits window = getWindowSize window
+
+failing "Mismatch between"
+  wrongSizeHandle : Renderer -> IO (Either String (Size PixelUnits))
+  wrongSizeHandle renderer = getWindowSizeInPixels renderer
+
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture

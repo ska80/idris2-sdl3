@@ -7,6 +7,9 @@ int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
+    assert(idris_sdl_get_window_size(NULL) == SDL_MAX_UINT64);
+    assert(idris_sdl_get_window_size_pixels(NULL) == SDL_MAX_UINT64);
+    assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_create_target_texture(NULL, 16, 16) == NULL);
     assert(idris_sdl_create_streaming_texture(NULL, 2, 2) == NULL);
     const Uint8 pixels[16] = {0};

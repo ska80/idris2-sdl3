@@ -341,6 +341,20 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+`getWindowSize window` returns `Either String (Size WindowUnits)` in window coordinates.
+`getWindowSizeInPixels window` returns `Either String (Size PixelUnits)` in physical pixels.  Both
+queries require the main thread and return copied `Int32` width and height fields.  Use them to
+obtain initial dimensions before resize events arrive.  The two sizes can differ on high-density
+displays.
+
+These queries describe the window, regardless of the renderer's active texture target or logical
+presentation.  A returned `Size` owns its values, not the window, and remains valid after window
+destruction.  Its units do not track window identity or later resizing. If dimensions are zero,
+defer size-dependent drawing or allocation.  Errors return through `Left`. The adapter packs two
+nonnegative dimensions into one native return value without allocating an output buffer.  Renderer
+output-size queries remain unbound pending investigation of software-driver behavior that differs
+from the installed header documentation.
+
 `WindowResizedEvent timestamp dimensions` reports a size in window coordinates through
 `WindowSizeData`.  `WindowPixelSizeChangedEvent timestamp dimensions` reports a size in physical
 pixels through `PixelSizeData`.  Both records contain `windowID`, `width`, and `height`. Dimensions
@@ -548,11 +562,14 @@ nearest and linear filtering.  Tests allow small rounding differences for fracti
 interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
 static textures used as render targets.  Wait tests cover queued and delayed events, zero and
 expired timeouts, timeout bounds, old SDL errors, and copied text lifetime.  A test-only C timer
-queues delayed events without calling Idris from another thread.  Resize tests cover distinct window
-and pixel dimensions, zero sizes, signed limits, timestamps, and buffer reuse.  They test typed
-polling, type-only polling, and timed waits. Compile-time tests reject mixed size units.  These use
-synthetic events. Display-density changes on real monitors still need manual testing.  Event tests
-cover keyboard data, repeat status, window identifiers, timestamps, and data retained after buffer
+queues delayed events without calling Idris from another thread.  Size query tests cover initial
+dimensions, non-square windows, independence from texture targets and logical presentation, and
+copied values after window destruction.  Native tests cover query failure. Compile-time tests reject
+mixed size units and handle types.  Resize tests cover distinct window and pixel dimensions, zero
+sizes, signed limits, timestamps, and buffer reuse.  They test typed polling, type-only polling, and
+timed waits. Compile-time tests reject mixed size units.  These use synthetic
+events. Display-density changes on real monitors still need manual testing.  Event tests cover
+keyboard data, repeat status, window identifiers, timestamps, and data retained after buffer
 reuse. Mouse tests cover fractional coordinates, relative motion, presses, releases, click counts,
 unknown buttons, and button-state bits.  Wheel tests cover normal, flipped, and unknown directions,
 fractional values, pointer position, and signed 32-bit limits. Text tests cover Unicode, empty and

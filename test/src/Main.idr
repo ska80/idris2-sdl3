@@ -16,6 +16,7 @@ import ScopedTests
 import TargetScopeTests
 import RotationTests
 import ShapeTests
+import SizeTests
 
 %default covering
 
@@ -76,6 +77,7 @@ resources window = do
       Right () <- textureTests window renderer | Left err => pure (Left err)
       Right () <- renderTests window renderer | Left err => pure (Left err)
       Right () <- shapeTests window renderer | Left err => pure (Left err)
+      Right () <- sizeTests window renderer | Left err => pure (Left err)
       Right () <- targetScopeTests window renderer | Left err => pure (Left err)
       Right () <- scalingTests window renderer | Left err => pure (Left err)
       Right () <- coordinateTests renderer | Left err => pure (Left err)

@@ -68,6 +68,10 @@ IDRIS_SDL3 int idris_sdl_draw_point(SDL_Renderer* renderer, double x, double y);
 IDRIS_SDL3 int idris_sdl_draw_line(SDL_Renderer* renderer, double x1, double y1, double x2, double y2);
 IDRIS_SDL3 int idris_sdl_draw_rect(SDL_Renderer* renderer, Sint32 has_rect, double x, double y, double w, double h);
 
+/* Packed width:height (32 bits each). SDL_MAX_UINT64 means failure. */
+IDRIS_SDL3 Uint64 idris_sdl_get_window_size(SDL_Window* window);
+IDRIS_SDL3 Uint64 idris_sdl_get_window_size_pixels(SDL_Window* window);
+
 IDRIS_SDL3 int idris_sdl_start_text_input(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_stop_text_input(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_text_input_active(SDL_Window* window);

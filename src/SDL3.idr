@@ -125,6 +125,17 @@ record Point (space : CoordinateSpace) where
   x : Double
   y : Double
 
+||| Distinguish window-coordinate dimensions from physical pixel dimensions.
+public export
+data SizeUnit = WindowUnits | PixelUnits
+
+||| Copied dimensions. Units do not track window or renderer identity.
+public export
+record Size (unit : SizeUnit) where
+  constructor MkSize
+  width : Int32
+  height : Int32
+
 ||| Reusable output storage for coordinate conversion. Free exactly once.
 export
 data CoordinateBuffer = MkCoordinateBuffer AnyPtr
@@ -198,6 +209,22 @@ createRenderer (MkWindow ptr) = owned MkRenderer (prim__createRenderer ptr)
 export
 destroyRenderer : Renderer -> IO ()
 destroyRenderer (MkRenderer ptr) = primIO (prim__destroyRenderer ptr)
+
+queriedSize : PrimIO Bits64 -> IO (Either String (Size unit))
+queriedSize action = do
+  packed <- primIO action
+  if packed == 0xffffffffffffffff then Left <$> getError
+     else pure (Right (MkSize (cast (packed `div` 4294967296)) (cast (packed `mod` 4294967296))))
+
+||| Query window-coordinate dimensions on the main thread. Copies errors on failure.
+export
+getWindowSize : Window -> IO (Either String (Size WindowUnits))
+getWindowSize (MkWindow ptr) = queriedSize (prim__getWindowSize ptr)
+
+||| Query physical pixel dimensions on the main thread, which can differ from window coordinates.
+export
+getWindowSizeInPixels : Window -> IO (Either String (Size PixelUnits))
+getWindowSizeInPixels (MkWindow ptr) = queriedSize (prim__getWindowSizeInPixels ptr)
 
 ||| Load a BMP file into CPU memory. Does not require a renderer.
 ||| Destroy the returned surface when no longer needed.

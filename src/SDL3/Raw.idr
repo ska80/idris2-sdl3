@@ -71,6 +71,16 @@ prim__updateTextureRGBA : AnyPtr -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 export
 prim__updateTextureRegionRGBA : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 
+||| Size queries pack width in the high 32 bits and height in the low 32 bits.
+||| UINT64_MAX means failure. Successful dimensions are nonnegative.
+%foreign "C:idris_sdl_get_window_size, libidris2_sdl3, sdl3.h"
+export
+prim__getWindowSize : AnyPtr -> PrimIO Bits64
+
+%foreign "C:idris_sdl_get_window_size_pixels, libidris2_sdl3, sdl3.h"
+export
+prim__getWindowSizeInPixels : AnyPtr -> PrimIO Bits64
+
 %foreign "C:SDL_DestroyTexture, libSDL3, SDL3/SDL.h"
 export
 prim__destroyTexture : AnyPtr -> PrimIO ()
