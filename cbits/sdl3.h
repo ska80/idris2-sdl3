@@ -22,6 +22,8 @@ IDRIS_SDL3 int          idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Ui
 /* Returns 0 through 255, or -1 on failure. */
 IDRIS_SDL3 int          idris_sdl_get_texture_alpha_mod(SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode);
+/* Unsigned 32-bit mode code, or -1 on failure. */
+IDRIS_SDL3 Sint64       idris_sdl_get_texture_blend_mode(SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_set_texture_scale_mode(SDL_Texture* texture, int mode);
 /* Signed 32-bit mode code, or -2147483649 on failure. */
 IDRIS_SDL3 Sint64       idris_sdl_get_texture_scale_mode(SDL_Texture* texture);

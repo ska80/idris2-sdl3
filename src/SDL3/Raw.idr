@@ -134,6 +134,11 @@ prim__getTextureAlphaMod : NativeTexture -> PrimIO Int32
 export
 prim__setTextureBlendMode : NativeTexture -> Bits32 -> PrimIO Int
 
+||| Unsigned 32-bit mode code, or -1 on failure. The marker cannot collide with a mode code.
+%foreign "C:idris_sdl_get_texture_blend_mode, libidris2_sdl3, sdl3.h"
+export
+prim__getTextureBlendMode : NativeTexture -> PrimIO Int64
+
 %foreign "C:idris_sdl_set_texture_scale_mode, libidris2_sdl3, sdl3.h"
 export
 prim__setTextureScaleMode : NativeTexture -> Int -> PrimIO Int

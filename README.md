@@ -414,6 +414,7 @@ mode` with one of these modes:
 - `PremultipliedAdditiveBlend` adds source colors without scaling them again.
 - `ModulateBlend` multiplies source and destination colors.
 - `MultiplyBlend` also preserves destination color based on source transparency.
+- `OtherBlendMode code` preserves a custom or unknown SDL code as `Bits32`.
 
 With `AlphaBlend`, alpha modulation of zero makes the texture invisible.  Premultiplied modes
 require correctly prepared pixels. The binding does not convert their color values.  When fading a
@@ -424,8 +425,35 @@ Filtering selects source pixels when drawing a scaled texture.  `setTextureScale
 NearestScale` selects individual pixels, which suits pixel art.  `LinearScale` interpolates
 neighboring pixels and is SDL's default.  All four texture controls require the main thread and
 return `False` on failure.  Call `getError` immediately after failure. SDL can choose the closest
-supported blend or scale mode, so failure does not guarantee unchanged state.  Custom blend modes
-and queries for color modulation and blending are not yet exposed.
+supported blend or scale mode, so failure does not guarantee unchanged state. Color modulation
+queries and custom blend composition are not yet exposed.
+
+`getTextureBlendMode texture` returns `IO (Either String BlendMode)` for every texture access type.
+Call it on the main thread, with the texture and renderer alive. It reports texture blending, not
+the renderer's draw blending. The copied result survives texture destruction. The adapter uses a
+stack `SDL_BlendMode` and returns its unsigned 32-bit code through a signed 64-bit integer.  The
+failure marker is -1, which cannot collide with any unsigned 32-bit code.
+
+`BlendMode` now includes `OtherBlendMode Bits32`. Update exhaustive matches to handle it.  Both
+`setTextureBlendMode` and `setDrawBlendMode` can pass this code to SDL, but support depends on the
+renderer. Blend codes are complete modes, not independent flags to combine with bitwise OR.  `Eq
+BlendMode` compares SDL codes, so `OtherBlendMode 1` equals `AlphaBlend`.  The binding preserves
+custom codes but does not yet provide a custom-mode composition function.
+
+`withTextureBlendMode texture mode action`, exported by `SDL3.Scoped`, saves the current mode and
+attempts restoration after the action returns `Right` or `Left`. Nested scopes save their own entry
+mode, including custom codes. Only texture blending is restored. Alpha, color modulation, filtering,
+renderer draw blending, and target selection are not restored.  Keep the texture and renderer alive
+on the main thread. The helper does not own either resource.
+
+A failed query skips the action. A failed setting skips it but still triggers restoration, because
+SDL can change the mode even when the setting fails. Setting and action errors take precedence over
+restoration errors. If only restoration fails, the helper returns that SDL error. A `Left` result
+does not guarantee restoration. Runtime exceptions, process exit, and actions that never return do
+not guarantee restoration either.
+
+A successful scope makes three foreign state calls in addition to its action. It does not allocate
+native heap storage for the saved mode.
 
 `getTextureScaleMode texture` returns `IO (Either String ScaleMode)` for every texture access type.
 It reports the current filtering mode on the main thread, with the texture and renderer alive.  The
@@ -808,6 +836,13 @@ Pixel tests compare scoped linear filtering with restored nearest filtering. Tes
 mode and restore the actual code that SDL reports. Native and raw tests cover null-query failure.
 Compile-time tests reject wrong handles, result types, and blend modes used as filtering modes.
 Restoration failures and differences between hardware renderers still need separate testing.
+
+Texture-blend tests cover every named mode, cached queries, all texture access types, nested scopes,
+action errors, invalid codes, skipped actions, independent textures, and copied mode lifetime.  They
+also test that alpha and filtering changes survive a blend scope. Pixel tests compare scoped alpha
+blending with restored additive blending. Native and raw tests cover null-query failure.
+Compile-time tests reject wrong handles, result types, and filtering modes used as blend modes.
+Successful custom-mode restoration and restoration failures still need tests on suitable renderers.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

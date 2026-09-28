@@ -8,6 +8,8 @@ _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
 
 _Static_assert(sizeof(SDL_ScaleMode) == 4, "Bindings require 32-bit SDL scale mode codes");
 
+_Static_assert(sizeof(SDL_BlendMode) == 4, "Bindings require 32-bit SDL blend mode codes");
+
 _Static_assert(sizeof(SDL_PixelFormat) == 4 && sizeof(SDL_Texture) == 16 && offsetof(SDL_Texture, format) == 0 &&
                    offsetof(SDL_Texture, w) == 4 && offsetof(SDL_Texture, h) == 8 && offsetof(SDL_Texture, refcount) == 12,
                "Update SDL3.Raw.NativeTexture for this SDL_Texture layout");
@@ -158,6 +160,14 @@ int idris_sdl_get_texture_alpha_mod(SDL_Texture* texture) {
     if (!SDL_GetTextureAlphaMod(texture, &alpha)) return -1;
 
     return alpha;
+}
+
+Sint64 idris_sdl_get_texture_blend_mode(SDL_Texture* texture) {
+    SDL_BlendMode mode;
+
+    if (!SDL_GetTextureBlendMode(texture, &mode)) return -1;
+
+    return mode;
 }
 
 int idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode) {

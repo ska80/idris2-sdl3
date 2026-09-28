@@ -52,6 +52,7 @@ data BlendMode = NoBlend
                | PremultipliedAdditiveBlend
                | ModulateBlend
                | MultiplyBlend
+               | OtherBlendMode Bits32
 
 blendBits : BlendMode -> Bits32
 blendBits NoBlend = 0
@@ -61,6 +62,12 @@ blendBits AdditiveBlend = 2
 blendBits PremultipliedAdditiveBlend = 0x20
 blendBits ModulateBlend = 4
 blendBits MultiplyBlend = 8
+blendBits (OtherBlendMode code) = code
+
+||| Compare SDL codes, including alternate representations of named modes.
+export
+Eq BlendMode where
+  x == y = blendBits x == blendBits y
 
 ||| Nearest selects a source pixel. Linear interpolates neighboring pixels.
 public export
@@ -405,6 +412,23 @@ export
 setTextureScaleMode : Texture access -> ScaleMode -> IO Bool
 setTextureScaleMode (MkTexture ptr) mode =
   (/= 0) <$> primIO (prim__setTextureScaleMode ptr (scaleValue mode))
+
+||| Copy the texture blend mode on the main thread. Keep the texture and renderer alive.
+||| Preserve custom or unknown SDL codes as OtherBlendMode. Copies SDL errors on failure.
+export
+getTextureBlendMode : Texture access -> IO (Either String BlendMode)
+getTextureBlendMode (MkTexture ptr) = do
+  value <- primIO (prim__getTextureBlendMode ptr)
+  if value == -1 then Left <$> getError else
+    pure (Right (case value of
+      0 => NoBlend
+      1 => AlphaBlend
+      2 => AdditiveBlend
+      4 => ModulateBlend
+      8 => MultiplyBlend
+      0x10 => PremultipliedAlphaBlend
+      0x20 => PremultipliedAdditiveBlend
+      other => OtherBlendMode (cast other)))
 
 ||| Copy the current texture filtering mode on the main thread. Keep the texture and renderer alive.
 ||| Unknown SDL codes are preserved as OtherScaleMode, not treated as query failures.
