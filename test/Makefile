@@ -15,7 +15,7 @@ build/native: native.c ../cbits/sdl3.c ../cbits/sdl3.h
 		../cbits/sdl3.c -o $@ $(shell $(PKG_CONFIG) --libs sdl3)
 
 
-build/libidris2_sdl3_test.so: fixtures.c fixtures.h
+build/libidris2_sdl3_test.so: fixtures.c fixtures.h ../cbits/sdl3.h
 	$(MKDIR) -p build
 	$(CC) $(CFLAGS) -std=c11 -Wall -Wextra -Werror -fPIC -shared \
 		$(shell $(PKG_CONFIG) --cflags sdl3) fixtures.c -o $@ \

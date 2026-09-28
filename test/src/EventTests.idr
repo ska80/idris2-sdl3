@@ -161,7 +161,7 @@ eventTests buffer = do
     | _ => pure (Left "Key release data was incorrect")
   Just (UnknownEvent unknownTime 0x8000) <- fixture buffer 5
     | _ => pure (Left "Unknown event type was not preserved")
-  -- Equality avoids RefC's truncation of wide numeric case patterns.
+  -- Compare the full timestamp, including bits above the low 32 bits.
   let times = [quitTime, closeTime, pressTime, releaseTime, unknownTime]
   if not (all (== 0x100000002) times)
     then pure (Left "Event timestamps lost bits")

@@ -2,6 +2,7 @@
 module SDL3.Raw
 
 import Data.Buffer
+import System.FFI
 
 %default total
 
@@ -71,15 +72,31 @@ prim__updateTextureRGBA : AnyPtr -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 export
 prim__updateTextureRegionRGBA : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 
-||| Size queries pack width in the high 32 bits and height in the low 32 bits.
-||| UINT64_MAX means failure. Successful dimensions are nonnegative.
+||| Full layout of caller-owned IdrisSDLSize storage. Not an Idris value record.
+public export
+NativeSize : Type
+NativeSize = Struct "IdrisSDLSize" [("width", Int32), ("height", Int32)]
+
+%foreign "C:idris_sdl_size_new, libidris2_sdl3, sdl3.h"
+export
+prim__newSize : PrimIO NativeSize
+
+%foreign "C:idris_sdl_is_null, libidris2_sdl3, sdl3.h"
+export
+prim__sizeIsNull : NativeSize -> PrimIO Int
+
+%foreign "C:idris_sdl_size_free, libidris2_sdl3, sdl3.h"
+export
+prim__freeSize : NativeSize -> PrimIO ()
+
+||| Fill existing storage. Read fields only after a return value of 1.
 %foreign "C:idris_sdl_get_window_size, libidris2_sdl3, sdl3.h"
 export
-prim__getWindowSize : AnyPtr -> PrimIO Bits64
+prim__getWindowSize : AnyPtr -> NativeSize -> PrimIO Int
 
 %foreign "C:idris_sdl_get_window_size_pixels, libidris2_sdl3, sdl3.h"
 export
-prim__getWindowSizeInPixels : AnyPtr -> PrimIO Bits64
+prim__getWindowSizeInPixels : AnyPtr -> NativeSize -> PrimIO Int
 
 %foreign "C:SDL_DestroyTexture, libSDL3, SDL3/SDL.h"
 export
@@ -133,39 +150,38 @@ prim__renderTextureRegion : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Do
                            Double -> Double -> Double -> Double -> PrimIO Int
 
 ||| Option bits 0, 1, 2 select source, destination, and center structs, or NULL.
-||| Bits 3 and 4 encode SDL flip flags. Packing avoids RefC's large-arity FFI limit.
+||| Bits 3 and 4 encode SDL flip flags.
 %foreign "C:idris_sdl_render_texture_rotated, libidris2_sdl3, sdl3.h"
 export
 prim__renderTextureRotated : AnyPtr -> AnyPtr -> Bits32 -> Double -> Double -> Double -> Double ->
                             Double -> Double -> Double -> Double -> Double -> Double -> Double -> PrimIO Int
 
+||| Full layout of the adapter's double-valued result, not SDL's float-valued point.
+public export
+NativePoint : Type
+NativePoint = Struct "IdrisSDLPoint" [("x", Double), ("y", Double)]
+
 %foreign "C:idris_sdl_coordinate_new, libidris2_sdl3, sdl3.h"
 export
-prim__coordinateNew : PrimIO AnyPtr
+prim__coordinateNew : PrimIO NativePoint
+
+%foreign "C:idris_sdl_is_null, libidris2_sdl3, sdl3.h"
+export
+prim__coordinateIsNull : NativePoint -> PrimIO Int
 
 %foreign "C:idris_sdl_coordinate_free, libidris2_sdl3, sdl3.h"
 export
-prim__coordinateFree : AnyPtr -> PrimIO ()
-
-||| Requires a live coordinate buffer containing a successful conversion result.
-%foreign "C:idris_sdl_coordinate_x, libidris2_sdl3, sdl3.h"
-export
-prim__coordinateX : AnyPtr -> PrimIO Double
-
-||| Requires a live coordinate buffer containing a successful conversion result.
-%foreign "C:idris_sdl_coordinate_y, libidris2_sdl3, sdl3.h"
-export
-prim__coordinateY : AnyPtr -> PrimIO Double
+prim__coordinateFree : NativePoint -> PrimIO ()
 
 ||| Requires a live coordinate buffer as the final argument.
 %foreign "C:idris_sdl_render_coordinates_from_window, libidris2_sdl3, sdl3.h"
 export
-prim__renderCoordinatesFromWindow : AnyPtr -> Double -> Double -> AnyPtr -> PrimIO Int
+prim__renderCoordinatesFromWindow : AnyPtr -> Double -> Double -> NativePoint -> PrimIO Int
 
 ||| Requires a live coordinate buffer as the final argument.
 %foreign "C:idris_sdl_render_coordinates_to_window, libidris2_sdl3, sdl3.h"
 export
-prim__renderCoordinatesToWindow : AnyPtr -> Double -> Double -> AnyPtr -> PrimIO Int
+prim__renderCoordinatesToWindow : AnyPtr -> Double -> Double -> NativePoint -> PrimIO Int
 
 %foreign "C:idris_sdl_set_render_scale, libidris2_sdl3, sdl3.h"
 export

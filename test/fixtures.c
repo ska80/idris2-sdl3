@@ -4,50 +4,87 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+void idris_test_size_fields(IdrisSDLSize* size, Sint32 width, Sint32 height) {
+    size->width  = width;
+    size->height = height;
+}
+
+int idris_test_resize_window(Uint32 identifier, Sint32 width, Sint32 height) {
+    SDL_Window* window = SDL_GetWindowFromID(identifier);
+
+    if (!SDL_SetWindowSize(window, width, height)) return 0;
+
+    return SDL_SyncWindow(window);
+}
+
 /* Linux test fixture. Return a unique file path, copied by Idris. */
 char* idris_test_make_bmp(void) {
     static char path[64];
+
     SDL_strlcpy(path, "/tmp/idris2-sdl3-bmp-XXXXXX", sizeof(path));
+
     int fd = mkstemp(path);
+
     if (fd < 0) return "";
+
     close(fd);
+
     SDL_Surface* surface = SDL_CreateSurface(8, 4, SDL_PIXELFORMAT_RGBA32);
+
     if (!surface) {
         unlink(path);
         return "";
     }
+
     const SDL_Rect left  = {0, 0, 4, 4};
     const SDL_Rect right = {4, 0, 4, 4};
-    int            ok    = SDL_FillSurfaceRect(surface, &left, SDL_MapSurfaceRGBA(surface, 220, 30, 40, 255)) &&
+
+    int ok = SDL_FillSurfaceRect(surface, &left, SDL_MapSurfaceRGBA(surface, 220, 30, 40, 255)) &&
              SDL_FillSurfaceRect(surface, &right, SDL_MapSurfaceRGBA(surface, 20, 210, 60, 255)) && SDL_SaveBMP(surface, path);
+
     SDL_DestroySurface(surface);
+
     if (!ok) {
         unlink(path);
+
         return "";
     }
+
     return path;
 }
 
 int idris_test_text_input_area(Uint32 window_id, Sint32 x, Sint32 y, Sint32 w, Sint32 h, Sint32 cursor) {
-    SDL_Rect    area;
-    int         actual_cursor;
+    SDL_Rect area;
+    int      actual_cursor;
+
     SDL_Window* window = SDL_GetWindowFromID(window_id);
+
     if (!window || !SDL_GetTextInputArea(window, &area, &actual_cursor)) return 0;
+
     return area.x == x && area.y == y && area.w == w && area.h == h && actual_cursor == cursor;
 }
 
 /* Readback allocates only in tests, never in the binding's draw path. */
 int idris_test_pixel_near(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 tolerance) {
     SDL_Window* window = SDL_GetWindowFromID(window_id);
+
     if (!window) return 0;
+
     SDL_Renderer* renderer = SDL_GetRenderer(window);
+
     if (!renderer) return 0;
-    const SDL_Rect rect    = {x, y, 1, 1};
-    SDL_Surface*   surface = SDL_RenderReadPixels(renderer, &rect);
+
+    const SDL_Rect rect = {x, y, 1, 1};
+
+    SDL_Surface* surface = SDL_RenderReadPixels(renderer, &rect);
+
     if (!surface) return 0;
+
     Uint8 actual_r, actual_g, actual_b, actual_a;
     int   ok = SDL_ReadSurfacePixel(surface, 0, 0, &actual_r, &actual_g, &actual_b, &actual_a);
+
     SDL_DestroySurface(surface);
+
     return ok && abs((int)actual_r - r) <= tolerance && abs((int)actual_g - g) <= tolerance && abs((int)actual_b - b) <= tolerance &&
            abs((int)actual_a - a) <= tolerance;
 }
@@ -91,8 +128,11 @@ int idris_test_window_state(Uint32 identifier) {
 /* Test-only events. Keep these symbols out of the binding library. */
 int idris_test_queue_event(int kind) {
     static char text[256];
-    SDL_Event   event = {0};
+
+    SDL_Event event = {0};
+
     SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+
     /* Invalidate text from the previous fixture to test Idris string ownership. */
     text[0] = '\0';
 
@@ -101,13 +141,11 @@ int idris_test_queue_event(int kind) {
     switch (kind) {
     case 1:
         event.type = SDL_EVENT_QUIT;
-
         break;
 
     case 2:
         event.type            = SDL_EVENT_WINDOW_CLOSE_REQUESTED;
         event.window.windowID = 0x80000001u;
-
         break;
 
     case 3:
@@ -120,12 +158,10 @@ int idris_test_queue_event(int kind) {
         event.key.mod      = SDL_KMOD_LSHIFT | SDL_KMOD_RCTRL;
         event.key.down     = kind == 3;
         event.key.repeat   = kind == 3;
-
         break;
 
     case 5:
         event.type = SDL_EVENT_USER;
-
         break;
 
     case 6:
@@ -172,11 +208,14 @@ int idris_test_queue_event(int kind) {
     case 17:
         event.type          = SDL_EVENT_TEXT_INPUT;
         event.text.windowID = 0x80000001u;
+
         if (kind == 13) SDL_strlcpy(text, "héllo 世界 🎮", sizeof(text));
+
         if (kind == 17) {
             SDL_memset(text, 'x', 200);
             text[200] = '\0';
         }
+
         event.text.text = text;
         break;
 
@@ -184,7 +223,9 @@ int idris_test_queue_event(int kind) {
     case 16:
         event.type          = SDL_EVENT_TEXT_EDITING;
         event.edit.windowID = 0x80000001u;
+
         if (kind == 14) SDL_strlcpy(text, "にほん", sizeof(text));
+
         event.edit.text   = text;
         event.edit.start  = kind == 14 ? 1 : -1;
         event.edit.length = kind == 14 ? 2 : -1;

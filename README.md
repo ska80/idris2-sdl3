@@ -5,10 +5,8 @@ windows, 2D rendering, BMP loading, and static, streaming, and render-target tex
 covers keyboard, mouse, text input, window-close and size-change events, and timers.  It does not
 yet bind other image formats, audio streams, gamepads, or the GPU API.
 
-The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the
-primary backend and the default for builds, examples, tests, and performance work.  RefC support is
-secondary. We preserve compatibility where practical without limiting Chez support.  Tests run on
-Linux with SDL 3.4.16 and Idris 2 0.8.0, using both Chez and RefC.  Other platforms are not
+The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the only
+supported backend. Tests run on Linux with SDL 3.4.16 and Idris 2 0.8.0.  Other platforms are not
 tested. The current C build produces a Linux shared library.
 
 ## Build and run
@@ -32,9 +30,7 @@ library search paths.
 Resizing preserves the scene's width-to-height ratio and adds borders where needed.  Close the
 window, press Escape, or left-click the blue rectangle to exit.  The example converts click
 positions into scene coordinates, including after resizing.  `make test` uses SDL's dummy video
-driver, so it does not need a display.  Use `make test CG=refc` for the secondary RefC compatibility
-test.  Use `make run-c` to build and run the example with RefC.  This target is a shortcut for `make
-run CG=refc`.
+driver, so it does not need a display. The Makefile rejects backends other than Chez.
 
 ## API and safety
 
@@ -134,6 +130,11 @@ points retain their values after buffer reuse or destruction.  Conversions do no
 records or convert relative motion values. They convert positions, not movement distances.  The
 point types distinguish coordinate spaces, but do not track renderer identity or later changes to
 rendering state.
+
+The buffer owns a native struct with two C `double` fields. The C adapter converts SDL's
+single-precision results into these fields. Chez reads them directly, without separate C getter
+calls. This changes storage, not SDL's calculation precision. Allocate the buffer once, outside the
+loop. The raw coordinate bindings now use a typed struct pointer instead of `AnyPtr`.
 
 A viewport is a drawing area with its own coordinate origin.  `setRenderViewport renderer (Just
 (MkRect x y width height))` sets that area on the current render target.  Drawing starts at `(0, 0)`
@@ -350,10 +351,17 @@ displays.
 These queries describe the window, regardless of the renderer's active texture target or logical
 presentation.  A returned `Size` owns its values, not the window, and remains valid after window
 destruction.  Its units do not track window identity or later resizing. If dimensions are zero,
-defer size-dependent drawing or allocation.  Errors return through `Left`. The adapter packs two
-nonnegative dimensions into one native return value without allocating an output buffer.  Renderer
-output-size queries remain unbound pending investigation of software-driver behavior that differs
-from the installed header documentation.
+defer size-dependent drawing or allocation. Errors return through `Left`.
+
+Each window owns one native size struct, allocated during `createWindow` and freed by
+`destroyWindow`. If SDL window creation fails, the binding frees this storage and preserves the
+error.  Both queries reuse the same struct. C fills it and returns success separately. Chez reads
+the `Int32` fields directly and copies them before another query can reuse the storage.  There is no
+native output-buffer allocation per query, global scratch buffer, or frame reset.  The returned
+Idris records can still require managed allocation. Do not call these queries concurrently or after
+window destruction. The raw query signatures changed to accept output storage.  Renderer output-size
+queries remain unbound pending investigation of software-driver behavior that differs from the
+installed header documentation.
 
 `WindowResizedEvent timestamp dimensions` reports a size in window coordinates through
 `WindowSizeData`.  `WindowPixelSizeChangedEvent timestamp dimensions` reports a size in physical
@@ -505,9 +513,9 @@ pixels back to compare rendered colors, but normal rendering does not.
 
 No resource registry, finalizer, or automatic error-string copy runs on each successful rendering
 call. Event polling uses multiple native calls and constructs Idris values.  A successful point
-conversion uses one SDL call and two native field reads.  The adapter allocates no native memory per
-conversion when you reuse a coordinate buffer. Idris still constructs result values.  There are no
-benchmarks yet, so this project does not claim zero overhead.
+conversion uses one foreign call and two direct struct field reads. The adapter allocates no native
+memory per conversion when you reuse a coordinate buffer. Idris still constructs result values.
+There are no general performance guarantees, and this project does not claim zero overhead.
 
 ## Use from another package
 
@@ -515,11 +523,10 @@ Add this project as a local package in your application's `pack.toml`, then add 
 its `.ipkg` file.  The C library is separate from pack's Idris package installation.  Keep it
 available when you run the application.
 
-For Chez, include this project's `cbits` directory and the SDL library directory in
-`LD_LIBRARY_PATH`.  Only RefC needs the additional compile and link configuration below.  Add those
-library directories to `LIBRARY_PATH` and add `cbits` and the SDL include directory to `CPATH`.  Set
-`IDRIS2_LDLIBS` to include `-lidris2_sdl3 -lSDL3`. The root Makefile sets these values when
-`CG=refc`.
+Build the application with `--cg=chez`. Include this project's `cbits` directory and the SDL library
+directory in `LD_LIBRARY_PATH`. The root Makefile sets this path for builds, tests, and examples.
+Rebuild clients and the native library together after this update. Raw size-query signatures and
+coordinate-buffer layout changed, although the public typed query signatures remain unchanged.
 
 ## Tests and next steps
 
@@ -579,11 +586,13 @@ reset and composition cancellation without disabling text input.  The test-only 
 inserts known events into SDL's queue. It is not part of the binding library.  The example builds in
 the test environment, but interactive display behavior needs a manual test.
 
-With the current RefC version, use equality tests for wide numeric values instead of numeric case
-patterns.  Its generated case code can truncate those values. The event tests use values above 32
-bits to test timestamp preservation.  The rotation adapter packs its option flags into one argument
-to avoid a large-argument foreign-call failure in the current RefC backend.  It still makes one
-native call and needs no caller-owned conversion buffer.
+Size-storage tests cover the native struct layout, signed field limits, repeated queries after
+resizing, multiple windows, and copied values after storage reuse and destruction.  The event tests
+use values above 32 bits to test timestamp preservation.  Rotation option flags remain packed
+because they represent independent bits, not a multi-field result.  Event unions still use C
+accessors. Idris `Double` describes a C `double`, not a C `float`.  Coordinate adapters therefore
+convert SDL float results into a separate double-valued result struct.  They do not reinterpret
+`SDL_FPoint` memory as doubles.
 
 Next work includes texture locking, audio streams, and target-texture cleanup helpers.  Keep each
 addition close to SDL's API and test its failure paths.  Measure call overhead and allocations

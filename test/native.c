@@ -3,16 +3,49 @@
 #include <assert.h>
 #include <stdio.h>
 
+static void size_tests(void) {
+    assert(SDL_Init(SDL_INIT_VIDEO));
+
+    SDL_Window* window = SDL_CreateWindow("size storage", 37, 23, SDL_WINDOW_HIDDEN);
+    assert(window);
+
+    IdrisSDLSize* size = idris_sdl_size_new();
+    assert(size);
+    assert(idris_sdl_get_window_size(window, size) == 1);
+    assert(size->width == 37 && size->height == 23);
+
+    IdrisSDLSize copied = *size;
+    assert(idris_sdl_get_window_size_pixels(window, size) == 1);
+    assert(size->width == 37 && size->height == 23);
+    assert(idris_sdl_get_window_size(NULL, size) == 0);
+    assert(idris_sdl_get_window_size_pixels(NULL, size) == 0);
+    assert(SDL_SetWindowSize(window, 53, 31));
+    assert(SDL_SyncWindow(window));
+    assert(idris_sdl_get_window_size(window, size) == 1);
+    assert(size->width == 53 && size->height == 31);
+    assert(idris_sdl_get_window_size(window, NULL) == 0);
+    assert(idris_sdl_get_window_size_pixels(window, NULL) == 0);
+
+    idris_sdl_size_free(size);
+    idris_sdl_size_free(NULL);
+
+    SDL_DestroyWindow(window);
+
+    assert(copied.width == 37 && copied.height == 23);
+}
+
 int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
-    assert(idris_sdl_get_window_size(NULL) == SDL_MAX_UINT64);
-    assert(idris_sdl_get_window_size_pixels(NULL) == SDL_MAX_UINT64);
+    assert(idris_sdl_get_window_size(NULL, NULL) == 0);
+    assert(idris_sdl_get_window_size_pixels(NULL, NULL) == 0);
     assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_create_target_texture(NULL, 16, 16) == NULL);
     assert(idris_sdl_create_streaming_texture(NULL, 2, 2) == NULL);
+
     const Uint8 pixels[16] = {0};
+
     assert(idris_sdl_update_texture_rgba(NULL, pixels, sizeof(pixels), 8) == 0);
     assert(idris_sdl_update_texture_region_rgba(NULL, 0, 0, 1, 1, pixels, sizeof(pixels), 4) == 0);
     assert(idris_sdl_get_error()[0] != '\0');
@@ -61,13 +94,16 @@ int main(void) {
     empty_text.type = SDL_EVENT_TEXT_EDITING;
     assert(idris_sdl_event_text(&empty_text)[0] == '\0');
 
-    SDL_FPoint* coordinates = idris_sdl_coordinate_new();
+    IdrisSDLPoint* coordinates = idris_sdl_coordinate_new();
     assert(coordinates);
     assert(idris_sdl_render_coordinates_from_window(NULL, 1.5, 2.5, coordinates) == 0);
     assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_render_coordinates_to_window(NULL, 1.5, 2.5, coordinates) == 0);
     assert(idris_sdl_get_error()[0] != '\0');
+    assert(idris_sdl_render_coordinates_from_window(NULL, 1.5, 2.5, NULL) == 0);
+    assert(idris_sdl_render_coordinates_to_window(NULL, 1.5, 2.5, NULL) == 0);
     idris_sdl_coordinate_free(coordinates);
+    idris_sdl_coordinate_free(NULL);
 
     SDL_Event* buffer = idris_sdl_event_new();
 
@@ -121,9 +157,10 @@ int main(void) {
 
     idris_sdl_event_free(buffer);
 
+    size_tests();
     SDL_Quit();
 
-    puts("Native event tests passed");
+    puts("Native tests passed");
 
     return 0;
 }

@@ -58,11 +58,22 @@ copiedPoint renderer = do
   Right (MkPoint x y) <- pure result | Left err => pure (Left err)
   if near x 1.25 && near y 2.5 then pure (Right ()) else pure (Left "Point did not survive buffer destruction")
 
+cachedConversion : Renderer -> CoordinateBuffer -> IO (Either String ())
+cachedConversion renderer buffer = do
+  let query = renderCoordinatesFromWindow renderer buffer (MkPoint 12.5 (-7.5))
+  Right (MkPoint x1 y1) <- query | Left err => pure (Left err)
+  True <- setRenderScale renderer 2 3 | False => Left <$> getError
+  Right (MkPoint x2 y2) <- query | Left err => pure (Left err)
+  True <- setRenderScale renderer 1 1 | False => Left <$> getError
+  if near x1 12.5 && near y1 (-7.5) && near x2 6.25 && near y2 (-2.5)
+     then pure (Right ()) else pure (Left "Reused conversion action returned stale fields")
+
 export
 coordinateTests : Renderer -> IO (Either String ())
 coordinateTests renderer = do
   Right buffer <- newCoordinateBuffer | Left err => pure (Left err)
   result <- do
+    Right () <- cachedConversion renderer buffer | Left err => pure (Left err)
     Right () <- scaleAndViewport renderer buffer | Left err => pure (Left err)
     logicalCoordinates renderer buffer
   viewport <- setRenderViewport renderer Nothing

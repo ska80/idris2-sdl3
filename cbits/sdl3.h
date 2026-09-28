@@ -37,13 +37,16 @@ IDRIS_SDL3 int idris_sdl_render_texture_rotated(SDL_Renderer* renderer, SDL_Text
                                                 double sw, double sh, double dx, double dy, double dw, double dh, double angle, double cx,
                                                 double cy);
 
-IDRIS_SDL3 SDL_FPoint* idris_sdl_coordinate_new(void);
-IDRIS_SDL3 void        idris_sdl_coordinate_free(SDL_FPoint* point);
-/* Read coordinates only after a successful conversion into this buffer. */
-IDRIS_SDL3 double      idris_sdl_coordinate_x(const SDL_FPoint* point);
-IDRIS_SDL3 double      idris_sdl_coordinate_y(const SDL_FPoint* point);
-IDRIS_SDL3 int         idris_sdl_render_coordinates_from_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point);
-IDRIS_SDL3 int         idris_sdl_render_coordinates_to_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point);
+/* ABI conversion result, not an SDL_FPoint. Read only after successful conversion. */
+typedef struct IdrisSDLPoint {
+    double x;
+    double y;
+} IdrisSDLPoint;
+
+IDRIS_SDL3 IdrisSDLPoint* idris_sdl_coordinate_new(void);
+IDRIS_SDL3 void           idris_sdl_coordinate_free(IdrisSDLPoint* point);
+IDRIS_SDL3 int            idris_sdl_render_coordinates_from_window(SDL_Renderer* renderer, double x, double y, IdrisSDLPoint* point);
+IDRIS_SDL3 int            idris_sdl_render_coordinates_to_window(SDL_Renderer* renderer, double x, double y, IdrisSDLPoint* point);
 
 IDRIS_SDL3 int    idris_sdl_set_render_vsync(SDL_Renderer* renderer, Sint64 value);
 /* Returns -2 on failure, outside the valid SDL VSync values. */
@@ -68,9 +71,16 @@ IDRIS_SDL3 int idris_sdl_draw_point(SDL_Renderer* renderer, double x, double y);
 IDRIS_SDL3 int idris_sdl_draw_line(SDL_Renderer* renderer, double x1, double y1, double x2, double y2);
 IDRIS_SDL3 int idris_sdl_draw_rect(SDL_Renderer* renderer, Sint32 has_rect, double x, double y, double w, double h);
 
-/* Packed width:height (32 bits each). SDL_MAX_UINT64 means failure. */
-IDRIS_SDL3 Uint64 idris_sdl_get_window_size(SDL_Window* window);
-IDRIS_SDL3 Uint64 idris_sdl_get_window_size_pixels(SDL_Window* window);
+/* Caller-owned output storage. Read fields only after a successful query. */
+typedef struct IdrisSDLSize {
+    Sint32 width;
+    Sint32 height;
+} IdrisSDLSize;
+
+IDRIS_SDL3 IdrisSDLSize* idris_sdl_size_new(void);
+IDRIS_SDL3 void          idris_sdl_size_free(IdrisSDLSize* size);
+IDRIS_SDL3 int           idris_sdl_get_window_size(SDL_Window* window, IdrisSDLSize* size);
+IDRIS_SDL3 int           idris_sdl_get_window_size_pixels(SDL_Window* window, IdrisSDLSize* size);
 
 IDRIS_SDL3 int idris_sdl_start_text_input(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_stop_text_input(SDL_Window* window);

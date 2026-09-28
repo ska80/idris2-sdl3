@@ -1,3 +1,5 @@
+/* -*- external-format: utf-8; -*- */
+
 #include "sdl3.h"
 
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
@@ -36,7 +38,7 @@ int idris_sdl_init(Uint32 flags) {
     return SDL_Init(flags);
 }
 
-/* Idris copies the string. Its C backend requires char *, not const char *. */
+/* Idris copies the borrowed SDL string. */
 char* idris_sdl_get_error(void) {
     return (char*)SDL_GetError();
 }
@@ -45,24 +47,38 @@ int idris_sdl_is_null(const void* ptr) {
     return ptr == NULL;
 }
 
-static Uint64 pack_size(int width, int height) {
-    if (width < 0 || height < 0) {
-        SDL_SetError("SDL returned negative dimensions");
-        return SDL_MAX_UINT64;
-    }
-    return ((Uint64)(Uint32)width << 32) | (Uint32)height;
+IdrisSDLSize* idris_sdl_size_new(void) {
+    IdrisSDLSize* size = SDL_calloc(1, sizeof(*size));
+
+    if (!size) SDL_SetError("Cannot allocate window size storage");
+
+    return size;
 }
 
-Uint64 idris_sdl_get_window_size(SDL_Window* window) {
-    int w, h;
-    if (!SDL_GetWindowSize(window, &w, &h)) return SDL_MAX_UINT64;
-    return pack_size(w, h);
+void idris_sdl_size_free(IdrisSDLSize* size) {
+    SDL_free(size);
 }
 
-Uint64 idris_sdl_get_window_size_pixels(SDL_Window* window) {
-    int w, h;
-    if (!SDL_GetWindowSizeInPixels(window, &w, &h)) return SDL_MAX_UINT64;
-    return pack_size(w, h);
+static int valid_size(const IdrisSDLSize* size) {
+    if (size->width < 0 || size->height < 0) return SDL_SetError("SDL returned negative dimensions");
+
+    return 1;
+}
+
+int idris_sdl_get_window_size(SDL_Window* window, IdrisSDLSize* size) {
+    if (!size) return SDL_SetError("Window size storage is null");
+
+    if (!SDL_GetWindowSize(window, &size->width, &size->height)) return 0;
+
+    return valid_size(size);
+}
+
+int idris_sdl_get_window_size_pixels(SDL_Window* window, IdrisSDLSize* size) {
+    if (!size) return SDL_SetError("Window size storage is null");
+
+    if (!SDL_GetWindowSizeInPixels(window, &size->width, &size->height)) return 0;
+
+    return valid_size(size);
 }
 
 SDL_Renderer* idris_sdl_create_renderer(SDL_Window* window) {
@@ -88,8 +104,9 @@ static int update_texture_rgba(SDL_Texture* texture, const SDL_Rect* rect, const
     const int height = rect ? rect->h : texture->h;
 
     if (rect && (rect->x < 0 || rect->y < 0 || width <= 0 || height <= 0 || width > texture->w || height > texture->h ||
-                 rect->x > texture->w - width || rect->y > texture->h - height))
+                 rect->x > texture->w - width || rect->y > texture->h - height)) {
         return SDL_SetError("Upload rectangle must have positive dimensions and fit inside the texture");
+    }
 
     const Uint64 row_bytes = (Uint64)width * 4;
 
@@ -110,6 +127,7 @@ int idris_sdl_update_texture_rgba(SDL_Texture* texture, const void* pixels, Uint
 int idris_sdl_update_texture_region_rgba(SDL_Texture* texture, Sint32 x, Sint32 y, Sint32 w, Sint32 h, const void* pixels, Uint64 size,
                                          Sint32 pitch) {
     const SDL_Rect rect = {x, y, w, h};
+
     return update_texture_rgba(texture, &rect, pixels, size, pitch);
 }
 
@@ -143,6 +161,7 @@ int idris_sdl_render_texture(SDL_Renderer* renderer, SDL_Texture* texture) {
 
 int idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h) {
     const SDL_FRect rect = {(float)x, (float)y, (float)w, (float)h};
+
     return SDL_RenderTexture(renderer, texture, NULL, &rect);
 }
 
@@ -170,32 +189,42 @@ int idris_sdl_render_texture_rotated(SDL_Renderer* renderer, SDL_Texture* textur
                                     (options & 4) ? &center : NULL, (SDL_FlipMode)((options >> 3) & 3));
 }
 
-SDL_FPoint* idris_sdl_coordinate_new(void) {
-    SDL_FPoint* point = SDL_calloc(1, sizeof(SDL_FPoint));
+IdrisSDLPoint* idris_sdl_coordinate_new(void) {
+    IdrisSDLPoint* point = SDL_calloc(1, sizeof(*point));
 
     if (!point) SDL_SetError("Cannot allocate coordinate buffer");
 
     return point;
 }
 
-void idris_sdl_coordinate_free(SDL_FPoint* point) {
+void idris_sdl_coordinate_free(IdrisSDLPoint* point) {
     SDL_free(point);
 }
 
-double idris_sdl_coordinate_x(const SDL_FPoint* point) {
-    return point->x;
+int idris_sdl_render_coordinates_from_window(SDL_Renderer* renderer, double x, double y, IdrisSDLPoint* point) {
+    if (!point) return SDL_SetError("Coordinate storage is null");
+
+    float converted_x, converted_y;
+
+    if (!SDL_RenderCoordinatesFromWindow(renderer, (float)x, (float)y, &converted_x, &converted_y)) return 0;
+
+    point->x = converted_x;
+    point->y = converted_y;
+
+    return 1;
 }
 
-double idris_sdl_coordinate_y(const SDL_FPoint* point) {
-    return point->y;
-}
+int idris_sdl_render_coordinates_to_window(SDL_Renderer* renderer, double x, double y, IdrisSDLPoint* point) {
+    if (!point) return SDL_SetError("Coordinate storage is null");
 
-int idris_sdl_render_coordinates_from_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point) {
-    return SDL_RenderCoordinatesFromWindow(renderer, (float)x, (float)y, &point->x, &point->y);
-}
+    float converted_x, converted_y;
 
-int idris_sdl_render_coordinates_to_window(SDL_Renderer* renderer, double x, double y, SDL_FPoint* point) {
-    return SDL_RenderCoordinatesToWindow(renderer, (float)x, (float)y, &point->x, &point->y);
+    if (!SDL_RenderCoordinatesToWindow(renderer, (float)x, (float)y, &converted_x, &converted_y)) return 0;
+
+    point->x = converted_x;
+    point->y = converted_y;
+
+    return 1;
 }
 
 int idris_sdl_set_render_scale(SDL_Renderer* renderer, double x, double y) {
@@ -208,6 +237,7 @@ int idris_sdl_set_render_logical_presentation(SDL_Renderer* renderer, Sint32 w, 
 
 int idris_sdl_set_render_viewport(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h) {
     const SDL_Rect rect = {x, y, w, h};
+
     return SDL_SetRenderViewport(renderer, &rect);
 }
 
@@ -217,6 +247,7 @@ int idris_sdl_reset_render_viewport(SDL_Renderer* renderer) {
 
 int idris_sdl_set_render_clip_rect(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h) {
     const SDL_Rect rect = {x, y, w, h};
+
     return SDL_SetRenderClipRect(renderer, &rect);
 }
 
@@ -250,6 +281,7 @@ Sint32 idris_sdl_get_render_vsync(SDL_Renderer* renderer) {
 
     if (value < -1) {
         SDL_SetError("Unknown SDL VSync mode");
+
         return -2;
     }
 
@@ -270,11 +302,13 @@ int idris_sdl_draw_line(SDL_Renderer* renderer, double x1, double y1, double x2,
 
 int idris_sdl_draw_rect(SDL_Renderer* renderer, Sint32 has_rect, double x, double y, double w, double h) {
     const SDL_FRect rect = {(float)x, (float)y, (float)w, (float)h};
+
     return SDL_RenderRect(renderer, has_rect ? &rect : NULL);
 }
 
 int idris_sdl_fill_rect(SDL_Renderer* r, double x, double y, double w, double h) {
     const SDL_FRect rect = {(float)x, (float)y, (float)w, (float)h};
+
     return SDL_RenderFillRect(r, &rect);
 }
 
@@ -292,6 +326,7 @@ int idris_sdl_text_input_active(SDL_Window* window) {
 
 int idris_sdl_set_text_input_area(SDL_Window* window, Sint32 x, Sint32 y, Sint32 w, Sint32 h, Sint32 cursor) {
     const SDL_Rect rect = {x, y, w, h};
+
     return SDL_SetTextInputArea(window, &rect, cursor);
 }
 
@@ -305,7 +340,9 @@ int idris_sdl_clear_composition(SDL_Window* window) {
 
 SDL_Event* idris_sdl_event_new(void) {
     SDL_Event* event = SDL_calloc(1, sizeof(SDL_Event));
+
     if (!event) SDL_SetError("Cannot allocate SDL event buffer");
+
     return event;
 }
 
@@ -393,6 +430,7 @@ int idris_sdl_event_repeat(const SDL_Event* event) {
 
 Uint32 idris_sdl_event_mouse_id(const SDL_Event* event) {
     if (event->type == SDL_EVENT_MOUSE_WHEEL) return event->wheel.which;
+
     return event->type == SDL_EVENT_MOUSE_MOTION ? event->motion.which : event->button.which;
 }
 
@@ -410,11 +448,13 @@ Uint8 idris_sdl_event_mouse_clicks(const SDL_Event* event) {
 
 double idris_sdl_event_mouse_x(const SDL_Event* event) {
     if (event->type == SDL_EVENT_MOUSE_WHEEL) return event->wheel.mouse_x;
+
     return event->type == SDL_EVENT_MOUSE_MOTION ? event->motion.x : event->button.x;
 }
 
 double idris_sdl_event_mouse_y(const SDL_Event* event) {
     if (event->type == SDL_EVENT_MOUSE_WHEEL) return event->wheel.mouse_y;
+
     return event->type == SDL_EVENT_MOUSE_MOTION ? event->motion.y : event->button.y;
 }
 
@@ -449,6 +489,7 @@ Sint32 idris_sdl_event_wheel_integer_y(const SDL_Event* event) {
 /* Borrowed until the next poll. Idris copies this string and never writes to it. */
 char* idris_sdl_event_text(const SDL_Event* event) {
     const char* text = event->type == SDL_EVENT_TEXT_INPUT ? event->text.text : event->edit.text;
+
     return (char*)(text ? text : "");
 }
 

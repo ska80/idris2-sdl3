@@ -3,13 +3,15 @@ module SDL3
 import public SDL3.Events
 import public SDL3.Flags
 import SDL3.Raw
+
 import Data.Buffer
+import System.FFI
 
 %default total
 
-||| Owned window. Destroy after its renderer, before quit.
+||| Owned window and reusable native size storage. Destroy after its renderer, before quit.
 export
-data Window = MkWindow AnyPtr
+data Window = MkWindow AnyPtr NativeSize
 
 ||| Owned renderer. Its window must remain alive.
 export
@@ -18,7 +20,9 @@ data Renderer = MkRenderer AnyPtr
 ||| Synchronize presentation with display refreshes, or disable synchronization.
 ||| VSyncInterval requires a value from 1 through 2147483647.
 public export
-data VSyncMode = VSyncDisabled | VSyncAdaptive | VSyncInterval Bits32
+data VSyncMode = VSyncDisabled
+               | VSyncAdaptive
+               | VSyncInterval Bits32
 
 public export
 Eq VSyncMode where
@@ -41,8 +45,13 @@ data TextureAccess = StaticAccess | StreamingAccess | TargetAccess
 
 ||| How source pixels combine with destination pixels.
 public export
-data BlendMode = NoBlend | AlphaBlend | PremultipliedAlphaBlend
-               | AdditiveBlend | PremultipliedAdditiveBlend | ModulateBlend | MultiplyBlend
+data BlendMode = NoBlend
+               | AlphaBlend
+               | PremultipliedAlphaBlend
+               | AdditiveBlend
+               | PremultipliedAdditiveBlend
+               | ModulateBlend
+               | MultiplyBlend
 
 blendBits : BlendMode -> Bits32
 blendBits NoBlend = 0
@@ -138,7 +147,7 @@ record Size (unit : SizeUnit) where
 
 ||| Reusable output storage for coordinate conversion. Free exactly once.
 export
-data CoordinateBuffer = MkCoordinateBuffer AnyPtr
+data CoordinateBuffer = MkCoordinateBuffer NativePoint
 
 ||| Reusable native event storage. Free exactly once.
 export
@@ -180,51 +189,65 @@ owned wrap action = do
   null <- primIO (prim__isNull ptr)
   if null /= 0 then Left <$> getError else pure (Right (wrap ptr))
 
+newWindow : String -> Int -> Int -> WindowFlags -> IO (Either String Window)
+newWindow title width height flags = do
+  storage <- primIO prim__newSize
+  0 <- primIO (prim__sizeIsNull storage) | _ => Left <$> getError
+  ptr <- primIO (prim__createWindow title width height (windowBits flags))
+  0 <- primIO (prim__isNull ptr) | _ => do
+    err <- getError
+    primIO (prim__freeSize storage)
+    pure (Left err)
+  pure (Right (MkWindow ptr storage))
+
 ||| Width and height must be positive C int values. Call on the main thread.
+||| Allocates size storage once. Queries reuse it until window destruction.
 export
 createWindow : String -> Int -> Int -> WindowFlags -> IO (Either String Window)
 createWindow title width height flags =
   if width <= 0 || height <= 0 || width > 2147483647 || height > 2147483647
      then pure (Left "Window dimensions must be positive 32-bit integers")
-     else owned MkWindow (prim__createWindow title width height (windowBits flags))
+     else newWindow title width height flags
 
 ||| Do not use the window after this call. Destroy its renderer first.
 export
 destroyWindow : Window -> IO ()
-destroyWindow (MkWindow ptr) = primIO (prim__destroyWindow ptr)
+destroyWindow (MkWindow ptr storage) = do
+  primIO (prim__destroyWindow ptr)
+  primIO (prim__freeSize storage)
 
 ||| Identifier for a live window. The identifier does not extend its lifetime.
 ||| Zero means failure. Call on the main thread.
 export
 getWindowID : Window -> IO (Either String WindowID)
-getWindowID (MkWindow ptr) = do
+getWindowID (MkWindow ptr _) = do
   value <- primIO (prim__getWindowID ptr)
   if value == 0 then Left <$> getError else pure (Right (MkWindowID value))
 
 ||| Select SDL's default renderer. Call on the main thread.
 export
 createRenderer : Window -> IO (Either String Renderer)
-createRenderer (MkWindow ptr) = owned MkRenderer (prim__createRenderer ptr)
+createRenderer (MkWindow ptr _) = owned MkRenderer (prim__createRenderer ptr)
 
 export
 destroyRenderer : Renderer -> IO ()
 destroyRenderer (MkRenderer ptr) = primIO (prim__destroyRenderer ptr)
 
-queriedSize : PrimIO Bits64 -> IO (Either String (Size unit))
-queriedSize action = do
-  packed <- primIO action
-  if packed == 0xffffffffffffffff then Left <$> getError
-     else pure (Right (MkSize (cast (packed `div` 4294967296)) (cast (packed `mod` 4294967296))))
+queriedSize : NativeSize -> PrimIO Int -> IO (Either String (Size unit))
+queriedSize storage action = do
+  1 <- primIO action | _ => Left <$> getError
+  -- Read inside the successful IO continuation. No borrowed view escapes.
+  pure (Right (MkSize (getField storage "width") (getField storage "height")))
 
 ||| Query window-coordinate dimensions on the main thread. Copies errors on failure.
 export
 getWindowSize : Window -> IO (Either String (Size WindowUnits))
-getWindowSize (MkWindow ptr) = queriedSize (prim__getWindowSize ptr)
+getWindowSize (MkWindow ptr storage) = queriedSize storage (prim__getWindowSize ptr storage)
 
 ||| Query physical pixel dimensions on the main thread, which can differ from window coordinates.
 export
 getWindowSizeInPixels : Window -> IO (Either String (Size PixelUnits))
-getWindowSizeInPixels (MkWindow ptr) = queriedSize (prim__getWindowSizeInPixels ptr)
+getWindowSizeInPixels (MkWindow ptr storage) = queriedSize storage (prim__getWindowSizeInPixels ptr storage)
 
 ||| Load a BMP file into CPU memory. Does not require a renderer.
 ||| Destroy the returned surface when no longer needed.
@@ -420,20 +443,20 @@ renderTextureRotated (MkRenderer renderer) (MkTexture texture) (Just (MkFRect sx
 ||| Allocate once and reuse for coordinate conversions. Do not share between threads.
 export
 newCoordinateBuffer : IO (Either String CoordinateBuffer)
-newCoordinateBuffer = owned MkCoordinateBuffer prim__coordinateNew
+newCoordinateBuffer = do
+  ptr <- primIO prim__coordinateNew
+  0 <- primIO (prim__coordinateIsNull ptr) | _ => Left <$> getError
+  pure (Right (MkCoordinateBuffer ptr))
 
 ||| Do not use the buffer after this call. Copied points remain valid.
 export
 freeCoordinateBuffer : CoordinateBuffer -> IO ()
 freeCoordinateBuffer (MkCoordinateBuffer ptr) = primIO (prim__coordinateFree ptr)
 
-convertedPoint : AnyPtr -> PrimIO Int -> IO (Either String (Point space))
+convertedPoint : NativePoint -> PrimIO Int -> IO (Either String (Point space))
 convertedPoint buffer action = do
-  ok <- primIO action
-  if ok == 0 then Left <$> getError else do
-    x <- primIO (prim__coordinateX buffer)
-    y <- primIO (prim__coordinateY buffer)
-    pure (Right (MkPoint x y))
+  1 <- primIO action | _ => Left <$> getError
+  pure (Right (MkPoint (getField buffer "x") (getField buffer "y")))
 
 ||| Convert a window point using the renderer's current target, viewport, and scales.
 ||| Call on the main thread. Match the renderer to the event's window first.
@@ -551,32 +574,32 @@ record TextInputArea where
 ||| The C adapter uses a stack rectangle and does not retain this value.
 export
 setTextInputArea : Window -> Maybe TextInputArea -> IO Bool
-setTextInputArea (MkWindow ptr) Nothing =
+setTextInputArea (MkWindow ptr _) Nothing =
   (/= 0) <$> primIO (prim__clearTextInputArea ptr)
-setTextInputArea (MkWindow ptr) (Just (MkTextInputArea x y width height cursor)) =
+setTextInputArea (MkWindow ptr _) (Just (MkTextInputArea x y width height cursor)) =
   (/= 0) <$> primIO (prim__setTextInputArea ptr x y width height cursor)
 
 ||| Dismiss native composition without disabling text input. Call on the main thread.
 ||| Returns False on failure. Clear the application's composition display separately.
 export
 clearComposition : Window -> IO Bool
-clearComposition (MkWindow ptr) = (/= 0) <$> primIO (prim__clearComposition ptr)
+clearComposition (MkWindow ptr _) = (/= 0) <$> primIO (prim__clearComposition ptr)
 
 ||| Enable text input for a live window on the main thread. Disabled by default.
 ||| This can show a screen keyboard. Pair with stopTextInput.
 export
 startTextInput : Window -> IO Bool
-startTextInput (MkWindow ptr) = (/= 0) <$> primIO (prim__startTextInput ptr)
+startTextInput (MkWindow ptr _) = (/= 0) <$> primIO (prim__startTextInput ptr)
 
 ||| Disable text input on the main thread. Returns False on failure.
 export
 stopTextInput : Window -> IO Bool
-stopTextInput (MkWindow ptr) = (/= 0) <$> primIO (prim__stopTextInput ptr)
+stopTextInput (MkWindow ptr _) = (/= 0) <$> primIO (prim__stopTextInput ptr)
 
 ||| Query a live window on the main thread. False means input is inactive.
 export
 textInputActive : Window -> IO Bool
-textInputActive (MkWindow ptr) = (/= 0) <$> primIO (prim__textInputActive ptr)
+textInputActive (MkWindow ptr _) = (/= 0) <$> primIO (prim__textInputActive ptr)
 
 export
 newEventBuffer : IO (Either String EventBuffer)

@@ -2,6 +2,7 @@ module TypeSafety
 
 import SDL3
 import SDL3.Scoped
+import SDL3.Raw
 import Data.Buffer
 
 failing "Mismatch between"
@@ -205,6 +206,14 @@ failing "Mismatch between"
 failing "Mismatch between"
   wrongSizeHandle : Renderer -> IO (Either String (Size PixelUnits))
   wrongSizeHandle renderer = getWindowSizeInPixels renderer
+
+failing "Mismatch between"
+  wrongNativeSizeStorage : AnyPtr -> NativePoint -> PrimIO Int
+  wrongNativeSizeStorage window storage = prim__getWindowSize window storage
+
+failing "Mismatch between"
+  wrongNativeCoordinateStorage : AnyPtr -> NativeSize -> PrimIO Int
+  wrongNativeCoordinateStorage renderer storage = prim__renderCoordinatesFromWindow renderer 1 2 storage
 
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
