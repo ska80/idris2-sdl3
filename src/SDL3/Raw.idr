@@ -130,6 +130,11 @@ prim__setTextureAlphaMod : NativeTexture -> Bits8 -> PrimIO Int
 export
 prim__getTextureAlphaMod : NativeTexture -> PrimIO Int32
 
+||| Raw SDL enum arguments. Composition does not test renderer support.
+%foreign "C:SDL_ComposeCustomBlendMode, libSDL3, SDL3/SDL.h"
+export
+prim__composeBlendMode : Int32 -> Int32 -> Int32 -> Int32 -> Int32 -> Int32 -> PrimIO Bits32
+
 %foreign "C:idris_sdl_set_texture_blend_mode, libidris2_sdl3, sdl3.h"
 export
 prim__setTextureBlendMode : NativeTexture -> Bits32 -> PrimIO Int

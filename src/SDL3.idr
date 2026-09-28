@@ -69,6 +69,65 @@ export
 Eq BlendMode where
   x == y = blendBits x == blendBits y
 
+blendModeFromBits : Bits32 -> BlendMode
+blendModeFromBits 0 = NoBlend
+blendModeFromBits 1 = AlphaBlend
+blendModeFromBits 2 = AdditiveBlend
+blendModeFromBits 4 = ModulateBlend
+blendModeFromBits 8 = MultiplyBlend
+blendModeFromBits 0x10 = PremultipliedAlphaBlend
+blendModeFromBits 0x20 = PremultipliedAdditiveBlend
+blendModeFromBits other = OtherBlendMode other
+
+||| Multiplier for a source or destination pixel component in a blend equation.
+public export
+data BlendFactor = ZeroFactor | OneFactor
+                 | SourceColorFactor | OneMinusSourceColorFactor
+                 | SourceAlphaFactor | OneMinusSourceAlphaFactor
+                 | DestinationColorFactor | OneMinusDestinationColorFactor
+                 | DestinationAlphaFactor | OneMinusDestinationAlphaFactor
+
+factorValue : BlendFactor -> Int32
+factorValue ZeroFactor = 1
+factorValue OneFactor = 2
+factorValue SourceColorFactor = 3
+factorValue OneMinusSourceColorFactor = 4
+factorValue SourceAlphaFactor = 5
+factorValue OneMinusSourceAlphaFactor = 6
+factorValue DestinationColorFactor = 7
+factorValue OneMinusDestinationColorFactor = 8
+factorValue DestinationAlphaFactor = 9
+factorValue OneMinusDestinationAlphaFactor = 10
+
+||| Combine the multiplied source and destination components. Subtract means source minus destination.
+public export
+data BlendOperation = BlendAdd | BlendSubtract | BlendReverseSubtract | BlendMinimum | BlendMaximum
+
+operationValue : BlendOperation -> Int32
+operationValue BlendAdd = 1
+operationValue BlendSubtract = 2
+operationValue BlendReverseSubtract = 3
+operationValue BlendMinimum = 4
+operationValue BlendMaximum = 5
+
+||| One equation for RGB or alpha: operation(source * sourceFactor, destination * destinationFactor).
+public export
+record BlendEquation where
+  constructor MkBlendEquation
+  sourceFactor : BlendFactor
+  destinationFactor : BlendFactor
+  operation : BlendOperation
+
+||| Compose RGB and alpha equations without creating resources or changing renderer state.
+||| Safe on any thread. Composition does not test renderer support or premultiply pixel data.
+||| Named SDL codes use their named constructors. Other codes use OtherBlendMode.
+export
+composeBlendMode : BlendEquation -> BlendEquation -> IO BlendMode
+composeBlendMode (MkBlendEquation srcRGB dstRGB rgbOp) (MkBlendEquation srcA dstA alphaOp) = do
+  code <- primIO (prim__composeBlendMode (factorValue srcRGB) (factorValue dstRGB) (operationValue rgbOp)
+                                       (factorValue srcA) (factorValue dstA) (operationValue alphaOp))
+  pure (blendModeFromBits code)
+
 ||| Nearest selects a source pixel. Linear interpolates neighboring pixels.
 public export
 data ScaleMode = NearestScale | LinearScale | OtherScaleMode Int32
@@ -416,16 +475,7 @@ setTextureScaleMode (MkTexture ptr) mode =
 queriedBlendMode : PrimIO Int64 -> IO (Either String BlendMode)
 queriedBlendMode action = do
   value <- primIO action
-  if value == -1 then Left <$> getError else
-    pure (Right (case value of
-      0 => NoBlend
-      1 => AlphaBlend
-      2 => AdditiveBlend
-      4 => ModulateBlend
-      8 => MultiplyBlend
-      0x10 => PremultipliedAlphaBlend
-      0x20 => PremultipliedAdditiveBlend
-      other => OtherBlendMode (cast other)))
+  if value == -1 then Left <$> getError else pure (Right (blendModeFromBits (cast value)))
 
 ||| Copy the texture blend mode on the main thread. Keep the texture and renderer alive.
 ||| Preserve custom or unknown SDL codes as OtherBlendMode. Copies SDL errors on failure.

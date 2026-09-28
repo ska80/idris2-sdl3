@@ -447,7 +447,7 @@ NearestScale` selects individual pixels, which suits pixel art.  `LinearScale` i
 neighboring pixels and is SDL's default.  All four texture controls require the main thread and
 return `False` on failure.  Call `getError` immediately after failure. SDL can choose the closest
 supported blend or scale mode, so failure does not guarantee unchanged state. Color modulation
-queries and custom blend composition are not yet exposed.
+queries are not yet exposed.
 
 `getTextureBlendMode texture` returns `IO (Either String BlendMode)` for every texture access type.
 Call it on the main thread, with the texture and renderer alive. It reports texture blending, not
@@ -458,8 +458,42 @@ failure marker is -1, which cannot collide with any unsigned 32-bit code.
 `BlendMode` now includes `OtherBlendMode Bits32`. Update exhaustive matches to handle it.  Both
 `setTextureBlendMode` and `setDrawBlendMode` can pass this code to SDL, but support depends on the
 renderer. Blend codes are complete modes, not independent flags to combine with bitwise OR.  `Eq
-BlendMode` compares SDL codes, so `OtherBlendMode 1` equals `AlphaBlend`.  The binding preserves
-custom codes but does not yet provide a custom-mode composition function.
+BlendMode` compares SDL codes, so `OtherBlendMode 1` equals `AlphaBlend`.
+
+`composeBlendMode rgb alpha` returns `IO BlendMode` from two `BlendEquation` records.  Construct
+each with `MkBlendEquation sourceFactor destinationFactor operation`.  The RGB equation applies to
+red, green, and blue separately. The alpha equation applies to alpha.  Each equation combines
+`source * sourceFactor` and `destination * destinationFactor`.
+
+A blend factor multiplies a pixel component before the operation. `ZeroFactor` and `OneFactor`
+select 0 and 1. `SourceColorFactor` and `DestinationColorFactor` select the corresponding color
+components. `SourceAlphaFactor` and `DestinationAlphaFactor` select alpha. These four source and
+destination factors have `OneMinus...Factor` counterparts that select 1 minus the value. In the
+alpha equation, SDL uses the fourth component of the selected factor, as described in
+`SDL_blendmode.h`.
+
+`BlendAdd` adds the products. `BlendSubtract` subtracts the destination product from the source
+product. `BlendReverseSubtract` reverses that subtraction. `BlendMinimum` and `BlendMaximum` select
+the smaller or larger product. For example, this mode subtracts source RGB from destination RGB and
+leaves destination alpha unchanged:
+
+```idris
+subtractSource : IO BlendMode
+subtractSource = composeBlendMode
+  (MkBlendEquation OneFactor OneFactor BlendReverseSubtract)
+  (MkBlendEquation ZeroFactor OneFactor BlendAdd)
+```
+
+Composition calls `SDL_ComposeCustomBlendMode` directly, with no C adapter or native output buffer.
+It is safe on any thread. It creates no SDL resource, changes no renderer state, and does not
+prepare or premultiply pixel data. Cache the returned mode if you reuse the equations.  SDL codes
+for predefined modes become named constructors. Other codes become `OtherBlendMode`.  Mathematically
+equivalent equations do not necessarily produce the same SDL code.
+
+Composition does not test renderer support. Apply the result with `setTextureBlendMode` or
+`setDrawBlendMode` on the main thread, then handle failure. The software renderer does not support
+custom modes. Hardware support depends on the renderer, factors, and operations. A rejected setting
+can still change state. Use the scoped blend helpers when you need a restoration attempt.
 
 `withTextureBlendMode texture mode action`, exported by `SDL3.Scoped`, saves the current mode and
 attempts restoration after the action returns `Right` or `Left`. Nested scopes save their own entry
@@ -872,6 +906,13 @@ cover scoped alpha blending, restored additive blending, and unchanged draw colo
 tests cover null-query failure. Compile-time tests reject textures used as renderers and filtering
 modes used as draw blend modes. Custom-mode restoration and restoration failures still need tests on
 suitable renderers.
+
+Blend-composition tests compare all ten factors and five operations against SDL header constants,
+with each varied in every argument position. They cover all seven predefined recipes, custom codes,
+and repeated composition. Integration tests apply a composed mode through both scoped blend helpers
+and handle either support or rejection. Compile-time tests reject swapped factors and operations,
+and filtering modes used as equations. The software tests cover custom-mode rejection, not hardware
+rendering with custom equations.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

@@ -10,6 +10,18 @@ _Static_assert(sizeof(SDL_ScaleMode) == 4, "Bindings require 32-bit SDL scale mo
 
 _Static_assert(sizeof(SDL_BlendMode) == 4, "Bindings require 32-bit SDL blend mode codes");
 
+_Static_assert(sizeof(SDL_BlendFactor) == 4 && sizeof(SDL_BlendOperation) == 4, "Bindings require 32-bit SDL blend factors and operations");
+
+_Static_assert(SDL_BLENDFACTOR_ZERO == 1 && SDL_BLENDFACTOR_ONE == 2 && SDL_BLENDFACTOR_SRC_COLOR == 3 &&
+                   SDL_BLENDFACTOR_ONE_MINUS_SRC_COLOR == 4 && SDL_BLENDFACTOR_SRC_ALPHA == 5 && SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA == 6 &&
+                   SDL_BLENDFACTOR_DST_COLOR == 7 && SDL_BLENDFACTOR_ONE_MINUS_DST_COLOR == 8 && SDL_BLENDFACTOR_DST_ALPHA == 9 &&
+                   SDL_BLENDFACTOR_ONE_MINUS_DST_ALPHA == 10,
+               "Update SDL3 blend factor constants");
+
+_Static_assert(SDL_BLENDOPERATION_ADD == 1 && SDL_BLENDOPERATION_SUBTRACT == 2 && SDL_BLENDOPERATION_REV_SUBTRACT == 3 &&
+                   SDL_BLENDOPERATION_MINIMUM == 4 && SDL_BLENDOPERATION_MAXIMUM == 5,
+               "Update SDL3 blend operation constants");
+
 _Static_assert(sizeof(SDL_PixelFormat) == 4 && sizeof(SDL_Texture) == 16 && offsetof(SDL_Texture, format) == 0 &&
                    offsetof(SDL_Texture, w) == 4 && offsetof(SDL_Texture, h) == 8 && offsetof(SDL_Texture, refcount) == 12,
                "Update SDL3.Raw.NativeTexture for this SDL_Texture layout");

@@ -15,6 +15,43 @@ SDL_Texture* idris_test_null_texture(void) {
     return NULL;
 }
 
+Uint32 idris_test_compose_blend(int slot, int choice) {
+    static const SDL_BlendFactor    factors[]    = {SDL_BLENDFACTOR_ZERO,      SDL_BLENDFACTOR_ONE,
+                                                    SDL_BLENDFACTOR_SRC_COLOR, SDL_BLENDFACTOR_ONE_MINUS_SRC_COLOR,
+                                                    SDL_BLENDFACTOR_SRC_ALPHA, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                                                    SDL_BLENDFACTOR_DST_COLOR, SDL_BLENDFACTOR_ONE_MINUS_DST_COLOR,
+                                                    SDL_BLENDFACTOR_DST_ALPHA, SDL_BLENDFACTOR_ONE_MINUS_DST_ALPHA};
+    static const SDL_BlendOperation operations[] = {SDL_BLENDOPERATION_ADD, SDL_BLENDOPERATION_SUBTRACT, SDL_BLENDOPERATION_REV_SUBTRACT,
+                                                    SDL_BLENDOPERATION_MINIMUM, SDL_BLENDOPERATION_MAXIMUM};
+    SDL_BlendFactor                 src_rgb = SDL_BLENDFACTOR_ONE, dst_rgb = SDL_BLENDFACTOR_ZERO;
+    SDL_BlendFactor                 src_a = SDL_BLENDFACTOR_SRC_ALPHA, dst_a = SDL_BLENDFACTOR_DST_ALPHA;
+    SDL_BlendOperation              rgb_op = SDL_BLENDOPERATION_ADD, alpha_op = SDL_BLENDOPERATION_MAXIMUM;
+
+    if (slot < 0 || slot > 5 || choice < 0 || choice >= ((slot == 2 || slot == 5) ? 5 : 10)) return SDL_BLENDMODE_INVALID;
+
+    switch (slot) {
+    case 0:
+        src_rgb = factors[choice];
+        break;
+    case 1:
+        dst_rgb = factors[choice];
+        break;
+    case 2:
+        rgb_op = operations[choice];
+        break;
+    case 3:
+        src_a = factors[choice];
+        break;
+    case 4:
+        dst_a = factors[choice];
+        break;
+    case 5:
+        alpha_op = operations[choice];
+        break;
+    }
+    return SDL_ComposeCustomBlendMode(src_rgb, dst_rgb, rgb_op, src_a, dst_a, alpha_op);
+}
+
 void idris_test_size_fields(IdrisSDLSize* size, Sint32 width, Sint32 height) {
     size->width  = width;
     size->height = height;
