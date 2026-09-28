@@ -8,6 +8,10 @@ static void size_tests(void) {
 
     SDL_Window* window = SDL_CreateWindow("size storage", 37, 23, SDL_WINDOW_HIDDEN);
     assert(window);
+    assert(idris_sdl_get_window_pixel_density(window) == (double)SDL_GetWindowPixelDensity(window));
+    assert(idris_sdl_get_window_display_scale(window) == (double)SDL_GetWindowDisplayScale(window));
+    assert(idris_sdl_get_window_pixel_density(window) == 1.0);
+    assert(idris_sdl_get_window_display_scale(window) == 1.0);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
     assert(idris_sdl_show_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) == 0);
@@ -108,6 +112,10 @@ int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
+    assert(idris_sdl_get_window_pixel_density(NULL) == 0.0);
+    assert(SDL_GetError()[0] != '\0');
+    assert(idris_sdl_get_window_display_scale(NULL) == 0.0);
+    assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_set_window_bordered(NULL, 1) == 0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_set_window_resizable(NULL, 0) == 0);

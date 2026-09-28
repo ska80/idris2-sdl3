@@ -234,6 +234,18 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererPixelDensity : Renderer -> IO (Either String Double)
+  rendererPixelDensity renderer = getWindowPixelDensity renderer
+
+failing "Mismatch between"
+  textureDisplayScale : Texture access -> IO (Either String Double)
+  textureDisplayScale texture = getWindowDisplayScale texture
+
+failing "Mismatch between"
+  densityAsDimensions : Window -> IO (Either String (Size PixelUnits))
+  densityAsDimensions window = getWindowPixelDensity window
+
+failing "Mismatch between"
   rendererBorderControl : Renderer -> IO Bool
   rendererBorderControl renderer = setWindowBordered renderer True
 

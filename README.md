@@ -624,6 +624,27 @@ presentation.  A returned `Size` owns its values, not the window, and remains va
 destruction.  Its units do not track window identity or later resizing. If dimensions are zero,
 defer size-dependent drawing or allocation. Errors return through `Left`.
 
+`getWindowPixelDensity window` returns `IO (Either String Double)`. Pixel density is the ratio of
+backing pixels to window coordinates. For example, a 1920×1080 window with a 3840×2160 pixel buffer
+has a density of 2.0. The value describes the window, not the renderer's current drawing scale or
+texture target.
+
+`getWindowDisplayScale window` also returns `IO (Either String Double)`. Display scale combines
+pixel density with the display's content scale and describes the expected content size in pixels.
+At a scale of 2.0, each content dimension uses twice the pixels required at scale 1.0.  Display
+scale and pixel density are not necessarily equal. Both use `Double`, so their types do not prevent
+mixing them up. Neither query changes rendering state or converts input coordinates.
+
+Call these queries on the main thread while the window is alive. Their results are copied values and
+remain valid after destruction. Re-query after monitor moves or display-scaling changes rather than
+treating a copied value as current state. Display-scale change events are not yet decoded beyond
+`OtherEvent` or `UnknownEvent`. Avoid applying display scaling twice if your layout already accounts
+for it through logical presentation or rendering scale.
+
+SDL returns these values as C `float`, with 0.0 for failure. The adapters widen them to C `double`
+for Idris `Double` and allocate no native output storage. Widening does not add precision.  The
+typed API copies the SDL error into `Left` on failure. Each query makes one foreign call.
+
 `setWindowSize window (MkSize width height)` requests a new client-area size in window coordinates.
 Its size argument has type `Size WindowUnits`, not `Size PixelUnits`. Both `Int32` dimensions must
 be positive. Call it on the main thread while the window is alive. It returns `Bool`.  Read
@@ -1022,6 +1043,15 @@ disabled, stable identifiers and titles, and use with an active texture target. 
 null windows and zero/nonzero input conversion. Compile-time tests reject wrong handles and flag
 values used instead of booleans. The dummy driver does not apply style changes.  Actual border
 changes, interactive resizing, and fullscreen restrictions need manual testing.
+
+Window-scale tests cover the dummy driver's density and display scale of 1.0, repeated query
+actions, resizing, independent windows, and the high-density creation flag. They compare pixel
+density with window and pixel dimensions and query while a scaled texture target is active.  Copied
+values survive resource cleanup. Native and raw tests cover null-window failures, and compile-time
+tests reject wrong handles and density values used as dimensions.
+
+These tests do not establish behavior on real high-density displays. Fractional factors, different
+pixel-density and display-scale values, monitor moves, and live scale changes need manual testing.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

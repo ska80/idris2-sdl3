@@ -47,6 +47,15 @@ prim__getWindowTitle : AnyPtr -> PrimIO String
 export
 prim__setWindowTitle : AnyPtr -> String -> PrimIO Int
 
+||| SDL float widened to Double. Zero means failure, with an SDL error.
+%foreign "C:idris_sdl_get_window_pixel_density, libidris2_sdl3, sdl3.h"
+export
+prim__getWindowPixelDensity : AnyPtr -> PrimIO Double
+
+%foreign "C:idris_sdl_get_window_display_scale, libidris2_sdl3, sdl3.h"
+export
+prim__getWindowDisplayScale : AnyPtr -> PrimIO Double
+
 ||| Full SDL flag mask. Requires a live window on the main thread.
 %foreign "C:SDL_GetWindowFlags, libSDL3, SDL3/SDL.h"
 export

@@ -426,6 +426,26 @@ export
 getWindowSizeInPixels : Window -> IO (Either String (Size PixelUnits))
 getWindowSizeInPixels (MkWindow ptr storage) = queriedSize storage (prim__getWindowSizeInPixels ptr storage)
 
+queriedWindowScale : PrimIO Double -> IO (Either String Double)
+queriedWindowScale action = do
+  value <- primIO action
+  if value == 0 then Left <$> getError else pure (Right value)
+
+||| Query the ratio of backing pixels to window coordinates on the main thread.
+||| Keep the window alive. Copies SDL errors on failure. Renderer scale and targets do not define this ratio.
+||| SDL returns float precision, widened to Double for the foreign ABI without native output storage.
+export
+getWindowPixelDensity : Window -> IO (Either String Double)
+getWindowPixelDensity (MkWindow ptr _) = queriedWindowScale (prim__getWindowPixelDensity ptr)
+
+||| Query the expected content scale relative to window pixels on the main thread.
+||| Combines pixel density with display content scale. This is not necessarily the pixel density.
+||| Keep the window alive. Copies SDL errors on failure. Re-query after display scale changes or monitor moves.
+||| SDL float precision is widened to Double. This does not change rendering state.
+export
+getWindowDisplayScale : Window -> IO (Either String Double)
+getWindowDisplayScale (MkWindow ptr _) = queriedWindowScale (prim__getWindowDisplayScale ptr)
+
 ||| Load a BMP file into CPU memory. Does not require a renderer.
 ||| Destroy the returned surface when no longer needed.
 export

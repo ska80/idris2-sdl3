@@ -71,6 +71,14 @@ int idris_sdl_is_null(const void* ptr) {
     return ptr == NULL;
 }
 
+double idris_sdl_get_window_pixel_density(SDL_Window* window) {
+    return (double)SDL_GetWindowPixelDensity(window);
+}
+
+double idris_sdl_get_window_display_scale(SDL_Window* window) {
+    return (double)SDL_GetWindowDisplayScale(window);
+}
+
 int idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered) {
     return SDL_SetWindowBordered(window, bordered != 0);
 }
