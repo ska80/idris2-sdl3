@@ -8,6 +8,23 @@ static void size_tests(void) {
 
     SDL_Window* window = SDL_CreateWindow("size storage", 37, 23, SDL_WINDOW_HIDDEN);
     assert(window);
+
+    int (*state_requests[])(SDL_Window*) = {idris_sdl_minimize_window, idris_sdl_maximize_window, idris_sdl_restore_window};
+
+    for (int i = 0; i < 3; ++i) {
+        SDL_ClearError();
+
+        assert(state_requests[i](NULL) == 0);
+        assert(SDL_GetError()[0] != '\0');
+
+        SDL_ClearError();
+
+        /* The dummy driver does not implement these requests. */
+        assert(state_requests[i](window) == 0);
+        assert(SDL_GetError()[0] != '\0');
+    }
+
+    assert((SDL_GetWindowFlags(window) & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_MAXIMIZED)) == 0);
     assert(idris_sdl_get_window_pixel_density(window) == (double)SDL_GetWindowPixelDensity(window));
     assert(idris_sdl_get_window_display_scale(window) == (double)SDL_GetWindowDisplayScale(window));
     assert(idris_sdl_get_window_pixel_density(window) == 1.0);

@@ -234,6 +234,26 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererMinimizeRequest : Renderer -> IO Bool
+  rendererMinimizeRequest renderer = minimizeWindow renderer
+
+failing "Mismatch between"
+  textureMaximizeRequest : Texture access -> IO Bool
+  textureMaximizeRequest texture = maximizeWindow texture
+
+failing "Mismatch between"
+  identifierRestoreRequest : WindowID -> IO Bool
+  identifierRestoreRequest identifier = restoreWindow identifier
+
+failing "Mismatch between"
+  flagsMinimizedQuery : WindowFlags -> IO Bool
+  flagsMinimizedQuery flags = isWindowMinimized flags
+
+failing "Mismatch between"
+  rendererMaximizedQuery : Renderer -> IO Bool
+  rendererMaximizedQuery renderer = isWindowMaximized renderer
+
+failing "Mismatch between"
   rendererRaiseRequest : Renderer -> IO Bool
   rendererRaiseRequest renderer = raiseWindow renderer
 

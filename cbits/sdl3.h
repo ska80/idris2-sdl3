@@ -16,6 +16,9 @@ IDRIS_SDL3 int idris_sdl_set_window_title(SDL_Window* window, const char* title)
 /* Widen SDL float results for the Idris Double ABI. Zero means failure. */
 IDRIS_SDL3 double idris_sdl_get_window_pixel_density(SDL_Window* window);
 IDRIS_SDL3 double idris_sdl_get_window_display_scale(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_minimize_window(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_maximize_window(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_restore_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_raise_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_set_window_fullscreen(SDL_Window* window, Sint32 fullscreen);
 IDRIS_SDL3 int idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered);

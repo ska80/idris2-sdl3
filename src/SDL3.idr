@@ -361,6 +361,42 @@ export
 setWindowTitle : Window -> String -> IO Bool
 setWindowTitle (MkWindow ptr _) title = (/= 0) <$> primIO (prim__setWindowTitle ptr title)
 
+||| Request minimization of a live window on the main thread. Read getError immediately after False.
+||| Requests can be delayed or denied. In fullscreen this has no direct effect, but can affect later windowed state.
+export
+minimizeWindow : Window -> IO Bool
+minimizeWindow (MkWindow ptr _) = (/= 0) <$> primIO (prim__minimizeWindow ptr)
+
+||| Request maximization of a live, resizable window on the main thread.
+||| Non-resizable windows cannot be maximized. Requests can be delayed or denied.
+||| Read getError immediately after False. True alone does not prove a state change.
+export
+maximizeWindow : Window -> IO Bool
+maximizeWindow (MkWindow ptr _) = (/= 0) <$> primIO (prim__maximizeWindow ptr)
+
+||| Request restoration of a minimized or maximized window's size and position on the main thread.
+||| Keep the window alive. Read getError immediately after False. Requests can be delayed or denied.
+||| In fullscreen this has no direct effect, but can affect later windowed state. It does not leave fullscreen.
+export
+restoreWindow : Window -> IO Bool
+restoreWindow (MkWindow ptr _) = (/= 0) <$> primIO (prim__restoreWindow ptr)
+
+||| Read SDL_WINDOW_MINIMIZED on the main thread, while the window is alive.
+||| This is a state, not a success indicator or a hidden-state query.
+export
+isWindowMinimized : Window -> IO Bool
+isWindowMinimized (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  pure ((flags .&. 0x40) /= 0)
+
+||| Read SDL_WINDOW_MAXIMIZED on the main thread, while the window is alive.
+||| This is a state, not a success indicator or a fullscreen-state query.
+export
+isWindowMaximized : Window -> IO Bool
+isWindowMaximized (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  pure ((flags .&. 0x80) /= 0)
+
 ||| Request that a live window be raised and gain keyboard focus on the main thread.
 ||| Window-manager policy can deny focus. True does not prove that focus changed.
 ||| Read getError immediately after False. Use showWindow separately for a hidden window.

@@ -612,6 +612,28 @@ caller-owned buffer on the main thread. Copied values survive buffer reuse and d
 new native storage for each notification. Update exhaustive matches for these four new
 constructors. Actual pointer movement, mouse capture, and relative mouse mode need platform tests.
 
+`minimizeWindow window`, `maximizeWindow window`, and `restoreWindow window` each return `IO Bool`.
+They request minimization, maximization, or restoration of a minimized or maximized window's size
+and position. Maximization requires a resizable window and is not fullscreen mode.  Minimize and
+restore requests have no direct effect in fullscreen, but can affect the later windowed state. Use
+`setWindowFullscreen window False` to request leaving fullscreen.
+
+Call these functions on the main thread while the window is alive. If a request returns `False`,
+read `getError` immediately. A successful request can be delayed or denied by the window system.
+Use state-change events or `syncWindow` when waiting, then query the reported state.
+Synchronization can block or time out, and it does not prove that the requested state was granted.
+It does not wait for GPU work. The dummy driver rejects all three requests as unsupported.
+
+`isWindowMinimized window` and `isWindowMaximized window` return `IO Bool` from SDL's corresponding
+window flags. Call them on the main thread with a live window. Their booleans are states, not
+success indicators. They are distinct from hidden and fullscreen state. Copied results survive
+window destruction but do not track later changes. Query size separately when updating layout.
+
+The request adapters only widen SDL's boolean results to C integers. Queries use the direct
+window-flag binding, with masks checked against SDL headers during the native build.  No adapter
+output storage is allocated. These calls do not transfer ownership or change cleanup order: destroy
+textures before their renderer, then destroy the window.
+
 `WindowMinimizedEvent timestamp identifier`, `WindowMaximizedEvent timestamp identifier`, and
 `WindowRestoredEvent timestamp identifier` report SDL window-state changes. Restored means restored
 to normal size and position. Each notification contains a copied nanosecond timestamp and
@@ -620,8 +642,8 @@ current size.
 
 Match the identifier to your window before changing application state. A queued notification records
 a past change and does not prove the current state. It does not own the window or extend its
-lifetime.  Minimization is distinct from hiding and losing keyboard focus. These bindings do not
-minimize, maximize, or restore windows, and the decoder does not pause or resume rendering.
+lifetime. Minimization is distinct from hiding and losing keyboard focus. Decoding these events does
+not minimize, maximize, or restore windows, and does not pause or resume rendering.
 
 Type-only polling returns `WindowMinimized`, `WindowMaximized`, or `WindowRestored`.  Payload
 polling and both wait APIs use the same decoder. Update exhaustive matches for the three new
@@ -1269,6 +1291,15 @@ behavior rather than assuming successful requests gain focus. They also draw wit
 renderer and texture target after raising. Native tests cover null-window failure and hidden-window
 raising. Compile-time tests reject wrong handles. Real stacking, focus-policy decisions, and focus
 changes between applications need manual testing.
+
+Minimize, maximize, and restore tests cover dummy-driver rejection, SDL errors, repeated requests,
+cached actions, independent windows, and copied false state flags after cleanup. They distinguish
+hidden and fullscreen flags from minimized and maximized flags. Native tests cover null-window
+failures with cleared error state. Tests also preserve window identity, title, dimensions, and use
+of an existing renderer and texture target after rejected requests. Compile-time tests reject wrong
+handles and identifiers. Successful requests, true state flags, real state-change events, and
+window-manager restrictions remain manual-test cases because the dummy driver lacks these
+operations.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a
