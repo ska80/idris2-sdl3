@@ -1,9 +1,9 @@
 # Core audio playback
 
 Import `SDL3` for core playback and WAV data. Import `SDL3.Scoped` for resource scopes.  Initialize
-SDL with `audio`, or `video <+> audio` when the application also draws windows.  The first version
-supports default-device playback. It does not record audio, enumerate devices, or install callbacks
-that run Idris code on an SDL audio thread.
+SDL with `audio`, or `video <+> audio` when the application also draws windows. The binding supports
+default-device playback. It does not record audio, enumerate devices, or install callbacks that run
+Idris code on an SDL audio thread.
 
 ## Streams and formats
 
@@ -51,7 +51,7 @@ flush only at the end of the input sequence.
 `getPlaybackQueued stream` returns `IO (Either String Bits32)` for input bytes still queued.  SDL
 clamps the count at 2147483647. The count can change while playback runs. It excludes audio that SDL
 already converted or handed to the device. Zero is not proof of audible silence or exact playback
-completion. This first version provides no finished-track notification or automatic refill.
+completion. The binding provides no finished-track notification or automatic refill.
 
 ## Playback controls
 
@@ -101,7 +101,7 @@ instances, reuse a pool of separate streams rather than opening a device for eve
 no automatic voice allocation in this layer.
 
 WAV loading is not incremental disk streaming. Large music files occupy native memory, and queueing
-adds SDL-owned copies. This version does not decode MP3, Ogg, or other compressed music containers.
+adds SDL-owned copies. The binding does not decode MP3, Ogg, or other compressed music containers.
 It does not automatically loop music, seek, fade, or manage tracks. Applications can feed PCM
 chunks, but gapless looping and a full music player are better handled by the planned mixer layer.
 
@@ -130,7 +130,8 @@ backgroundAndSound musicData soundData =
 `withPlaybackStream spec action` destroys the stream and closes its device after an ordinary `Right`
 or `Left` callback return. Do not destroy or retain the supplied handle. Its callback runs on the
 caller's thread, not SDL's audio thread. Runtime exceptions, process exit, and callbacks that do not
-return do not guarantee cleanup. These scopes do not enforce lifetimes in Idris types.
+return do not guarantee cleanup. These scopes do not enforce lifetimes in Idris types.  See
+[resource ownership](resources.md) for shared scope and error rules.
 
 Destroy playback streams before calling SDL `quit`. Free WAV resources exactly once and before final
 SDL shutdown. Queued copies do not borrow their source WAV or buffer. No separate device handle
@@ -168,14 +169,9 @@ testing. The tests do not establish audible timing or mixer behavior.
 ## Relationship to SDL3_mixer
 
 SDL3 core supplies streams, devices, sample conversion, and mixing of device-bound streams.
-SDL3_mixer builds a game-audio layer on top. Its installed header is
-`/usr/local/include/SDL3_mixer/SDL_mixer.h`. It describes decoded `MIX_Audio` assets, reusable
-`MIX_Track` objects, and `MIX_Mixer` output. Music and sound effects use the same asset/track model.
-The header also provides loading from I/O streams for decoding during playback.
+SDL3_mixer adds decoded assets, tracks, looping, fades, and other game-audio controls.  Available
+compressed formats depend on its build. Music and sound effects use the same asset and track model.
 
-The planned mixer binding can supply supported compressed formats, automatic looping, fades, track
-playback state, tags, and positional audio. Available codecs depend on the mixer build.  For those
-features, a mixer and tracks will normally replace the convenience playback streams, not become
-another wrapper around their owned devices. Keep the ownership types separate.  This core increment
-does not link SDL3_mixer or promise that its device-owned streams can be used as mixer-track inputs
-without further work.
+This library does not bind or link SDL3_mixer. Its core playback streams own their devices and are
+not mixer tracks. Future extension bindings belong in `SDL3.Mixer`, separate from core audio in
+`SDL3`.
