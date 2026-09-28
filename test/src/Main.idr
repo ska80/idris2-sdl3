@@ -15,6 +15,7 @@ import RenderTests
 import ScalingTests
 import CoordinateTests
 import StreamingTests
+import TextureLockTests
 import TimerTests
 import VSyncTests
 import WaitTests
@@ -111,6 +112,7 @@ resources window = do
       Right () <- scalingTests window renderer | Left err => pure (Left err)
       Right () <- coordinateTests renderer | Left err => pure (Left err)
       Right () <- streamingTests window renderer | Left err => pure (Left err)
+      Right () <- textureLockTests window renderer | Left err => pure (Left err)
       Right () <- rotationTests window renderer | Left err => pure (Left err)
       Right () <- vsyncTests renderer | Left err => pure (Left err)
       render renderer

@@ -234,6 +234,34 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  targetTextureLock : TextureLockBuffer -> Texture TargetAccess -> IO (Either String LockedRGBA)
+  targetTextureLock storage texture = lockTextureRGBA storage texture Nothing
+
+failing "Mismatch between"
+  staticTextureLock : TextureLockBuffer -> Texture StaticAccess -> IO (Either String LockedRGBA)
+  staticTextureLock storage texture = lockTextureRGBA storage texture Nothing
+
+failing "Mismatch between"
+  wrongLockStorage : CoordinateBuffer -> Texture StreamingAccess -> IO (Either String LockedRGBA)
+  wrongLockStorage storage texture = lockTextureRGBA storage texture Nothing
+
+failing "Mismatch between"
+  textureAsLockView : Texture StreamingAccess -> IO Bool
+  textureAsLockView texture = fillLockedRGBA texture 0 0 0 255
+
+failing "Mismatch between"
+  lockedViewAsSurface : LockedRGBA -> IO ()
+  lockedViewAsSurface view = destroySurface view
+
+failing "Mismatch between"
+  floatingLockRegion : TextureLockBuffer -> Texture StreamingAccess -> FRect -> IO (Either String LockedRGBA)
+  floatingLockRegion storage texture rect = lockTextureRGBA storage texture (Just rect)
+
+failing "Mismatch between"
+  lockSizeAsWindowUnits : LockedRGBA -> Size WindowUnits
+  lockSizeAsWindowUnits view = lockedRGBASize view
+
+failing "Mismatch between"
   rendererMouseGrab : Renderer -> IO Bool
   rendererMouseGrab renderer = setWindowMouseGrab renderer True
 
@@ -560,6 +588,14 @@ failing "Mismatch between"
 failing "Mismatch between"
   untypedNativeTexture : AnyPtr -> PrimIO ()
   untypedNativeTexture ptr = prim__destroyTexture ptr
+
+failing "Name SDL3.MkTextureLockBuffer is private"
+  forgeTextureLockBuffer : NativeTextureLock -> TextureLockBuffer
+  forgeTextureLockBuffer = MkTextureLockBuffer
+
+failing "Name SDL3.MkLockedRGBA is private"
+  forgeLockedRGBA : NativeTextureLock -> Bits64 -> Size PixelUnits -> Int32 -> LockedRGBA
+  forgeLockedRGBA = MkLockedRGBA
 
 failing "Name SDL3.MkTexture is private"
   forgeTexture : NativeTexture -> Texture TargetAccess

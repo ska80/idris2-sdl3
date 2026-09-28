@@ -149,11 +149,144 @@ static void size_tests(void) {
     assert(copied.width == 37 && copied.height == 23);
 }
 
+static void texture_lock_tests(void) {
+    Uint8 destination[64], source[24];
+
+    SDL_memset(destination, 0xcd, sizeof(destination));
+
+    for (unsigned i = 0; i < sizeof(source); ++i)
+        source[i] = (Uint8)i;
+
+    SDL_Texture         dummy  = {0}; /* Only a non-null identity; never passed to SDL. */
+    IdrisSDLTextureLock memory = {2, 3, 20, 7, &dummy, destination + 4};
+
+    assert(idris_sdl_locked_fill_rgba(&memory, 7, 1, 2, 3, 4) == 1);
+
+    for (unsigned i = 0; i < sizeof(destination); ++i) {
+        bool written = i >= 4 && i < 52 && (i - 4) % 20 < 8;
+        assert(destination[i] == (written ? (i - 4) % 4 + 1 : 0xcd));
+    }
+
+    assert(idris_sdl_locked_pixel_rgba(&memory, 7, 1, 2, 5, 6, 7, 8) == 1);
+    assert(destination[48] == 5 && destination[51] == 8);
+    assert(idris_sdl_locked_pixel_rgba(&memory, 7, -1, 0, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_locked_pixel_rgba(&memory, 7, 2, 0, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_locked_pixel_rgba(&memory, 7, 0, 3, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_locked_pixel_rgba(&memory, 7, SDL_MAX_SINT32, SDL_MIN_SINT32, 0, 0, 0, 0) == 0);
+
+    Uint8 saved[64];
+    SDL_memcpy(saved, destination, sizeof(saved));
+
+    assert(idris_sdl_locked_fill_rgba(&memory, 6, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_locked_copy_rgba(&memory, 7, NULL, 24, 8) == 0);
+    assert(idris_sdl_locked_copy_rgba(&memory, 7, source, 23, 8) == 0);
+    assert(idris_sdl_locked_copy_rgba(&memory, 7, source, 24, 7) == 0);
+    assert(idris_sdl_locked_copy_rgba(&memory, 7, source, 24, -1) == 0);
+    assert(SDL_memcmp(saved, destination, sizeof(saved)) == 0);
+    assert(idris_sdl_locked_copy_rgba(&memory, 7, source, 24, 8) == 1);
+
+    for (unsigned y = 0; y < 3; ++y) {
+        assert(SDL_memcmp(destination + 4 + y * 20, source + y * 8, 8) == 0);
+    }
+
+    for (unsigned i = 0; i < sizeof(destination); ++i) {
+        if (!(i >= 4 && i < 52 && (i - 4) % 20 < 8)) assert(destination[i] == 0xcd);
+    }
+
+    assert(idris_sdl_locked_fill_rgba(NULL, 0, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_unlock_texture_rgba(NULL, 0) == 0);
+
+    idris_sdl_texture_lock_free(NULL);
+
+    SDL_Window* window = SDL_CreateWindow("lock tests", 16, 16, SDL_WINDOW_HIDDEN);
+    assert(window);
+
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, "software");
+    assert(renderer);
+
+    SDL_Texture* texture = idris_sdl_create_streaming_texture(renderer, 8, 5);
+    SDL_Texture* wrong   = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, 8, 5);
+    SDL_Texture* format  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 8, 5);
+    assert(texture && wrong && format);
+
+    IdrisSDLTextureLock* lock = idris_sdl_texture_lock_new();
+    assert(lock);
+    assert(idris_sdl_lock_texture_rgba(NULL, texture, 0, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_lock_texture_rgba(lock, NULL, 0, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_lock_texture_rgba(lock, wrong, 0, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_lock_texture_rgba(lock, format, 0, 0, 0, 0, 0) == 0);
+
+    const SDL_Rect invalid[] = {
+        {-1, 0,              1,              1 },
+        {0,  0,              0,              1 },
+        {0,  0,              1,              -1},
+        {7,  4,              2,              1 },
+        {0,  0,              SDL_MAX_SINT32, 1 },
+        {0,  SDL_MIN_SINT32, 1,              1 }
+    };
+
+    for (unsigned i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i) {
+        SDL_Rect r = invalid[i];
+        assert(idris_sdl_lock_texture_rgba(lock, texture, 1, r.x, r.y, r.w, r.h) == 0);
+        assert(lock->texture == NULL);
+    }
+
+    assert(idris_sdl_lock_texture_rgba(lock, texture, 0, 0, 0, 0, 0) == 1);
+    assert(lock->width == 8 && lock->height == 5 && lock->pitch >= 32);
+
+    Uint64 first = lock->generation;
+    assert(idris_sdl_locked_fill_rgba(lock, first, 20, 40, 60, 255) == 1);
+    assert(idris_sdl_lock_texture_rgba(lock, texture, 0, 0, 0, 0, 0) == 0);
+    assert(lock->generation == first);
+    assert(idris_sdl_unlock_texture_rgba(lock, first) == 1);
+    assert(idris_sdl_unlock_texture_rgba(lock, first) == 0);
+    assert(idris_sdl_locked_fill_rgba(lock, first, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_lock_texture_rgba(lock, texture, 1, 6, 3, 2, 2) == 1);
+    assert(lock->width == 2 && lock->height == 2 && lock->pitch >= 8);
+    assert(idris_sdl_locked_fill_rgba(lock, first, 0, 0, 0, 0) == 0);
+    assert(idris_sdl_unlock_texture_rgba(lock, first) == 0);
+    assert(idris_sdl_locked_copy_rgba(lock, lock->generation, source, 24, 12) == 1);
+    assert(idris_sdl_unlock_texture_rgba(lock, lock->generation) == 1);
+
+    lock->generation = SDL_MAX_UINT64;
+
+    assert(idris_sdl_lock_texture_rgba(lock, texture, 0, 0, 0, 0, 0) == 0);
+
+    idris_sdl_texture_lock_free(lock);
+
+    lock = idris_sdl_texture_lock_new();
+
+    assert(lock);
+    assert(idris_sdl_lock_texture_rgba(lock, texture, 0, 0, 0, 0, 0) == 1);
+    assert(idris_sdl_locked_fill_rgba(lock, lock->generation, 42, 84, 126, 255) == 1);
+
+    /* Freeing storage also unlocks while the texture is still alive. */
+    idris_sdl_texture_lock_free(lock);
+
+    assert(SDL_RenderTexture(renderer, texture, NULL, NULL));
+
+    SDL_Surface* readback = SDL_RenderReadPixels(renderer, NULL);
+    assert(readback);
+
+    Uint8 r, g, b, a;
+    assert(SDL_ReadSurfacePixel(readback, 0, 0, &r, &g, &b, &a));
+    assert(r == 42 && g == 84 && b == 126 && a == 255);
+
+    SDL_DestroySurface(readback);
+    SDL_DestroyTexture(format);
+    SDL_DestroyTexture(wrong);
+    SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+}
+
 static void point_buffer_tests(void) {
     assert(idris_sdl_points_new(0) == NULL);
     assert(idris_sdl_points_new(0x80000000u) == NULL);
     assert(idris_sdl_points_new(SDL_MAX_UINT32) == NULL);
+
     if (sizeof(size_t) == 4) assert(idris_sdl_points_new(0x20000000u) == NULL);
+
     assert(idris_sdl_points_set(NULL, 0, 1, 2) == 0);
     assert(idris_sdl_draw_points(NULL, NULL, 0) == 0);
     assert(idris_sdl_draw_lines(NULL, NULL, 0) == 0);
@@ -418,6 +551,7 @@ int main(void) {
     idris_sdl_event_free(buffer);
 
     size_tests();
+    texture_lock_tests();
     point_buffer_tests();
     rect_buffer_tests();
     SDL_Quit();

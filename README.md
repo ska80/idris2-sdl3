@@ -32,6 +32,17 @@ window, press Escape, or left-click the blue rectangle to exit.  The example con
 positions into scene coordinates, including after resizing.  `make test` uses SDL's dummy video
 driver, so it does not need a display. The Makefile rejects backends other than Chez.
 
+`make run-locking` runs `examples/Locking.idr`. It reuses one lock buffer while updating a streaming
+texture each frame. A fill initializes the pixels, then a pixel write moves a marker across the
+texture. The callback unlocks before rendering. Close the window or press Escape to exit.  `make
+example` builds both examples. For a three-frame headless run after building:
+
+```sh
+SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software \
+  LD_LIBRARY_PATH="$PWD/cbits:/usr/local/lib:${LD_LIBRARY_PATH:-}" \
+  examples/build/exec/sdl3-locking --smoke
+```
+
 ## API and safety
 
 Import `SDL3` for the typed API. `examples/Main.idr` shows an event loop, callback-based cleanup,
@@ -323,8 +334,86 @@ other textures.
 
 The binding passes the buffer directly to SDL without an extra staging copy or native allocation.
 SDL still copies or uploads the pixels internally.  SDL documents `SDL_UpdateTexture` as slow and
-recommends texture locking for frequent updates.  Texture locking is not yet bound. No upload
-benchmarks are available.  `test/src/StreamingTests.idr` shows buffer reuse and rows with padding.
+recommends texture locking for frequent updates. Scoped RGBA locking is available as described
+below.  No upload or locking benchmarks are available. `test/src/StreamingTests.idr` shows buffer
+reuse and rows with padding.
+
+`withTextureLockRGBA storage texture region action` borrows write-only RGBA pixels for the callback.
+Import `SDL3.Scoped` for this helper and `withTextureLockBuffer`. The texture must have type
+`Texture StreamingAccess`. `Nothing` locks the whole texture. `Just rect` locks a positive rectangle
+wholly inside it, measured in texture pixels. Invalid rectangles fail rather than being clipped.
+Static and render-target textures cannot use this typed API.
+
+Allocate the `TextureLockBuffer` once outside the frame loop, then reuse it for successive locks.
+`newTextureLockBuffer` and `freeTextureLockBuffer` provide manual ownership. The scoped helper
+allocates and frees the same storage around a callback. There is one native metadata allocation per
+buffer, not per lock. SDL can still allocate or upload internally. Idris creates managed view
+values.  The binding calls `SDL_LockTexture`, not `SDL_LockTextureToSurface`. It creates no
+temporary surface wrapper.
+
+`LockedRGBA` is opaque. `lockedRGBASize view` returns copied `Size PixelUnits` dimensions for the
+region. `lockedRGBAPitch view` returns its copied `Int32` pitch, the byte stride between rows.
+Neither exposes a raw pixel pointer. Size and pitch snapshots can outlive the lock and its storage.
+Do not assume that pitch equals width times four, or that row padding is writable.  The binding
+requires a non-null pixel address and positive pitch that covers the region's row bytes.  The
+region's address span must also fit the native address size. Invalid SDL output fails acquisition.
+
+`setLockedPixelRGBA view x y r g b a` writes four `Bits8` channels at region-relative `Int32`
+coordinates. Negative or out-of-range coordinates fail before writing. `fillLockedRGBA view r g b a`
+initializes the entire region to one color. Both preserve row padding and pixels outside the region.
+Neither operation reads previous pixel values. Each call crosses the foreign interface once.
+
+`copyLockedRGBA view source sourcePitch` copies a whole region from an Idris `Buffer`.  Source byte
+zero supplies the region's top-left pixel. Source pitch must cover width times four bytes, and
+capacity must cover pitch times height, including final-row padding. The copy handles different
+source and destination pitches and writes only the region's row bytes. Invalid inputs fail before
+copying. Do not mutate the source during the call. It can be reused afterward.  The raw API also
+requires accurate capacity and a source that does not overlap the destination.
+
+Initialize every pixel in the locked region before unlocking, including on error paths.  SDL does
+not promise old texture contents. The binding does not clear the pixels automatically or track which
+pixels you initialized. Use `fillLockedRGBA` or a valid whole-region copy before later work that can
+fail. Uninitialized pixels can produce corrupted output. Unlocking submits changes, even when the
+callback returns `Left`. It does not roll back partial writes or wait for GPU completion.
+
+Acquisition failure skips the callback. Ordinary `Right` and `Left` returns both trigger unlock.
+The callback result survives successful cleanup, and callback errors take precedence over cleanup
+errors. Runtime exceptions, process exit, and callbacks that do not return do not guarantee cleanup.
+The manual API is `lockTextureRGBA` followed by `unlockTextureRGBA`. All pixel operations and manual
+unlock return `Bool`. Read `getError` immediately after `False`. SDL's unlock returns no status.  A
+`True` unlock result means the view was active and SDL was called, not that a GPU upload succeeded.
+
+Keep the lock storage, texture, renderer, and window alive on the main thread throughout the lock.
+Do not render, upload, destroy, or re-lock that texture while locked, including through aliases.  A
+second buffer does not make locking the same texture twice safe. The binding rejects reuse of active
+storage, but it does not track locks acquired through other buffers or external SDL calls.  Do not
+unlock manually or free storage inside a scoped lock callback.
+
+Do not retain a borrowed view or actions that use it after the callback. Scopes do not enforce
+lifetimes in the type system. Generation checks reject inactive and stale views while their storage
+is alive, including after storage reuse. They cannot protect access after storage destruction.
+Generation counters do not wrap: an exhausted buffer rejects further locks. Freeing storage also
+unlocks an outstanding lock, so its texture must still be alive and all locked pixels initialized.
+Prefer the cleanup order below: lock scope, lock storage, texture, renderer, window, then `quit`.
+
+```idris
+import SDL3
+import SDL3.Scoped
+
+paint : TextureLockBuffer -> Texture StreamingAccess -> IO (Either String ())
+paint storage texture = withTextureLockRGBA storage texture Nothing $ \view => do
+  True <- fillLockedRGBA view 20 40 60 255 | False => Left <$> getError
+  pure (Right ())
+
+-- Allocate these resources outside the frame loop. Reuse storage in each paint call.
+prepare : Renderer -> IO (Either String ())
+prepare renderer = withStreamingTexture renderer 64 64 $ \texture =>
+  withTextureLockBuffer $ \storage => paint storage texture
+```
+
+The fill and bulk copy each use one foreign call. Per-pixel writes each use a separate call and can
+be expensive in a large Idris loop. Bulk copying still copies bytes on the CPU, and SDL can upload
+again on unlock. These bindings do not establish zero-copy rendering or a speedup over uploads.
 
 A surface stores image pixels in CPU memory. `loadBMP path` returns an owned `Surface` or a copied
 SDL error.  `createTextureFromSurface renderer surface` copies those pixels into a `Texture
@@ -1410,6 +1499,15 @@ handles, flags used as booleans, and identifiers used as owned windows. The dumm
 establish physical cursor confinement. Real confinement, focus transitions, backend failures, and
 interactions with capture or relative mode need manual testing.
 
-Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
-test its failure paths.  Measure call overhead and allocations before adding performance claims or a
-larger abstraction layer.
+Texture-lock tests cover whole and partial regions, RGBA byte order including alpha, and padded rows
+with guard bytes. They cover invalid coordinates, pitches, capacities, formats, and texture access
+types. Scoped tests cover skipped callbacks, preserved results and errors, unlock after `Left`,
+stale views, storage reuse, and copied metadata after cleanup. Readback tests check rendered pixels
+and changes outside a partial region. Native tests also cover generation exhaustion and unlock
+during storage cleanup. The locking example has a three-frame headless mode.  Hardware-specific
+pitches, driver failures, runtime exceptions, and locking performance remain untested. The software
+tests do not establish behavior on every renderer.
+
+Next work includes audio streams.  Keep each addition close to SDL's API and test its failure paths.
+Measure call overhead and allocations before adding performance claims or a larger abstraction
+layer.

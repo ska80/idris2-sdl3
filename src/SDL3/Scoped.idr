@@ -43,6 +43,30 @@ withStreamingTexture : Renderer -> Int -> Int ->
 withStreamingTexture renderer width height =
   withResource (createStreamingTexture renderer width height) destroyTexture
 
+||| Allocate reusable lock storage around the frame loop, then free it on ordinary return.
+||| Keep any outstanding locked texture alive through cleanup. Do not free or retain this storage.
+||| Runtime exceptions, process exit, and non-returning callbacks do not guarantee cleanup.
+export
+withTextureLockBuffer : (TextureLockBuffer -> IO (Either String a)) -> IO (Either String a)
+withTextureLockBuffer = withResource newTextureLockBuffer freeTextureLockBuffer
+
+||| Borrow write-only pixels and unlock after an ordinary Right or Left callback return.
+||| Acquisition failure skips the callback. An action error takes precedence over an unlock error.
+||| Initialize the whole region before returning, including Left. Filling first makes later errors safer.
+||| Unlock submits writes, not rollback. Keep storage, texture, renderer, and window alive on the main thread.
+||| Do not unlock manually, retain the view, or destroy, update, render, or re-lock the texture during this callback.
+||| Other storage does not make a second lock of the same texture safe. Runtime exceptions do not guarantee unlock.
+export
+withTextureLockRGBA : TextureLockBuffer -> Texture StreamingAccess -> Maybe Rect ->
+                      (LockedRGBA -> IO (Either String a)) -> IO (Either String a)
+withTextureLockRGBA storage texture region action = do
+  Right view <- lockTextureRGBA storage texture region | Left err => pure (Left err)
+  result <- action view
+  released <- unlockTextureRGBA view
+  case result of
+    Left err => pure (Left err)
+    Right value => if released then pure (Right value) else Left <$> getError
+
 ||| Create a target texture for the callback and destroy it on Right or Left.
 ||| Call on the main thread. Keep the renderer alive. Creation failure skips the callback.
 ||| This owns the texture, not target selection. Use withRenderTarget inside the callback.

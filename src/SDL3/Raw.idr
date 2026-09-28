@@ -173,6 +173,43 @@ prim__createTargetTexture : AnyPtr -> Int -> Int -> PrimIO NativeTexture
 export
 prim__createStreamingTexture : AnyPtr -> Int -> Int -> PrimIO NativeTexture
 
+public export
+NativeTextureLock : Type
+NativeTextureLock = Struct "IdrisSDLTextureLock" [("width", Int32), ("height", Int32), ("pitch", Int32),
+                                                 ("generation", Bits64), ("texture", AnyPtr), ("pixels", AnyPtr)]
+
+%foreign "C:idris_sdl_texture_lock_new, libidris2_sdl3, sdl3.h"
+export
+prim__textureLockNew : PrimIO NativeTextureLock
+
+%foreign "C:idris_sdl_is_null, libidris2_sdl3, sdl3.h"
+export
+prim__textureLockIsNull : NativeTextureLock -> PrimIO Int
+
+%foreign "C:idris_sdl_texture_lock_free, libidris2_sdl3, sdl3.h"
+export
+prim__textureLockFree : NativeTextureLock -> PrimIO ()
+
+%foreign "C:idris_sdl_lock_texture_rgba, libidris2_sdl3, sdl3.h"
+export
+prim__lockTextureRGBA : NativeTextureLock -> NativeTexture -> Int -> Int32 -> Int32 -> Int32 -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_unlock_texture_rgba, libidris2_sdl3, sdl3.h"
+export
+prim__unlockTextureRGBA : NativeTextureLock -> Bits64 -> PrimIO Int
+
+%foreign "C:idris_sdl_locked_pixel_rgba, libidris2_sdl3, sdl3.h"
+export
+prim__lockedPixelRGBA : NativeTextureLock -> Bits64 -> Int32 -> Int32 -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int
+
+%foreign "C:idris_sdl_locked_fill_rgba, libidris2_sdl3, sdl3.h"
+export
+prim__lockedFillRGBA : NativeTextureLock -> Bits64 -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int
+
+%foreign "C:idris_sdl_locked_copy_rgba, libidris2_sdl3, sdl3.h"
+export
+prim__lockedCopyRGBA : NativeTextureLock -> Bits64 -> Buffer -> Bits64 -> Int32 -> PrimIO Int
+
 ||| Size must be the actual buffer capacity. Prefer SDL3.updateTextureRGBA.
 %foreign "C:idris_sdl_update_texture_rgba, libidris2_sdl3, sdl3.h"
 export

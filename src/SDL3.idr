@@ -234,6 +234,25 @@ record Size (unit : SizeUnit) where
   width : Int32
   height : Int32
 
+||| Caller-owned reusable storage for one texture lock. Free exactly once after its last use.
+export
+data TextureLockBuffer = MkTextureLockBuffer NativeTextureLock
+
+||| Borrowed write-only RGBA view. Native access ends at unlock, and the storage must remain alive.
+||| The generation rejects old views while storage is alive. It does not prevent use after storage destruction.
+export
+data LockedRGBA = MkLockedRGBA NativeTextureLock Bits64 (Size PixelUnits) Int32
+
+||| Copied dimensions of the locked region, not necessarily the whole texture.
+export
+lockedRGBASize : LockedRGBA -> Size PixelUnits
+lockedRGBASize (MkLockedRGBA _ _ size _) = size
+
+||| Copied byte stride between locked rows. Do not assume width * 4 or writable row padding.
+export
+lockedRGBAPitch : LockedRGBA -> Int32
+lockedRGBAPitch (MkLockedRGBA _ _ _ pitch) = pitch
+
 ||| Reusable output storage for coordinate conversion. Free exactly once.
 export
 data CoordinateBuffer = MkCoordinateBuffer NativePoint
@@ -592,6 +611,69 @@ getWindowPixelDensity (MkWindow ptr _) = queriedWindowScale (prim__getWindowPixe
 export
 getWindowDisplayScale : Window -> IO (Either String Double)
 getWindowDisplayScale (MkWindow ptr _) = queriedWindowScale (prim__getWindowDisplayScale ptr)
+
+||| Allocate reusable lock output storage once, outside the frame loop.
+export
+newTextureLockBuffer : IO (Either String TextureLockBuffer)
+newTextureLockBuffer = do
+  ptr <- primIO prim__textureLockNew
+  0 <- primIO (prim__textureLockIsNull ptr) | _ => Left <$> getError
+  pure (Right (MkTextureLockBuffer ptr))
+
+||| Free storage on the main thread. An outstanding lock is unlocked first.
+||| Keep any locked texture and its renderer alive. Do not free storage inside a lock callback.
+||| After this call, do not use this storage or any borrowed view derived from it.
+export
+freeTextureLockBuffer : TextureLockBuffer -> IO ()
+freeTextureLockBuffer (MkTextureLockBuffer ptr) = primIO (prim__textureLockFree ptr)
+
+||| Lock an RGBA32 streaming texture on the main thread. Nothing locks the whole texture.
+||| A region must be positive and wholly inside the texture. Coordinates are texture pixels.
+||| Keep storage, texture, and renderer alive. Do not lock an already locked texture, even with other storage.
+||| Initialize EVERY pixel in the region before unlocking, including error paths. Old contents are undefined.
+||| Prefer SDL3.Scoped.withTextureLockRGBA for cleanup on ordinary Right or Left returns.
+export
+lockTextureRGBA : TextureLockBuffer -> Texture StreamingAccess -> Maybe Rect -> IO (Either String LockedRGBA)
+lockTextureRGBA (MkTextureLockBuffer storage) (MkTexture texture) region = do
+  result <- primIO $ case region of
+    Nothing => prim__lockTextureRGBA storage texture 0 0 0 0 0
+    Just (MkRect x y w h) => prim__lockTextureRGBA storage texture 1 x y w h
+  if result == the Int 0 then Left <$> getError else
+    pure (Right (MkLockedRGBA storage (getField storage "generation")
+                 (MkSize (getField storage "width") (getField storage "height")) (getField storage "pitch")))
+
+||| Unlock and submit changes on the main thread. Does not roll back changes or report GPU completion.
+||| Inactive or stale views return False. Read getError immediately after False.
+||| SDL_UnlockTexture returns void. True means the call was made, not that a GPU upload succeeded.
+export
+unlockTextureRGBA : LockedRGBA -> IO Bool
+unlockTextureRGBA (MkLockedRGBA storage generation _ _) =
+  (/= 0) <$> primIO (prim__unlockTextureRGBA storage generation)
+
+||| Write one RGBA pixel at coordinates relative to the locked region, with bounds checks.
+||| Requires an active view and live storage on the main thread. Read getError after False.
+||| This alone does not initialize the rest of the region. No reads of old pixel contents are provided.
+export
+setLockedPixelRGBA : LockedRGBA -> Int32 -> Int32 -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> IO Bool
+setLockedPixelRGBA (MkLockedRGBA storage generation _ _) x y r g b a =
+  (/= 0) <$> primIO (prim__lockedPixelRGBA storage generation x y r g b a)
+
+||| Initialize the whole locked region to one RGBA color, excluding row padding.
+||| Requires an active view and live storage on the main thread. Read getError after False.
+export
+fillLockedRGBA : LockedRGBA -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> IO Bool
+fillLockedRGBA (MkLockedRGBA storage generation _ _) r g b a =
+  (/= 0) <$> primIO (prim__lockedFillRGBA storage generation r g b a)
+
+||| Copy the whole locked region from a caller-owned RGBA byte buffer. Source byte zero is the region origin.
+||| Source pitch must cover width * 4 bytes, and capacity must cover pitch * height, including final-row padding.
+||| Requires an active view and live storage on the main thread. Do not modify the source during this call.
+||| Invalid input fails before copying. The source can be reused after return. Read getError after False.
+export
+copyLockedRGBA : LockedRGBA -> Buffer -> Int32 -> IO Bool
+copyLockedRGBA (MkLockedRGBA storage generation _ _) buffer pitch = do
+  size <- rawSize buffer
+  (/= 0) <$> primIO (prim__lockedCopyRGBA storage generation buffer (cast size) pitch)
 
 ||| Load a BMP file into CPU memory. Does not require a renderer.
 ||| Destroy the returned surface when no longer needed.

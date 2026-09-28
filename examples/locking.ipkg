@@ -1,0 +1,11 @@
+package sdl3-locking
+
+version = 0.0.0
+
+depends = sdl3
+
+sourcedir = "."
+
+main = Locking
+
+executable = sdl3-locking

@@ -35,6 +35,24 @@ IDRIS_SDL3 int idris_sdl_hide_window(SDL_Window* window);
 
 IDRIS_SDL3 SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, int height);
 IDRIS_SDL3 SDL_Texture* idris_sdl_create_streaming_texture(SDL_Renderer* renderer, int width, int height);
+
+/* Reusable output storage for one active lock. Pixels belong to SDL, not this allocation. */
+typedef struct IdrisSDLTextureLock {
+    Sint32 width, height, pitch;
+    Uint64 generation;
+    SDL_Texture* texture;
+    void* pixels;
+} IdrisSDLTextureLock;
+IDRIS_SDL3 IdrisSDLTextureLock* idris_sdl_texture_lock_new(void);
+IDRIS_SDL3 void idris_sdl_texture_lock_free(IdrisSDLTextureLock* lock);
+IDRIS_SDL3 int idris_sdl_lock_texture_rgba(IdrisSDLTextureLock* lock, SDL_Texture* texture, int region,
+                                         Sint32 x, Sint32 y, Sint32 w, Sint32 h);
+IDRIS_SDL3 int idris_sdl_unlock_texture_rgba(IdrisSDLTextureLock* lock, Uint64 generation);
+IDRIS_SDL3 int idris_sdl_locked_pixel_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Sint32 x, Sint32 y,
+                                         Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+IDRIS_SDL3 int idris_sdl_locked_fill_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+IDRIS_SDL3 int idris_sdl_locked_copy_rgba(IdrisSDLTextureLock* lock, Uint64 generation, const void* pixels,
+                                        Uint64 size, Sint32 pitch);
 /* Validate before reading SDL_Texture's public dimensions through Chez. */
 IDRIS_SDL3 int idris_sdl_get_texture_size(SDL_Texture* texture);
 /* Size must describe the actual capacity of pixels. No pointer is retained. */

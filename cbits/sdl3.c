@@ -210,6 +210,138 @@ SDL_Texture* idris_sdl_create_streaming_texture(SDL_Renderer* renderer, int widt
     return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, width, height);
 }
 
+IdrisSDLTextureLock* idris_sdl_texture_lock_new(void) {
+    IdrisSDLTextureLock* lock = SDL_calloc(1, sizeof(*lock));
+
+    if (!lock) SDL_SetError("Cannot allocate texture lock storage");
+
+    return lock;
+}
+
+void idris_sdl_texture_lock_free(IdrisSDLTextureLock* lock) {
+    if (!lock) return;
+
+    if (lock->texture) SDL_UnlockTexture(lock->texture);
+
+    SDL_free(lock);
+}
+
+int idris_sdl_lock_texture_rgba(IdrisSDLTextureLock* lock, SDL_Texture* texture, int region, Sint32 x, Sint32 y, Sint32 w, Sint32 h) {
+    if (!lock || !texture) return SDL_SetError("Texture and lock storage must not be null");
+
+    if (lock->texture) return SDL_SetError("Texture lock storage is already active");
+
+    if (lock->generation == SDL_MAX_UINT64) return SDL_SetError("Texture lock generation is exhausted");
+
+    if (texture->format != SDL_PIXELFORMAT_RGBA32) return SDL_SetError("Texture must use RGBA32 pixels");
+
+    if (texture->w <= 0 || texture->h <= 0) return SDL_SetError("Texture dimensions must be positive");
+
+    if (!region) {
+        x = 0;
+        y = 0;
+        w = texture->w;
+        h = texture->h;
+    }
+
+    if (x < 0 || y < 0 || w <= 0 || h <= 0 || w > texture->w || h > texture->h || x > texture->w - w || y > texture->h - h) {
+        return SDL_SetError("Lock rectangle must have positive dimensions and fit inside the texture");
+    }
+
+    SDL_Rect rect   = {x, y, w, h};
+    void*    pixels = NULL;
+    int      pitch  = 0;
+
+    if (!SDL_LockTexture(texture, region ? &rect : NULL, &pixels, &pitch)) return 0;
+
+    /* The last row contains only the locked width, not a whole pitch from this offset. */
+    const Uint64 row_bytes = (Uint64)w * 4;
+
+    if (!pixels || pitch <= 0 || (Uint64)pitch < row_bytes || (Uint64)(h - 1) * (Uint64)pitch + row_bytes > SIZE_MAX) {
+        SDL_UnlockTexture(texture);
+
+        return SDL_SetError("SDL returned invalid RGBA lock storage");
+    }
+
+    lock->width  = w;
+    lock->height = h;
+    lock->pitch  = pitch;
+    lock->generation++;
+    lock->pixels  = pixels;
+    lock->texture = texture;
+
+    return 1;
+}
+
+static int valid_texture_lock(const IdrisSDLTextureLock* lock, Uint64 generation) {
+    if (!lock || !lock->texture || !lock->pixels || lock->generation != generation)
+        return SDL_SetError("RGBA texture lock is inactive or stale");
+
+    return 1;
+}
+
+int idris_sdl_unlock_texture_rgba(IdrisSDLTextureLock* lock, Uint64 generation) {
+    if (!valid_texture_lock(lock, generation)) return 0;
+
+    SDL_UnlockTexture(lock->texture);
+
+    lock->texture = NULL;
+    lock->pixels  = NULL;
+
+    return 1;
+}
+
+int idris_sdl_locked_pixel_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Sint32 x, Sint32 y, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    if (!valid_texture_lock(lock, generation)) return 0;
+
+    if (x < 0 || y < 0 || x >= lock->width || y >= lock->height) return SDL_SetError("Pixel coordinates are outside the locked region");
+
+    Uint8* pixel = (Uint8*)lock->pixels + (size_t)y * (size_t)lock->pitch + (size_t)x * 4;
+    pixel[0]     = r;
+    pixel[1]     = g;
+    pixel[2]     = b;
+    pixel[3]     = a;
+
+    return 1;
+}
+
+int idris_sdl_locked_fill_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    if (!valid_texture_lock(lock, generation)) return 0;
+
+    for (Sint32 y = 0; y < lock->height; ++y) {
+        Uint8* row = (Uint8*)lock->pixels + (size_t)y * (size_t)lock->pitch;
+
+        for (Sint32 x = 0; x < lock->width; ++x) {
+            row[0] = r;
+            row[1] = g;
+            row[2] = b;
+            row[3] = a;
+            row += 4;
+        }
+    }
+
+    return 1;
+}
+
+int idris_sdl_locked_copy_rgba(IdrisSDLTextureLock* lock, Uint64 generation, const void* pixels, Uint64 size, Sint32 pitch) {
+    if (!valid_texture_lock(lock, generation)) return 0;
+
+    const Uint64 row_bytes = (Uint64)lock->width * 4;
+
+    if (!pixels || pitch <= 0 || (Uint64)pitch < row_bytes) return SDL_SetError("Source buffer and RGBA pitch are invalid");
+
+    const Uint64 required = (Uint64)pitch * (Uint64)lock->height;
+
+    if (size < required || required > SIZE_MAX) return SDL_SetError("Source buffer is too small for the locked region and pitch");
+
+    for (Sint32 y = 0; y < lock->height; ++y) {
+        SDL_memcpy((Uint8*)lock->pixels + (size_t)y * (size_t)lock->pitch, (const Uint8*)pixels + (size_t)y * (size_t)pitch,
+                   (size_t)row_bytes);
+    }
+
+    return 1;
+}
+
 int idris_sdl_get_texture_size(SDL_Texture* texture) {
     /* SDL permits NULL outputs. Validate without rounding dimensions through float. */
     return SDL_GetTextureSize(texture, NULL, NULL);
