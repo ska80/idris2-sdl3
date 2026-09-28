@@ -234,6 +234,14 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  windowAsFullscreenIdentifier : Bits64 -> Window -> Event
+  windowAsFullscreenIdentifier timestamp window = WindowEnterFullscreenEvent timestamp window
+
+failing "Mismatch between"
+  sizeAsFullscreenExitIdentifier : Bits64 -> PixelSizeData -> Event
+  sizeAsFullscreenExitIdentifier timestamp size = WindowLeaveFullscreenEvent timestamp size
+
+failing "Mismatch between"
   sizeAsWindowPosition : Bits64 -> WindowSizeData -> Event
   sizeAsWindowPosition timestamp size = WindowMovedEvent timestamp size
 

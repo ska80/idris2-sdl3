@@ -630,6 +630,22 @@ without new native storage per notification. Update exhaustive matches for the t
 and three new payload constructors. This binding does not install SDL event watchers or draw from
 callbacks.
 
+`WindowEnterFullscreenEvent timestamp identifier` reports that a window entered fullscreen mode.
+`WindowLeaveFullscreenEvent timestamp identifier` reports that it left fullscreen mode.  Each
+contains a copied nanosecond timestamp and `WindowID`. Neither includes a display mode, dimensions,
+or a display-scale value. They do not distinguish desktop fullscreen from an exclusive display mode,
+and leaving fullscreen does not itself report restored dimensions.
+
+Match the identifier to a live window that you own before updating application state.  A queued
+notification describes a past change, not necessarily the current state. It does not own the window,
+request a transition, or wait for GPU work. Use size and scale queries separately when your layout
+needs current values. Do not assume a fixed order with resize or display-scale events.
+
+Type-only polling returns `WindowEnterFullscreen` or `WindowLeaveFullscreen`.  Payload polling and
+both wait APIs use the shared decoder. Use the caller-owned event buffer on the main thread. Copied
+notifications survive buffer reuse and destruction without new native storage per
+notification. Update exhaustive matches for the two type-only and two payload constructors.
+
 `showWindow window` and `hideWindow window` return `IO Bool`. Call them on the main thread while the
 window is alive, and read `getError` immediately after `False`. Hiding does not destroy the window,
 renderer, or textures. Keep their normal cleanup order and show the same window again when
@@ -1193,6 +1209,12 @@ Copied positions survive buffer reuse and destruction. Native tests use SDL's mo
 and signed window fields. Compile-time tests reject size and motion records used as move payloads,
 and window positions used as local points. These synthetic tests do not establish actual window
 movement or cross-monitor coordinate reporting. Those behaviors need manual platform tests.
+
+Fullscreen event tests cover both notifications through both polling APIs and both wait APIs.  They
+preserve wide timestamps, high-bit or zero identifiers, and copied values after buffer cleanup.
+Native tests use SDL's event constants. Compile-time tests reject owned windows and size records as
+notification identifiers. These synthetic events do not switch a window into fullscreen mode.
+Actual fullscreen transitions, display-mode selection, and related event ordering need manual tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

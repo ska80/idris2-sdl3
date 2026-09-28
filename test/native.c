@@ -273,7 +273,7 @@ int main(void) {
     }
 
     const Uint32 state_types[] = {SDL_EVENT_WINDOW_MINIMIZED, SDL_EVENT_WINDOW_MAXIMIZED, SDL_EVENT_WINDOW_RESTORED,
-                                  SDL_EVENT_WINDOW_SHOWN, SDL_EVENT_WINDOW_HIDDEN, SDL_EVENT_WINDOW_EXPOSED};
+                                  SDL_EVENT_WINDOW_SHOWN,     SDL_EVENT_WINDOW_HIDDEN,    SDL_EVENT_WINDOW_EXPOSED};
 
     for (int i = 0; i < 6; ++i) {
         size_event.type = state_types[i];
@@ -290,6 +290,16 @@ int main(void) {
     assert(idris_sdl_event_timestamp(&size_event) == SDL_UINT64_C(0x100000002));
     assert(idris_sdl_event_window_data1(&size_event) == SDL_MIN_SINT32);
     assert(idris_sdl_event_window_data2(&size_event) == SDL_MAX_SINT32);
+
+    const Uint32 fullscreen_types[] = {SDL_EVENT_WINDOW_ENTER_FULLSCREEN, SDL_EVENT_WINDOW_LEAVE_FULLSCREEN};
+
+    for (int i = 0; i < 2; ++i) {
+        size_event.type = fullscreen_types[i];
+        assert(idris_sdl_event_kind(&size_event) == 25 + i);
+        assert(idris_sdl_event_type(&size_event) == fullscreen_types[i]);
+        assert(idris_sdl_event_window(&size_event) == 0x80000001u);
+        assert(idris_sdl_event_timestamp(&size_event) == SDL_UINT64_C(0x100000002));
+    }
 
     idris_sdl_event_free(buffer);
 

@@ -329,6 +329,16 @@ int idris_test_queue_event(int kind) {
         event.edit.length = kind == 14 ? 2 : -1;
         break;
 
+    case 47:
+    case 48:
+    case 49:
+    case 50:
+        event.type = (kind == 47 || kind == 49) ? SDL_EVENT_WINDOW_ENTER_FULLSCREEN : SDL_EVENT_WINDOW_LEAVE_FULLSCREEN;
+        event.window.windowID = kind >= 49 ? 0 : kind == 47 ? 0x80000001u : 0xffffffffu;
+        event.window.data1 = SDL_MIN_SINT32;
+        event.window.data2 = SDL_MAX_SINT32;
+        break;
+
     case 44:
     case 45:
     case 46:

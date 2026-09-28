@@ -15,6 +15,8 @@ stateData (WindowRestoredEvent timestamp window) = Just (2, timestamp, window)
 stateData (WindowShownEvent timestamp window) = Just (3, timestamp, window)
 stateData (WindowHiddenEvent timestamp window) = Just (4, timestamp, window)
 stateData (WindowExposedEvent timestamp window) = Just (5, timestamp, window)
+stateData (WindowEnterFullscreenEvent timestamp window) = Just (6, timestamp, window)
+stateData (WindowLeaveFullscreenEvent timestamp window) = Just (7, timestamp, window)
 stateData _ = Nothing
 
 stateType : EventType -> Maybe Int
@@ -24,6 +26,8 @@ stateType WindowRestored = Just 2
 stateType WindowShown = Just 3
 stateType WindowHidden = Just 4
 stateType WindowExposed = Just 5
+stateType WindowEnterFullscreen = Just 6
+stateType WindowLeaveFullscreen = Just 7
 stateType _ = Nothing
 
 copiedEvent : Int -> IO (Either String Event)
@@ -61,7 +65,8 @@ windowStateEventTests buffer = do
   Right () <- checkCases buffer [(32, 0, 0x80000001), (33, 1, 0xffffffff), (34, 2, 42),
                                  (35, 0, 0), (36, 1, 0), (37, 2, 0),
                                  (38, 3, 0x80000001), (39, 4, 0xffffffff), (40, 5, 42),
-                                 (41, 3, 0), (42, 4, 0), (43, 5, 0)]
+                                 (41, 3, 0), (42, 4, 0), (43, 5, 0),
+                                 (47, 6, 0x80000001), (48, 7, 0xffffffff), (49, 6, 0), (50, 7, 0)]
     | Left err => pure (Left err)
   Nothing <- pollEventData buffer | _ => pure (Left "Window state events were not consumed")
   pure (Right ())

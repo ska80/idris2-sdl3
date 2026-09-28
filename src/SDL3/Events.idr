@@ -207,6 +207,9 @@ data Event = QuitEvent Bits64
            | WindowHiddenEvent Bits64 WindowID
            -- Redraw notification. No damaged rectangle or rendering action is included.
            | WindowExposedEvent Bits64 WindowID
+           -- Fullscreen transition notifications, without display mode or dimensions.
+           | WindowEnterFullscreenEvent Bits64 WindowID
+           | WindowLeaveFullscreenEvent Bits64 WindowID
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData
