@@ -19,6 +19,8 @@ IDRIS_SDL3 double idris_sdl_get_window_display_scale(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_minimize_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_maximize_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_restore_window(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_set_window_mouse_grab(SDL_Window* window, Sint32 grabbed);
+IDRIS_SDL3 int idris_sdl_get_window_mouse_grab(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_set_window_opacity(SDL_Window* window, double opacity);
 /* SDL float widened to double. -1 means failure. */
 IDRIS_SDL3 double idris_sdl_get_window_opacity(SDL_Window* window);

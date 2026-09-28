@@ -564,6 +564,28 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+Mouse grab requests confinement of the cursor to a window.  `setWindowMouseGrab window grabbed`
+returns `IO Bool`. With `grabbed = True`, it requests confinement.  With `grabbed = False`, it
+requests release. Call it on the main thread with a live window.  If it returns `False`, read
+`getError` immediately. Give the user a release or exit action before enabling confinement, and
+release it when your interaction no longer needs it.
+
+`getWindowMouseGrab window` returns `IO Bool` from `SDL_GetWindowMouseGrab`. Its result is a state,
+not a success indicator. Call it on the main thread while the window is alive. This is not a raw
+window-flag test. Focus changes and grabs on other windows can affect the reported state.  On the
+dummy driver, a hidden window can accept a grab request while the getter returns `False`.  Showing
+that window activates its pending grab and changes which window reports an active grab.
+
+A reported grab does not prove physical cursor confinement on every backend. Mouse capture receives
+mouse events beyond the window's edges. Relative mouse mode supports continuous motion without
+normal cursor boundaries. This API enables neither capture nor relative mouse mode, and it does not
+grab the keyboard or convert event coordinates.
+
+Both adapters widen SDL's boolean results for the C interface. The setter also converts its input to
+a C boolean. Neither allocates native output storage or creates a separate grab handle.  Copied
+query results survive window destruction but do not track later changes. Request release while the
+window is alive. Keep normal cleanup order: textures, renderer, then window.
+
 Window opacity controls how transparent the whole window appears. `setWindowOpacity window value`
 returns `IO Bool` and accepts a `Double`. Zero is transparent and one is opaque. Values outside 0..1
 are clamped to that range, including infinities. NaN, a value that means "not a number", is rejected
@@ -1379,6 +1401,14 @@ window identity, title, dimensions, texture alpha, and use of an existing render
 Compile-time tests reject wrong handles and byte alpha values used as opacity. Successful setter
 changes, fractional getter values, clamped results on a supported backend, and visible transparency
 need manual platform tests.
+
+Mouse-grab tests cover repeated and cached grab/release actions, focus-dependent state across two
+windows, hidden-window requests, and copied state after cleanup. They also preserve window identity,
+title, dimensions, and use of an existing renderer and target. Native tests compare the getter with
+SDL, exercise zero/nonzero inputs, and cover null-window failures. Compile-time tests reject wrong
+handles, flags used as booleans, and identifiers used as owned windows. The dummy driver does not
+establish physical cursor confinement. Real confinement, focus transitions, backend failures, and
+interactions with capture or relative mode need manual testing.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

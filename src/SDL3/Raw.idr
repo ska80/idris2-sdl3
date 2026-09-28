@@ -74,6 +74,15 @@ prim__maximizeWindow : AnyPtr -> PrimIO Int
 export
 prim__restoreWindow : AnyPtr -> PrimIO Int
 
+%foreign "C:idris_sdl_set_window_mouse_grab, libidris2_sdl3, sdl3.h"
+export
+prim__setWindowMouseGrab : AnyPtr -> Int32 -> PrimIO Int
+
+||| State from SDL_GetWindowMouseGrab, not a success indicator or a raw flag test.
+%foreign "C:idris_sdl_get_window_mouse_grab, libidris2_sdl3, sdl3.h"
+export
+prim__getWindowMouseGrab : AnyPtr -> PrimIO Int
+
 ||| Clamps before conversion to SDL float. Rejects NaN. Result is a widened C boolean.
 %foreign "C:idris_sdl_set_window_opacity, libidris2_sdl3, sdl3.h"
 export

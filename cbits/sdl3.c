@@ -101,6 +101,14 @@ int idris_sdl_restore_window(SDL_Window* window) {
     return SDL_RestoreWindow(window);
 }
 
+int idris_sdl_set_window_mouse_grab(SDL_Window* window, Sint32 grabbed) {
+    return SDL_SetWindowMouseGrab(window, grabbed != 0);
+}
+
+int idris_sdl_get_window_mouse_grab(SDL_Window* window) {
+    return SDL_GetWindowMouseGrab(window);
+}
+
 int idris_sdl_set_window_opacity(SDL_Window* window, double opacity) {
     if (opacity != opacity) return SDL_SetError("Window opacity must not be NaN");
     /* Apply SDL's range clamp before narrowing, including values beyond float range. */

@@ -36,6 +36,7 @@ import WindowStateControlTests
 import AlwaysOnTopTests
 import FlashTests
 import WindowOpacityTests
+import MouseGrabTests
 
 %default covering
 
@@ -132,6 +133,7 @@ smoke = do
   Right () <- alwaysOnTopTests | Left err => pure (Left err)
   Right () <- flashTests | Left err => pure (Left err)
   Right () <- windowOpacityTests | Left err => pure (Left err)
+  Right () <- mouseGrabTests | Left err => pure (Left err)
   Right () <- require "Init flags lost bits" (initBits (video <+> audio) == 0x30)
     | Left err => pure (Left err)
   Right () <- require "Window flags lost bits" (windowBits (hidden <+> resizable) == 0x28)

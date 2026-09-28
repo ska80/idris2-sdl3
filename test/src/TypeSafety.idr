@@ -234,6 +234,18 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererMouseGrab : Renderer -> IO Bool
+  rendererMouseGrab renderer = setWindowMouseGrab renderer True
+
+failing "Mismatch between"
+  flagsMouseGrab : Window -> WindowFlags -> IO Bool
+  flagsMouseGrab window flags = setWindowMouseGrab window flags
+
+failing "Mismatch between"
+  identifierMouseGrab : WindowID -> IO Bool
+  identifierMouseGrab identifier = getWindowMouseGrab identifier
+
+failing "Mismatch between"
   textureWindowOpacity : Texture access -> IO Bool
   textureWindowOpacity texture = setWindowOpacity texture 0.5
 

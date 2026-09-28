@@ -406,6 +406,21 @@ isWindowMaximized (MkWindow ptr _) = do
   flags <- primIO (prim__getWindowFlags ptr)
   pure ((flags .&. 0x80) /= 0)
 
+||| Request cursor confinement (True) or release (False) for a live window on the main thread.
+||| Read getError immediately after False. Actual confinement depends on focus and platform support.
+||| This is mouse grab, not mouse capture or relative mouse mode. Provide a release or exit action.
+export
+setWindowMouseGrab : Window -> Bool -> IO Bool
+setWindowMouseGrab (MkWindow ptr _) grabbed =
+  (/= 0) <$> primIO (prim__setWindowMouseGrab ptr (if grabbed then 1 else 0))
+
+||| Query SDL's mouse grab state on the main thread, while the window is alive.
+||| False is a state, not failure. This calls SDL_GetWindowMouseGrab rather than reading a creation flag.
+||| The result does not prove physical cursor confinement. Focus changes can change the reported state.
+export
+getWindowMouseGrab : Window -> IO Bool
+getWindowMouseGrab (MkWindow ptr _) = (/= 0) <$> primIO (prim__getWindowMouseGrab ptr)
+
 ||| Set a live window's opacity on the main thread. Zero is transparent, one is opaque.
 ||| Clamps to 0..1 before conversion to SDL float, including infinities. Rejects NaN without changing state.
 ||| Unsupported setters can fail. Read getError immediately after False. This is not texture alpha modulation.

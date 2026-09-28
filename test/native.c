@@ -90,8 +90,17 @@ static void size_tests(void) {
 
     assert(idris_sdl_raise_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
+    assert(idris_sdl_set_window_mouse_grab(window, -1) == 1);
+    assert(idris_sdl_get_window_mouse_grab(window) == 0);
     assert(idris_sdl_show_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) == 0);
+    assert(idris_sdl_get_window_mouse_grab(window) == 1);
+    assert(idris_sdl_get_window_mouse_grab(window) == (int)SDL_GetWindowMouseGrab(window));
+    assert(idris_sdl_set_window_mouse_grab(window, 0) == 1);
+    assert(idris_sdl_get_window_mouse_grab(window) == 0);
+    assert(idris_sdl_set_window_mouse_grab(window, 2) == 1);
+    assert(idris_sdl_get_window_mouse_grab(window) == 1);
+    assert(idris_sdl_set_window_mouse_grab(window, 0) == 1);
     assert(idris_sdl_hide_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
     assert(idris_sdl_set_window_fullscreen(window, -1) == 1);
@@ -201,7 +210,19 @@ int main(void) {
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_get_window_display_scale(NULL) == 0.0);
     assert(SDL_GetError()[0] != '\0');
+
     SDL_ClearError();
+
+    assert(idris_sdl_set_window_mouse_grab(NULL, 1) == 0);
+    assert(SDL_GetError()[0] != '\0');
+
+    SDL_ClearError();
+
+    assert(idris_sdl_get_window_mouse_grab(NULL) == 0);
+    assert(SDL_GetError()[0] != '\0');
+
+    SDL_ClearError();
+
     assert(idris_sdl_set_window_always_on_top(NULL, 1) == 0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_raise_window(NULL) == 0);
@@ -296,6 +317,7 @@ int main(void) {
     assert(idris_sdl_get_error()[0] != '\0');
     assert(idris_sdl_render_coordinates_from_window(NULL, 1.5, 2.5, NULL) == 0);
     assert(idris_sdl_render_coordinates_to_window(NULL, 1.5, 2.5, NULL) == 0);
+
     idris_sdl_coordinate_free(coordinates);
     idris_sdl_coordinate_free(NULL);
 
