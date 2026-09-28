@@ -613,6 +613,23 @@ type-only and three new payload constructors. Process events on the main thread 
 caller-owned buffer. Copied notifications survive buffer reuse and destruction without new native
 storage per notification. Do not assume a fixed order between these notifications and resize events.
 
+`WindowShownEvent timestamp identifier` and `WindowHiddenEvent timestamp identifier` report SDL
+visibility changes. They describe past changes, not current visibility, keyboard focus, or whether
+another window covers the contents. Match their `WindowID` to a live window that you own.  The
+identifier does not keep the window alive, and zero means no associated window.
+
+`WindowExposedEvent timestamp identifier` asks the application to redraw the window.  It contains no
+damaged rectangle. Redraw from application state through your normal rendering path.  Do not assume
+that the previous backbuffer contents remain valid after presentation.  Decoding an exposed event
+does not draw, present, or allocate rendering resources.
+
+Type-only polling returns `WindowShown`, `WindowHidden`, or `WindowExposed`.  Payload polling and
+both wait APIs copy the corresponding nanosecond timestamp and window identifier.  Use the
+caller-owned event buffer on the main thread. Copied notifications survive its reuse and destruction
+without new native storage per notification. Update exhaustive matches for the three new type-only
+and three new payload constructors. This binding does not install SDL event watchers or draw from
+callbacks.
+
 `showWindow window` and `hideWindow window` return `IO Bool`. Call them on the main thread while the
 window is alive, and read `getError` immediately after `False`. Hiding does not destroy the window,
 renderer, or textures. Keep their normal cleanup order and show the same window again when
@@ -1143,6 +1160,14 @@ survive buffer reuse and destruction. Unused integer fields contain extreme valu
 Native tests use SDL's event constants. Compile-time tests reject handles and size records used as
 notification identifiers. Synthetic events do not establish real minimization, maximization,
 restoration, or resize-event ordering. Those behaviors need manual window-manager tests.
+
+Shown, hidden, and exposed event tests cover both polling APIs and both wait APIs. They preserve
+wide timestamps, distinct identifiers, zero identifiers, and copied values after buffer cleanup.
+Native tests use SDL's event constants. Compile-time tests reject handles, flags, and rectangles
+used as notification identifiers. Dummy-driver integration tests also match real shown and hidden
+notifications to the window after `showWindow` and `hideWindow` calls. Exposed-event tests use
+synthetic notifications. Actual covering, uncovering, and redraw behavior need manual platform
+tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

@@ -193,6 +193,10 @@ data Event = QuitEvent Bits64
            | WindowMinimizedEvent Bits64 WindowID
            | WindowMaximizedEvent Bits64 WindowID
            | WindowRestoredEvent Bits64 WindowID
+           | WindowShownEvent Bits64 WindowID
+           | WindowHiddenEvent Bits64 WindowID
+           -- Redraw notification. No damaged rectangle or rendering action is included.
+           | WindowExposedEvent Bits64 WindowID
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData

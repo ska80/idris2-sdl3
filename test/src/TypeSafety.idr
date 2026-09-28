@@ -234,6 +234,18 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  windowAsShownIdentifier : Bits64 -> Window -> Event
+  windowAsShownIdentifier timestamp window = WindowShownEvent timestamp window
+
+failing "Mismatch between"
+  flagsAsHiddenIdentifier : Bits64 -> WindowFlags -> Event
+  flagsAsHiddenIdentifier timestamp flags = WindowHiddenEvent timestamp flags
+
+failing "Mismatch between"
+  rectAsExposedIdentifier : Bits64 -> Rect -> Event
+  rectAsExposedIdentifier timestamp rect = WindowExposedEvent timestamp rect
+
+failing "Mismatch between"
   windowAsMinimizedIdentifier : Bits64 -> Window -> Event
   windowAsMinimizedIdentifier timestamp window = WindowMinimizedEvent timestamp window
 

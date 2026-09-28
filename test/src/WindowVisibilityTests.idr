@@ -47,9 +47,32 @@ retainedRenderer window (MkWindowID identifier) renderer =
     True <- present renderer | False => Left <$> getError
     pure (Right ())
 
+findVisibility : Nat -> Bool -> WindowID -> EventBuffer -> IO Bool
+findVisibility Z shown identifier buffer = pure False
+findVisibility (S budget) shown identifier buffer = do
+  event <- pollEventData buffer
+  case event of
+    Just (WindowShownEvent _ target) =>
+      if shown && target == identifier then pure True else findVisibility budget shown identifier buffer
+    Just (WindowHiddenEvent _ target) =>
+      if not shown && target == identifier then pure True else findVisibility budget shown identifier buffer
+    -- SDL poll-cycle boundaries can precede newly queued notifications.
+    _ => findVisibility budget shown identifier buffer
+
+visibilityNotifications : IO (Either String ())
+visibilityNotifications = withWindow "visibility notifications" 16 16 hidden $ \window =>
+  withEventBuffer $ \buffer => do
+    Right identifier <- getWindowID window | Left err => pure (Left err)
+    True <- showWindow window | False => Left <$> getError
+    True <- findVisibility 256 True identifier buffer | False => pure (Left "Showing a window did not produce its shown notification")
+    True <- hideWindow window | False => Left <$> getError
+    True <- findVisibility 256 False identifier buffer | False => pure (Left "Hiding a window did not produce its hidden notification")
+    pure (Right ())
+
 export
 windowVisibilityTests : IO (Either String ())
 windowVisibilityTests = do
+  Right () <- visibilityNotifications | Left err => pure (Left err)
   copied <- withWindow "visibility" 37 23 (hidden <+> resizable <+> borderless) $ \window =>
     withWindow "other hidden window" 16 16 hidden $ \other => do
       initial <- isWindowHidden window

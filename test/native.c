@@ -272,9 +272,10 @@ int main(void) {
         assert(idris_sdl_event_timestamp(&size_event) == SDL_UINT64_C(0x100000002));
     }
 
-    const Uint32 state_types[] = {SDL_EVENT_WINDOW_MINIMIZED, SDL_EVENT_WINDOW_MAXIMIZED, SDL_EVENT_WINDOW_RESTORED};
+    const Uint32 state_types[] = {SDL_EVENT_WINDOW_MINIMIZED, SDL_EVENT_WINDOW_MAXIMIZED, SDL_EVENT_WINDOW_RESTORED,
+                                  SDL_EVENT_WINDOW_SHOWN, SDL_EVENT_WINDOW_HIDDEN, SDL_EVENT_WINDOW_EXPOSED};
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 6; ++i) {
         size_event.type = state_types[i];
         assert(idris_sdl_event_kind(&size_event) == 18 + i);
         assert(idris_sdl_event_type(&size_event) == state_types[i]);
