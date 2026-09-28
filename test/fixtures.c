@@ -329,6 +329,20 @@ int idris_test_queue_event(int kind) {
         event.edit.length = kind == 14 ? 2 : -1;
         break;
 
+    case 32:
+    case 33:
+    case 34:
+    case 35:
+    case 36:
+    case 37: {
+        const Uint32 types[] = {SDL_EVENT_WINDOW_MINIMIZED, SDL_EVENT_WINDOW_MAXIMIZED, SDL_EVENT_WINDOW_RESTORED};
+        event.type = types[(kind - 32) % 3];
+        event.window.windowID = kind >= 35 ? 0 : kind == 32 ? 0x80000001u : kind == 33 ? 0xffffffffu : 42;
+        event.window.data1 = SDL_MIN_SINT32;
+        event.window.data2 = SDL_MAX_SINT32;
+        break;
+    }
+
     case 28:
     case 29:
     case 30:

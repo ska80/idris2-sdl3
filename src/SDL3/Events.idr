@@ -189,6 +189,10 @@ data Event = QuitEvent Bits64
            -- Mouse focus notifications. No pointer position or mouse identifier is supplied.
            | WindowMouseEnterEvent Bits64 WindowID
            | WindowMouseLeaveEvent Bits64 WindowID
+           -- State-change notifications, without dimensions or ownership of the window.
+           | WindowMinimizedEvent Bits64 WindowID
+           | WindowMaximizedEvent Bits64 WindowID
+           | WindowRestoredEvent Bits64 WindowID
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData

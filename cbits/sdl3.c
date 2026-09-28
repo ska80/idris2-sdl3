@@ -617,6 +617,9 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
     case SDL_EVENT_WINDOW_FOCUS_LOST:
     case SDL_EVENT_WINDOW_MOUSE_ENTER:
     case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+    case SDL_EVENT_WINDOW_MINIMIZED:
+    case SDL_EVENT_WINDOW_MAXIMIZED:
+    case SDL_EVENT_WINDOW_RESTORED:
         return event->window.windowID;
     case SDL_EVENT_TEXT_INPUT:
         return event->text.windowID;
@@ -767,6 +770,12 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 16;
     case SDL_EVENT_WINDOW_MOUSE_LEAVE:
         return 17;
+    case SDL_EVENT_WINDOW_MINIMIZED:
+        return 18;
+    case SDL_EVENT_WINDOW_MAXIMIZED:
+        return 19;
+    case SDL_EVENT_WINDOW_RESTORED:
+        return 20;
     default:
         return 0;
     }

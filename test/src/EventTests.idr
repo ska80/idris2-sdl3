@@ -4,6 +4,7 @@ import SDL3
 import SDL3.Scoped
 import FocusEventTests
 import MouseFocusEventTests
+import WindowStateEventTests
 import Data.List
 
 %default covering
@@ -175,6 +176,7 @@ eventTests buffer = do
   Right () <- displayScaleTests buffer | Left err => pure (Left err)
   Right () <- focusEventTests buffer | Left err => pure (Left err)
   Right () <- mouseFocusEventTests buffer | Left err => pure (Left err)
+  Right () <- windowStateEventTests buffer | Left err => pure (Left err)
   Just (QuitEvent quitTime) <- fixture buffer 1
     | _ => pure (Left "Quit event was not decoded")
   Just (WindowCloseEvent closeTime target) <- fixture buffer 2

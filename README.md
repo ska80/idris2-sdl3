@@ -596,6 +596,23 @@ caller-owned buffer on the main thread. Copied values survive buffer reuse and d
 new native storage for each notification. Update exhaustive matches for these four new
 constructors. Actual pointer movement, mouse capture, and relative mouse mode need platform tests.
 
+`WindowMinimizedEvent timestamp identifier`, `WindowMaximizedEvent timestamp identifier`, and
+`WindowRestoredEvent timestamp identifier` report SDL window-state changes. Restored means restored
+to normal size and position. Each notification contains a copied nanosecond timestamp and
+`WindowID`, not dimensions or coordinates. Use the size queries on a live window when you need its
+current size.
+
+Match the identifier to your window before changing application state. A queued notification records
+a past change and does not prove the current state. It does not own the window or extend its
+lifetime.  Minimization is distinct from hiding and losing keyboard focus. These bindings do not
+minimize, maximize, or restore windows, and the decoder does not pause or resume rendering.
+
+Type-only polling returns `WindowMinimized`, `WindowMaximized`, or `WindowRestored`.  Payload
+polling and both wait APIs use the same decoder. Update exhaustive matches for the three new
+type-only and three new payload constructors. Process events on the main thread with the
+caller-owned buffer. Copied notifications survive buffer reuse and destruction without new native
+storage per notification. Do not assume a fixed order between these notifications and resize events.
+
 `showWindow window` and `hideWindow window` return `IO Bool`. Call them on the main thread while the
 window is alive, and read `getError` immediately after `False`. Hiding does not destroy the window,
 renderer, or textures. Keep their normal cleanup order and show the same window again when
@@ -1119,6 +1136,13 @@ bits. Copied values survive buffer reuse and destruction. Synthetic window event
 unused integer fields, not mouse-motion payloads. Native tests cover classification and window
 access. Compile-time tests reject owned windows and motion records as event identifiers.  These
 tests do not simulate real pointer movement or establish mouse-capture behavior.
+
+Window-state event tests cover all three notifications through both polling APIs and both wait APIs.
+They preserve distinct identifiers, zero identifiers, and timestamps above 32 bits. Copied values
+survive buffer reuse and destruction. Unused integer fields contain extreme values, not dimensions.
+Native tests use SDL's event constants. Compile-time tests reject handles and size records used as
+notification identifiers. Synthetic events do not establish real minimization, maximization,
+restoration, or resize-event ordering. Those behaviors need manual window-manager tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a
