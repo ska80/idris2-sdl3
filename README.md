@@ -66,7 +66,7 @@ start and stop controls return `Bool`, with `False` for failure.  Call `getError
 failure, on the same thread, before another SDL call can replace the error.
 
 Import `SDL3.Scoped` for optional cleanup helpers. A callback is the function that receives the
-resource.  Each helper creates a resource, calls your function, and releases the resource after the
+resource.  Each resource helper creates a resource, calls your function, and releases it after the
 function returns.  The available helpers are:
 
 - `withWindow title width height flags action` creates and destroys a window.
@@ -379,6 +379,31 @@ texture alpha` multiplies source alpha, which controls opacity, by `alpha / 255`
 not change the stored texture pixels. An alpha value of 255 preserves the original alpha, rather
 than forcing opacity.
 
+`getTextureAlphaMod texture` returns `IO (Either String Bits8)` for every texture access type.  It
+copies the additional alpha multiplier, not the alpha values stored in the pixels. Call it on the
+main thread, with the texture and renderer alive. Each call reads the current value, even when you
+reuse an IO action. The adapter uses one stack byte and returns an integer from 0 through 255, or -1
+on failure. The typed API copies the SDL error instead of exposing the failure marker.
+
+`withTextureAlphaMod texture alpha action`, exported by `SDL3.Scoped`, temporarily changes this byte
+value. It saves the previous alpha, sets the requested alpha, runs the action, and attempts
+restoration after either `Right` or `Left`. Nested scopes restore the value present at their own
+entry. The helper does not create or destroy a texture. Keep the texture and its renderer alive
+throughout the action and restoration, on the main thread.
+
+If the initial query fails, the helper skips the action without changing alpha. If the initial
+setting fails, it skips the action but still attempts restoration. Setting and action errors take
+precedence over restoration errors. If only restoration fails, the helper returns that SDL error.  A
+`Left` result does not guarantee restoration. Runtime exceptions, process exit, and actions that
+never return do not guarantee restoration either.
+
+Only byte alpha is restored. The helper does not restore color modulation, blending, or target
+selection. If external code sets floating-point alpha, avoid this helper when exact restoration is
+required. Saving and restoring the byte representation can lose that precision.  For premultiplied
+pixels, fading still requires matching changes to both RGB and alpha.  The helper makes three
+foreign state calls on its successful path, in addition to the action.  It does not allocate native
+heap storage for the saved alpha.
+
 Blending combines source texture pixels with destination pixels. Use `setTextureBlendMode texture
 mode` with one of these modes:
 
@@ -400,7 +425,7 @@ NearestScale` selects individual pixels, which suits pixel art.  `LinearScale` i
 neighboring pixels and is SDL's default.  All four texture controls require the main thread and
 return `False` on failure.  Call `getError` immediately after failure. SDL can choose the closest
 supported blend or scale mode, so failure does not guarantee unchanged state.  Custom blend modes
-and queries for these texture settings are not yet exposed.
+and queries for color modulation, blending, and filtering are not yet exposed.
 
 `pollEvent` returns only event types. `pollEventData` also returns timestamps and supported event
 data.  Both return `Nothing` for an empty queue. Each call consumes one event, so use one polling
@@ -620,60 +645,98 @@ coordinate-buffer layout changed, although the public typed query signatures rem
 ## Tests and next steps
 
 The tests cover native event classification, unknown events, empty queues, flag combinations, window
-creation, drawing, and timers.  Target scope tests cover nested window and texture selection,
-successful and failed actions, and actions that change the selected target.  They also cover failed
-selection, skipped actions, preserved results, and drawing color that is not restored.  Texture
-helper tests cover drawing, callback errors, invalid dimensions, and caller-owned surface reuse.
+creation, drawing, and timers.
+
+Target scope tests cover nested window and texture selection, successful and failed actions, and
+actions that change the selected target.  They also cover failed selection, skipped actions,
+preserved results, and drawing color that is not restored.
+
+Texture helper tests cover drawing, callback errors, invalid dimensions, and caller-owned surface
+reuse.
+
 Cleanup tests cover skipped callbacks after creation failure, preserved results, and nested cleanup
 after successful and failed callbacks.  They inspect window and renderer state through window
 identifiers, without using destroyed handles.  They also test copied events, points, and textures
-after their source resources are released.  Timing tests cover clock units, counter frequency, zero
-delays, and clock progress during nanosecond delays.  They enforce no upper duration limit because
-scheduling can resume the test late.  These tests are not timing-accuracy benchmarks.  Texture tests
-read pixels from off-screen and window targets.  They test destination rectangles, target reset,
-invalid dimensions, and rejection of textures from another renderer. BMP tests create temporary
-image files and remove them after each test.  They test missing and invalid files, pixel colors,
-source rectangles, and texture use after surface destruction. VSync tests cover mode queries,
-supported-mode selection, unsupported-mode errors, and interval bounds.  They restore disabled
-synchronization before presenting another frame.  Shape tests cover point placement, line endpoints,
-outline edges, unfilled interiors, clipping, scaling, and alpha blending.  They also cover a default
-outline on a target texture.  Compile-time tests reject window-coordinate points and integer outline
-rectangles.  Renderer tests cover viewport origins, clipping, empty clip rectangles, per-target
-state, and shape alpha blending. They also test that `clear` ignores viewport and clip state.
+after their source resources are released.
+
+Timing tests cover clock units, counter frequency, zero delays, and clock progress during nanosecond
+delays.  They enforce no upper duration limit because scheduling can resume the test late.  These
+tests are not timing-accuracy benchmarks.
+
+Texture tests read pixels from off-screen and window targets. They test destination rectangles,
+target reset, invalid dimensions, and rejection of textures from another renderer.
+
+BMP tests create temporary image files and remove them after each test.  They test missing and
+invalid files, pixel colors, source rectangles, and texture use after surface destruction.
+
+VSync tests cover mode queries, supported-mode selection, unsupported-mode errors, and interval
+bounds.  They restore disabled synchronization before presenting another frame.
+
+Shape tests cover point placement, line endpoints, outline edges, unfilled interiors, clipping,
+scaling, and alpha blending.  They also cover a default outline on a target texture.  Compile-time
+tests reject window-coordinate points and integer outline rectangles.
+
+Renderer tests cover viewport origins, clipping, empty clip rectangles, per-target state, and shape
+alpha blending. They also test that `clear` ignores viewport and clip state.
+
 Scaling tests cover every logical presentation mode, independent axis scaling, and scale and logical
-state retained across target switches. Coordinate tests cover inverse conversion, scaling, viewport
-offsets, letterbox borders, combined transforms, and copied point lifetime.  Compile-time tests
-reject mixed point spaces and buffer types.  Streaming tests cover RGBA byte order, row padding,
-buffer reuse, and source data consumption.  They also cover short buffers, invalid pitch, size
-multiplication beyond 32 bits, and rejected upload preservation.  Partial upload tests cover source
-origin, padded rows, texture edges, and preservation of neighboring pixels.  They reject invalid
-rectangles, extreme coordinates, short buffers, and invalid pitch.  Compile-time tests reject
-floating-point upload rectangles and partial uploads to render-target textures.  Compile-time tests
-reject uploads to static textures and uploads from the wrong buffer type.  Rotation tests cover
-every flip mode, clockwise and counterclockwise rotation, combined rotation and mirroring, source
-rectangles, and default destinations.  They also cover custom centers and unchanged pixels outside
-the destination.  Compile-time tests reject unrelated flip modes and absolute points used as
-rotation centers.  Pixel tests cover all exposed blend modes, color and alpha modulation, and
-nearest and linear filtering.  Tests allow small rounding differences for fractional blending and
-interpolation.  Compile-time tests reject mixed handle types, mixed flag types, forged handles, and
-static textures used as render targets.  Wait tests cover queued and delayed events, zero and
-expired timeouts, timeout bounds, old SDL errors, and copied text lifetime.  A test-only C timer
-queues delayed events without calling Idris from another thread.  Size query tests cover initial
-dimensions, non-square windows, independence from texture targets and logical presentation, and
-copied values after window destruction.  Native tests cover query failure. Compile-time tests reject
-mixed size units and handle types.  Resize tests cover distinct window and pixel dimensions, zero
-sizes, signed limits, timestamps, and buffer reuse.  They test typed polling, type-only polling, and
-timed waits. Compile-time tests reject mixed size units.  These use synthetic
-events. Display-density changes on real monitors still need manual testing.  Event tests cover
-keyboard data, repeat status, window identifiers, timestamps, and data retained after buffer
-reuse. Mouse tests cover fractional coordinates, relative motion, presses, releases, click counts,
-unknown buttons, and button-state bits.  Wheel tests cover normal, flipped, and unknown directions,
-fractional values, pointer position, and signed 32-bit limits. Text tests cover Unicode, empty and
-long text, composition selections, string ownership, and per-window start and stop controls. Area
-tests compare the stored SDL rectangle and cursor against the Idris values.  They also test area
-reset and composition cancellation without disabling text input.  The test-only native library
-inserts known events into SDL's queue. It is not part of the binding library.  The example builds in
-the test environment, but interactive display behavior needs a manual test.
+state retained across target switches.
+
+Coordinate tests cover inverse conversion, scaling, viewport offsets, letterbox borders, combined
+transforms, and copied point lifetime.  Compile-time tests reject mixed point spaces and buffer
+types.
+
+Streaming tests cover RGBA byte order, row padding, buffer reuse, and source data consumption.  They
+also cover short buffers, invalid pitch, size multiplication beyond 32 bits, and rejected upload
+preservation.
+
+Partial upload tests cover source origin, padded rows, texture edges, and preservation of
+neighboring pixels.  They reject invalid rectangles, extreme coordinates, short buffers, and invalid
+pitch.  Compile-time tests reject floating-point upload rectangles and partial uploads to
+render-target textures.  Compile-time tests reject uploads to static textures and uploads from the
+wrong buffer type.
+
+Rotation tests cover every flip mode, clockwise and counterclockwise rotation, combined rotation and
+mirroring, source rectangles, and default destinations.  They also cover custom centers and
+unchanged pixels outside the destination.  Compile-time tests reject unrelated flip modes and
+absolute points used as rotation centers.
+
+Pixel tests cover all exposed blend modes, color and alpha modulation, and nearest and linear
+filtering.  Tests allow small rounding differences for fractional blending and interpolation.
+Compile-time tests reject mixed handle types, mixed flag types, forged handles, and static textures
+used as render targets.
+
+Wait tests cover queued and delayed events, zero and expired timeouts, timeout bounds, old SDL
+errors, and copied text lifetime.  A test-only C timer queues delayed events without calling Idris
+from another thread.
+
+Size query tests cover initial dimensions, non-square windows, independence from texture targets and
+logical presentation, and copied values after window destruction.  Native tests cover query
+failure. Compile-time tests reject mixed size units and handle types.
+
+Resize tests cover distinct window and pixel dimensions, zero sizes, signed limits, timestamps, and
+buffer reuse.  They test typed polling, type-only polling, and timed waits. Compile-time tests
+reject mixed size units.  These use synthetic events. Display-density changes on real monitors still
+need manual testing.
+
+Event tests cover keyboard data, repeat status, window identifiers, timestamps, and data retained
+after buffer reuse.
+
+Mouse tests cover fractional coordinates, relative motion, presses, releases, click counts, unknown
+buttons, and button-state bits.
+
+Wheel tests cover normal, flipped, and unknown directions, fractional values, pointer position, and
+signed 32-bit limits.
+
+Text tests cover Unicode, empty and long text, composition selections, string ownership, and
+per-window start and stop controls.
+
+Area tests compare the stored SDL rectangle and cursor against the Idris values. They also test area
+reset and composition cancellation without disabling text input.
+
+The test-only native library inserts known events into SDL's queue. It is not part of the binding
+library.  The example builds in the test environment, but interactive display behavior needs a
+manual test.
 
 Size-storage tests cover the native struct layout, signed field limits, repeated queries after
 resizing, multiple windows, and copied values after storage reuse and destruction.  The event tests
@@ -705,6 +768,12 @@ texture field and signed dimension limits on a fabricated object, without callin
 Null-query tests cover failure, and compile-time tests reject wrong units, handles, and raw
 pointers.  Existing rendering, upload, rotation, and target-restoration tests also exercise typed
 texture pointers.
+
+Texture-alpha tests cover all 256 byte values, cached query actions, all texture access types,
+nested scopes, action errors, preserved results, independent textures, and rendered opacity.  Pixel
+tests show that restoration changes only alpha, not color modulation. Native and raw tests cover
+null-query failure. Compile-time tests reject wrong handles, result types, and wide alpha
+arguments. The software renderer does not exercise unsupported modulation or restoration failures.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

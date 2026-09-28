@@ -370,6 +370,15 @@ setTextureAlphaMod : Texture access -> Bits8 -> IO Bool
 setTextureAlphaMod (MkTexture ptr) alpha =
   (/= 0) <$> primIO (prim__setTextureAlphaMod ptr alpha)
 
+||| Copy the texture's additional alpha multiplier as a byte, not its pixel alpha values.
+||| Call on the main thread, with the texture and renderer alive. Copies SDL errors on failure.
+||| The adapter uses one stack byte, with no native heap allocation for output storage.
+export
+getTextureAlphaMod : Texture access -> IO (Either String Bits8)
+getTextureAlphaMod (MkTexture ptr) = do
+  value <- primIO (prim__getTextureAlphaMod ptr)
+  if value == -1 then Left <$> getError else pure (Right (cast value))
+
 ||| Select texture blending on the main thread. Returns False on failure.
 ||| SDL can select the closest supported mode when the requested mode fails.
 export

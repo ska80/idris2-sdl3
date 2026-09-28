@@ -150,6 +150,14 @@ int idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Uint8 alpha) {
     return SDL_SetTextureAlphaMod(texture, alpha);
 }
 
+int idris_sdl_get_texture_alpha_mod(SDL_Texture* texture) {
+    Uint8 alpha;
+
+    if (!SDL_GetTextureAlphaMod(texture, &alpha)) return -1;
+
+    return alpha;
+}
+
 int idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode) {
     return SDL_SetTextureBlendMode(texture, mode);
 }

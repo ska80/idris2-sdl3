@@ -19,6 +19,8 @@ IDRIS_SDL3 int idris_sdl_get_texture_size(SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_update_texture_rgba(SDL_Texture* texture, const void* pixels, Uint64 size, Sint32 pitch);
 IDRIS_SDL3 int          idris_sdl_set_texture_color_mod(SDL_Texture* texture, Uint8 r, Uint8 g, Uint8 b);
 IDRIS_SDL3 int          idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Uint8 alpha);
+/* Returns 0 through 255, or -1 on failure. */
+IDRIS_SDL3 int          idris_sdl_get_texture_alpha_mod(SDL_Texture* texture);
 IDRIS_SDL3 int          idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode);
 IDRIS_SDL3 int          idris_sdl_set_texture_scale_mode(SDL_Texture* texture, int mode);
 IDRIS_SDL3 int          idris_sdl_set_render_target(SDL_Renderer* renderer, SDL_Texture* texture);

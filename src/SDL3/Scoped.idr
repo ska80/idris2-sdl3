@@ -64,6 +64,23 @@ withTextureFromSurface : Renderer -> Surface ->
 withTextureFromSurface renderer surface =
   withResource (createTextureFromSurface renderer surface) destroyTexture
 
+||| Temporarily set byte alpha modulation, then attempt to restore its previous value.
+||| Keep the texture and renderer alive on the main thread. This does not own either resource.
+||| Query or setting failure skips the action. A failed setting still triggers restoration.
+||| Setting or action errors take precedence over restoration errors. Left does not guarantee restoration.
+||| Only byte alpha is restored, not color modulation, blending, or floating-point alpha precision.
+||| Runtime exceptions, process exit, and non-returning actions do not guarantee restoration.
+export
+withTextureAlphaMod : Texture access -> Bits8 -> IO (Either String a) -> IO (Either String a)
+withTextureAlphaMod {a} texture alpha action = do
+  Right previous <- getTextureAlphaMod texture | Left err => pure (Left err)
+  changed <- setTextureAlphaMod texture alpha
+  result <- the (IO (Either String a)) (if changed then action else Left <$> getError)
+  restored <- setTextureAlphaMod texture previous
+  case result of
+    Left err => pure (Left err)
+    Right value => if restored then pure (Right value) else Left <$> getError
+
 ||| Allocate one event buffer for the callback and free it on Right or Left.
 ||| Poll or wait on the main thread. Do not share, free, or retain the buffer.
 ||| Copied events can outlive the callback. Runtime exceptions do not guarantee cleanup.

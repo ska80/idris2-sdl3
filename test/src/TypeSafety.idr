@@ -250,6 +250,18 @@ failing "Mismatch between"
   wrongNativeCoordinateStorage renderer storage = prim__renderCoordinatesFromWindow renderer 1 2 storage
 
 failing "Mismatch between"
+  wrongAlphaHandle : Renderer -> IO (Either String Bits8)
+  wrongAlphaHandle renderer = getTextureAlphaMod renderer
+
+failing "Mismatch between"
+  wideScopedAlpha : Texture access -> Bits32 -> IO (Either String ())
+  wideScopedAlpha texture alpha = withTextureAlphaMod texture alpha (pure (Right ()))
+
+failing "Mismatch between"
+  wrongAlphaResult : Texture access -> IO (Either String Int32)
+  wrongAlphaResult texture = getTextureAlphaMod texture
+
+failing "Mismatch between"
   wrongTextureSizeUnits : Texture access -> IO (Either String (Size WindowUnits))
   wrongTextureSizeUnits texture = getTextureSize texture
 

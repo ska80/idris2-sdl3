@@ -125,6 +125,11 @@ prim__setTextureColorMod : NativeTexture -> Bits8 -> Bits8 -> Bits8 -> PrimIO In
 export
 prim__setTextureAlphaMod : NativeTexture -> Bits8 -> PrimIO Int
 
+||| Returns 0 through 255, or -1 on failure. No borrowed output pointer escapes.
+%foreign "C:idris_sdl_get_texture_alpha_mod, libidris2_sdl3, sdl3.h"
+export
+prim__getTextureAlphaMod : NativeTexture -> PrimIO Int32
+
 %foreign "C:idris_sdl_set_texture_blend_mode, libidris2_sdl3, sdl3.h"
 export
 prim__setTextureBlendMode : NativeTexture -> Bits32 -> PrimIO Int
