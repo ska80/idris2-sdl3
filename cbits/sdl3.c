@@ -69,6 +69,10 @@ int idris_sdl_is_null(const void* ptr) {
     return ptr == NULL;
 }
 
+int idris_sdl_set_window_title(SDL_Window* window, const char* title) {
+    return SDL_SetWindowTitle(window, title);
+}
+
 int idris_sdl_set_window_size(SDL_Window* window, Sint32 width, Sint32 height) {
     return SDL_SetWindowSize(window, width, height);
 }

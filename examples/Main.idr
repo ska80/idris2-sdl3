@@ -77,6 +77,9 @@ runRenderer identifier renderer = do
 
 runWindow : Window -> IO (Either String ())
 runWindow window = do
+  title <- getWindowTitle window
+  Right () <- require (setWindowTitle window (title ++ " - Escape or click the blue box to close"))
+    | Left err => pure (Left err)
   Right identifier <- getWindowID window | Left err => pure (Left err)
   withRenderer window (runRenderer identifier)
 

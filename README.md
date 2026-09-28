@@ -564,6 +564,20 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+`getWindowTitle window` returns `IO String`. It copies SDL's UTF-8 title into an Idris string.  An
+empty result is valid for an untitled window, not an error marker. The copy remains valid after
+later title changes or window destruction. The getter binds directly to SDL, with no C adapter.
+Call it on the main thread while the window is alive.
+
+`setWindowTitle window title` replaces the stored title and returns `Bool`. Empty text clears the
+title. Call it on the main thread and read `getError` immediately after `False`. SDL copies the
+supplied string. As with `createWindow`, do not include embedded NUL characters, because C strings
+end at the first NUL. The setter's adapter only converts SDL's boolean return value to a C integer.
+
+SDL can allocate native storage when a title changes, and the getter creates an Idris string copy.
+Update titles when needed rather than on every frame. The example adds its exit instructions once,
+before creating the renderer. Stored title tests do not verify how a window manager displays text.
+
 `getWindowSize window` returns `Either String (Size WindowUnits)` in window coordinates.
 `getWindowSizeInPixels window` returns `Either String (Size PixelUnits)` in physical pixels.  Both
 queries require the main thread and return copied `Int32` width and height fields.  Use them to
@@ -953,6 +967,13 @@ wrong handles.
 These tests use the dummy window system, which applies size changes immediately. Window-manager
 adjustments, denied requests, synchronization timeouts, fullscreen behavior, and real
 display-density changes still need manual tests.
+
+Window-title tests cover initial values, Unicode, empty and long strings, repeated updates, cached
+query actions, independent windows, stable identifiers, and copies retained after window
+destruction.  They also change the title with an active texture target and confirm that dimensions
+stay unchanged.  Native tests cover setter failure for a null window. Compile-time tests reject
+renderer and texture handles used as windows. Visible title rendering still needs manual testing
+with a window manager.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

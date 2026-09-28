@@ -332,6 +332,20 @@ getWindowID (MkWindow ptr _) = do
   value <- primIO (prim__getWindowID ptr)
   if value == 0 then Left <$> getError else pure (Right (MkWindowID value))
 
+||| Copy the window's UTF-8 title on the main thread, while the window is alive.
+||| An untitled window returns an empty string. The copy survives title changes and window destruction.
+||| The direct foreign binding copies SDL's borrowed string into an Idris String.
+export
+getWindowTitle : Window -> IO String
+getWindowTitle (MkWindow ptr _) = primIO (prim__getWindowTitle ptr)
+
+||| Set a UTF-8 title on the main thread, while the window is alive. Empty text clears the title.
+||| As with createWindow, do not include embedded NUL characters: C strings end at the first NUL.
+||| SDL copies the supplied title. Returns False on failure. Read getError immediately after False.
+export
+setWindowTitle : Window -> String -> IO Bool
+setWindowTitle (MkWindow ptr _) title = (/= 0) <$> primIO (prim__setWindowTitle ptr title)
+
 ||| Select SDL's default renderer. Call on the main thread.
 export
 createRenderer : Window -> IO (Either String Renderer)

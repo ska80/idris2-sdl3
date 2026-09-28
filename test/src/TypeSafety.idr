@@ -234,6 +234,18 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererTitleQuery : Renderer -> IO String
+  rendererTitleQuery renderer = getWindowTitle renderer
+
+failing "Mismatch between"
+  rendererTitleUpdate : Renderer -> IO Bool
+  rendererTitleUpdate renderer = setWindowTitle renderer "wrong handle"
+
+failing "Mismatch between"
+  textureTitleQuery : Texture access -> IO String
+  textureTitleQuery texture = getWindowTitle texture
+
+failing "Mismatch between"
   pixelResize : Window -> Size PixelUnits -> IO Bool
   pixelResize window dimensions = setWindowSize window dimensions
 

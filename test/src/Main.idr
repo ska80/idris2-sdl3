@@ -26,6 +26,7 @@ import ShapeTests
 import BatchTests
 import RectBatchTests
 import SizeTests
+import WindowTitleTests
 
 %default covering
 
@@ -112,6 +113,7 @@ smoke : IO (Either String ())
 smoke = do
   Right () <- timerTests | Left err => pure (Left err)
   Right () <- scopedTests | Left err => pure (Left err)
+  Right () <- windowTitleTests | Left err => pure (Left err)
   Right () <- require "Init flags lost bits" (initBits (video <+> audio) == 0x30)
     | Left err => pure (Left err)
   Right () <- require "Window flags lost bits" (windowBits (hidden <+> resizable) == 0x28)

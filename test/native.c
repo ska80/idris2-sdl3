@@ -8,6 +8,10 @@ static void size_tests(void) {
 
     SDL_Window* window = SDL_CreateWindow("size storage", 37, 23, SDL_WINDOW_HIDDEN);
     assert(window);
+    assert(idris_sdl_set_window_title(window, "native title") == 1);
+    assert(SDL_strcmp(SDL_GetWindowTitle(window), "native title") == 0);
+    assert(idris_sdl_set_window_title(window, "") == 1);
+    assert(SDL_GetWindowTitle(window)[0] == '\0');
 
     IdrisSDLSize* size = idris_sdl_size_new();
     assert(size);
@@ -93,6 +97,8 @@ int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
+    assert(idris_sdl_set_window_title(NULL, "invalid window") == 0);
+    assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_set_window_size(NULL, 1, 1) == 0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_sync_window(NULL) == 0);

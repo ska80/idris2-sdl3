@@ -38,6 +38,15 @@ prim__syncWindow : AnyPtr -> PrimIO Int
 export
 prim__destroyWindow : AnyPtr -> PrimIO ()
 
+||| Chez copies SDL's borrowed UTF-8 string. Requires a live window on the main thread.
+%foreign "C:SDL_GetWindowTitle, libSDL3, SDL3/SDL.h"
+export
+prim__getWindowTitle : AnyPtr -> PrimIO String
+
+%foreign "C:idris_sdl_set_window_title, libidris2_sdl3, sdl3.h"
+export
+prim__setWindowTitle : AnyPtr -> String -> PrimIO Int
+
 %foreign "C:SDL_GetWindowID, libSDL3, SDL3/SDL.h"
 export
 prim__getWindowID : AnyPtr -> PrimIO Bits32
