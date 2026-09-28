@@ -104,7 +104,7 @@ presentationValue PresentationIntegerScale = 4
 ||| The access parameter prevents non-target textures from becoming render targets.
 export
 data Texture : TextureAccess -> Type where
-  MkTexture : AnyPtr -> Texture access
+  MkTexture : NativeTexture -> Texture access
 
 ||| SDL integer rectangle, used for viewports and clipping.
 public export
@@ -197,6 +197,12 @@ owned wrap action = do
   null <- primIO (prim__isNull ptr)
   if null /= 0 then Left <$> getError else pure (Right (wrap ptr))
 
+ownedTexture : PrimIO NativeTexture -> IO (Either String (Texture access))
+ownedTexture action = do
+  ptr <- primIO action
+  null <- primIO (prim__textureIsNull ptr)
+  if null /= 0 then Left <$> getError else pure (Right (MkTexture ptr))
+
 newWindow : String -> Int -> Int -> WindowFlags -> IO (Either String Window)
 newWindow title width height flags = do
   storage <- primIO prim__newSize
@@ -273,7 +279,7 @@ destroySurface (MkSurface ptr) = primIO (prim__destroySurface ptr)
 export
 createTextureFromSurface : Renderer -> Surface -> IO (Either String (Texture StaticAccess))
 createTextureFromSurface (MkRenderer renderer) (MkSurface surface) =
-  owned MkTexture (prim__createTextureFromSurface renderer surface)
+  ownedTexture (prim__createTextureFromSurface renderer surface)
 
 ||| Configure presentation synchronization on the main thread.
 ||| Interval 1 requests every refresh, 2 every second refresh, and so on.
@@ -301,7 +307,7 @@ createTargetTexture : Renderer -> Int -> Int -> IO (Either String (Texture Targe
 createTargetTexture (MkRenderer ptr) width height =
   if width <= 0 || height <= 0 || width > 2147483647 || height > 2147483647
      then pure (Left "Texture dimensions must be positive 32-bit integers")
-     else owned MkTexture (prim__createTargetTexture ptr width height)
+     else ownedTexture (prim__createTargetTexture ptr width height)
 
 ||| Create an RGBA32 texture for repeated uploads on the main thread.
 ||| Pixel bytes use R, G, B, A order. Contents are undefined until uploaded.
@@ -310,7 +316,7 @@ createStreamingTexture : Renderer -> Int -> Int -> IO (Either String (Texture St
 createStreamingTexture (MkRenderer ptr) width height =
   if width <= 0 || height <= 0 || width > 2147483647 || height > 2147483647
      then pure (Left "Texture dimensions must be positive 32-bit integers")
-     else owned MkTexture (prim__createStreamingTexture ptr width height)
+     else ownedTexture (prim__createStreamingTexture ptr width height)
 
 ||| Upload the entire RGBA32 texture. Pitch is the byte distance between rows.
 ||| Requires pitch >= width * 4 and buffer size >= pitch * height.
@@ -333,6 +339,16 @@ updateTextureRegionRGBA : Texture StreamingAccess -> Rect -> Buffer -> Int32 -> 
 updateTextureRegionRGBA (MkTexture ptr) (MkRect x y width height) buffer pitch = do
   size <- rawSize buffer
   (/= 0) <$> primIO (prim__updateTextureRegionRGBA ptr x y width height buffer (cast size) pitch)
+
+||| Copy the texture's pixel dimensions on the main thread. Applies to every access type.
+||| SDL validates the handle before Chez reads its public integer fields.
+||| Allocates no native output storage. The copied size survives texture destruction.
+||| Keep the texture and its renderer alive throughout the query.
+export
+getTextureSize : Texture access -> IO (Either String (Size PixelUnits))
+getTextureSize (MkTexture ptr) = do
+  1 <- primIO (prim__getTextureSize ptr) | _ => Left <$> getError
+  pure (Right (MkSize (getField ptr "w") (getField ptr "h")))
 
 ||| Destroy on the main thread, before the creating renderer.
 ||| Switch away from this texture as a render target first. Do not reuse the handle.
@@ -417,7 +433,7 @@ renderTextureRegion (MkRenderer renderer) (MkTexture texture) (MkFRect sx sy sw 
                     (Just (MkFRect dx dy dw dh)) =
   (/= 0) <$> primIO (prim__renderTextureRegion renderer texture sx sy sw sh dx dy dw dh)
 
-rotatedTexture : AnyPtr -> AnyPtr -> Int32 -> Double -> Double -> Double -> Double ->
+rotatedTexture : AnyPtr -> NativeTexture -> Int32 -> Double -> Double -> Double -> Double ->
                  Int32 -> Double -> Double -> Double -> Double -> Double ->
                  Maybe RotationCenter -> TextureFlip -> IO Bool
 rotatedTexture renderer texture source sx sy sw sh destination dx dy dw dh angle Nothing flip =

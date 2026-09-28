@@ -16,51 +16,51 @@ prepareTexture renderer texture = withRenderTarget renderer (Just texture) $ do
   Right () <- require (setDrawColor renderer 80 180 255 255) | Left err => pure (Left err)
   require (clear renderer)
 
-frame : Renderer -> Texture TargetAccess -> IO (Either String ())
-frame renderer texture = do
+frame : Renderer -> Texture TargetAccess -> FRect -> IO (Either String ())
+frame renderer texture bounds = do
   Right () <- require (setDrawColor renderer 24 28 40 255) | Left err => pure (Left err)
   Right () <- require (clear renderer) | Left err => pure (Left err)
-  Right () <- require (renderTexture renderer texture (Just (MkFRect 220 150 200 180)))
+  Right () <- require (renderTexture renderer texture (Just bounds))
     | Left err => pure (Left err)
   Right () <- require (setDrawColor renderer 230 240 255 255) | Left err => pure (Left err)
-  Right () <- require (drawRect renderer (Just (MkFRect 220 150 200 180))) | Left err => pure (Left err)
+  Right () <- require (drawRect renderer (Just bounds)) | Left err => pure (Left err)
   require (present renderer)
 
-clickedRectangle : Renderer -> CoordinateBuffer -> Double -> Double -> IO (Either String Bool)
-clickedRectangle renderer coordinates windowX windowY = do
+clickedRectangle : Renderer -> CoordinateBuffer -> FRect -> Double -> Double -> IO (Either String Bool)
+clickedRectangle renderer coordinates (MkFRect left top width height) windowX windowY = do
   Right (MkPoint x y) <- renderCoordinatesFromWindow renderer coordinates (MkPoint windowX windowY)
     | Left err => pure (Left err)
-  pure (Right (x >= 220 && x < 420 && y >= 150 && y < 330))
+  pure (Right (x >= left && x < left + width && y >= top && y < top + height))
 
-drain : WindowID -> Renderer -> CoordinateBuffer -> EventBuffer -> IO (Either String Bool)
-drain window renderer coordinates buffer = do
+drain : WindowID -> Renderer -> FRect -> CoordinateBuffer -> EventBuffer -> IO (Either String Bool)
+drain window renderer bounds coordinates buffer = do
   event <- pollEventData buffer
   case event of
     Nothing => pure (Right False)
     Just (QuitEvent _) => pure (Right True)
     Just (WindowCloseEvent _ target) =>
-      if target == window then pure (Right True) else drain window renderer coordinates buffer
+      if target == window then pure (Right True) else drain window renderer bounds coordinates buffer
     Just (KeyboardEvent _ (MkKeyboardData target Pressed _ key _ False)) =>
-      if target == window && key == escapeKey then pure (Right True) else drain window renderer coordinates buffer
+      if target == window && key == escapeKey then pure (Right True) else drain window renderer bounds coordinates buffer
     Just (MouseButtonEvent _ (MkMouseButtonData target _ button ButtonPressed _ x y)) =>
       if target == window && button == leftButton then do
-        Right hit <- clickedRectangle renderer coordinates x y | Left err => pure (Left err)
-        if hit then pure (Right True) else drain window renderer coordinates buffer
-      else drain window renderer coordinates buffer
-    _ => drain window renderer coordinates buffer
+        Right hit <- clickedRectangle renderer coordinates bounds x y | Left err => pure (Left err)
+        if hit then pure (Right True) else drain window renderer bounds coordinates buffer
+      else drain window renderer bounds coordinates buffer
+    _ => drain window renderer bounds coordinates buffer
 
-loop : WindowID -> Renderer -> Texture TargetAccess -> CoordinateBuffer -> EventBuffer -> IO (Either String ())
-loop window renderer texture coordinates buffer = do
+loop : WindowID -> Renderer -> Texture TargetAccess -> FRect -> CoordinateBuffer -> EventBuffer -> IO (Either String ())
+loop window renderer texture bounds coordinates buffer = do
   start <- ticksNS
-  Right stop <- drain window renderer coordinates buffer | Left err => pure (Left err)
+  Right stop <- drain window renderer bounds coordinates buffer | Left err => pure (Left err)
   if stop then pure (Right ()) else do
-    Right () <- frame renderer texture | Left err => pure (Left err)
+    Right () <- frame renderer texture bounds | Left err => pure (Left err)
     end <- ticksNS
     let elapsed = end - start
     -- Target roughly 60 frames per second, including event and drawing work.
     -- Guard subtraction: Bits64 would wrap if this frame exceeded its budget.
     if elapsed < 16666667 then delayNS (16666667 - elapsed) else pure ()
-    loop window renderer texture coordinates buffer
+    loop window renderer texture bounds coordinates buffer
 
 runRenderer : WindowID -> Renderer -> IO (Either String ())
 runRenderer identifier renderer = do
@@ -68,9 +68,12 @@ runRenderer identifier renderer = do
     | Left err => pure (Left err)
   withTargetTexture renderer 200 180 $ \texture => do
     Right () <- prepareTexture renderer texture | Left err => pure (Left err)
+    Right (MkSize width height) <- getTextureSize texture | Left err => pure (Left err)
+    -- Query once. Reuse the same drawing and click bounds throughout the loop.
+    let bounds = MkFRect 220 150 (cast width) (cast height)
     withCoordinateBuffer $ \coordinates =>
       withEventBuffer $ \buffer =>
-        loop identifier renderer texture coordinates buffer
+        loop identifier renderer texture bounds coordinates buffer
 
 runWindow : Window -> IO (Either String ())
 runWindow window = do

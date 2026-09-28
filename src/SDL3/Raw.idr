@@ -50,27 +50,42 @@ prim__loadBMP : String -> PrimIO AnyPtr
 export
 prim__destroySurface : AnyPtr -> PrimIO ()
 
+||| SDL3's public SDL_Texture layout. SDL owns the memory.
+||| Treat all fields as read-only. Never read a null or destroyed texture.
+public export
+NativeTexture : Type
+NativeTexture = Struct "SDL_Texture" [("format", Bits32), ("w", Int32), ("h", Int32), ("refcount", Int32)]
+
+%foreign "C:idris_sdl_is_null, libidris2_sdl3, sdl3.h"
+export
+prim__textureIsNull : NativeTexture -> PrimIO Int
+
+||| Validate with SDL before reading the public dimensions in the IO continuation.
+%foreign "C:idris_sdl_get_texture_size, libidris2_sdl3, sdl3.h"
+export
+prim__getTextureSize : NativeTexture -> PrimIO Int
+
 %foreign "C:SDL_CreateTextureFromSurface, libSDL3, SDL3/SDL.h"
 export
-prim__createTextureFromSurface : AnyPtr -> AnyPtr -> PrimIO AnyPtr
+prim__createTextureFromSurface : AnyPtr -> AnyPtr -> PrimIO NativeTexture
 
 %foreign "C:idris_sdl_create_target_texture, libidris2_sdl3, sdl3.h"
 export
-prim__createTargetTexture : AnyPtr -> Int -> Int -> PrimIO AnyPtr
+prim__createTargetTexture : AnyPtr -> Int -> Int -> PrimIO NativeTexture
 
 %foreign "C:idris_sdl_create_streaming_texture, libidris2_sdl3, sdl3.h"
 export
-prim__createStreamingTexture : AnyPtr -> Int -> Int -> PrimIO AnyPtr
+prim__createStreamingTexture : AnyPtr -> Int -> Int -> PrimIO NativeTexture
 
 ||| Size must be the actual buffer capacity. Prefer SDL3.updateTextureRGBA.
 %foreign "C:idris_sdl_update_texture_rgba, libidris2_sdl3, sdl3.h"
 export
-prim__updateTextureRGBA : AnyPtr -> Buffer -> Bits64 -> Int32 -> PrimIO Int
+prim__updateTextureRGBA : NativeTexture -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 
 ||| Size must be the actual buffer capacity. Pixels start at the source region.
 %foreign "C:idris_sdl_update_texture_region_rgba, libidris2_sdl3, sdl3.h"
 export
-prim__updateTextureRegionRGBA : AnyPtr -> Int32 -> Int32 -> Int32 -> Int32 -> Buffer -> Bits64 -> Int32 -> PrimIO Int
+prim__updateTextureRegionRGBA : NativeTexture -> Int32 -> Int32 -> Int32 -> Int32 -> Buffer -> Bits64 -> Int32 -> PrimIO Int
 
 ||| Full layout of caller-owned IdrisSDLSize storage. Not an Idris value record.
 public export
@@ -100,33 +115,33 @@ prim__getWindowSizeInPixels : AnyPtr -> NativeSize -> PrimIO Int
 
 %foreign "C:SDL_DestroyTexture, libSDL3, SDL3/SDL.h"
 export
-prim__destroyTexture : AnyPtr -> PrimIO ()
+prim__destroyTexture : NativeTexture -> PrimIO ()
 
 %foreign "C:idris_sdl_set_texture_color_mod, libidris2_sdl3, sdl3.h"
 export
-prim__setTextureColorMod : AnyPtr -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int
+prim__setTextureColorMod : NativeTexture -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int
 
 %foreign "C:idris_sdl_set_texture_alpha_mod, libidris2_sdl3, sdl3.h"
 export
-prim__setTextureAlphaMod : AnyPtr -> Bits8 -> PrimIO Int
+prim__setTextureAlphaMod : NativeTexture -> Bits8 -> PrimIO Int
 
 %foreign "C:idris_sdl_set_texture_blend_mode, libidris2_sdl3, sdl3.h"
 export
-prim__setTextureBlendMode : AnyPtr -> Bits32 -> PrimIO Int
+prim__setTextureBlendMode : NativeTexture -> Bits32 -> PrimIO Int
 
 %foreign "C:idris_sdl_set_texture_scale_mode, libidris2_sdl3, sdl3.h"
 export
-prim__setTextureScaleMode : AnyPtr -> Int -> PrimIO Int
+prim__setTextureScaleMode : NativeTexture -> Int -> PrimIO Int
 
 ||| Borrowed pointer to the current target. Null means the window target.
 ||| Requires a live renderer on the main thread. Does not transfer ownership.
 %foreign "C:SDL_GetRenderTarget, libSDL3, SDL3/SDL.h"
 export
-prim__getRenderTarget : AnyPtr -> PrimIO AnyPtr
+prim__getRenderTarget : AnyPtr -> PrimIO NativeTexture
 
 %foreign "C:idris_sdl_set_render_target, libidris2_sdl3, sdl3.h"
 export
-prim__setRenderTarget : AnyPtr -> AnyPtr -> PrimIO Int
+prim__setRenderTarget : AnyPtr -> NativeTexture -> PrimIO Int
 
 %foreign "C:idris_sdl_reset_render_target, libidris2_sdl3, sdl3.h"
 export
@@ -134,26 +149,26 @@ prim__resetRenderTarget : AnyPtr -> PrimIO Int
 
 %foreign "C:idris_sdl_render_texture, libidris2_sdl3, sdl3.h"
 export
-prim__renderTexture : AnyPtr -> AnyPtr -> PrimIO Int
+prim__renderTexture : AnyPtr -> NativeTexture -> PrimIO Int
 
 %foreign "C:idris_sdl_render_texture_rect, libidris2_sdl3, sdl3.h"
 export
-prim__renderTextureRect : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double -> PrimIO Int
+prim__renderTextureRect : AnyPtr -> NativeTexture -> Double -> Double -> Double -> Double -> PrimIO Int
 
 %foreign "C:idris_sdl_render_texture_source, libidris2_sdl3, sdl3.h"
 export
-prim__renderTextureSource : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double -> PrimIO Int
+prim__renderTextureSource : AnyPtr -> NativeTexture -> Double -> Double -> Double -> Double -> PrimIO Int
 
 %foreign "C:idris_sdl_render_texture_region, libidris2_sdl3, sdl3.h"
 export
-prim__renderTextureRegion : AnyPtr -> AnyPtr -> Double -> Double -> Double -> Double ->
+prim__renderTextureRegion : AnyPtr -> NativeTexture -> Double -> Double -> Double -> Double ->
                            Double -> Double -> Double -> Double -> PrimIO Int
 
 ||| Option bits 0, 1, 2 select source, destination, and center structs, or NULL.
 ||| Bits 3 and 4 encode SDL flip flags.
 %foreign "C:idris_sdl_render_texture_rotated, libidris2_sdl3, sdl3.h"
 export
-prim__renderTextureRotated : AnyPtr -> AnyPtr -> Bits32 -> Double -> Double -> Double -> Double ->
+prim__renderTextureRotated : AnyPtr -> NativeTexture -> Bits32 -> Double -> Double -> Double -> Double ->
                             Double -> Double -> Double -> Double -> Double -> Double -> Double -> PrimIO Int
 
 ||| Full layout of the adapter's double-valued result, not SDL's float-valued point.

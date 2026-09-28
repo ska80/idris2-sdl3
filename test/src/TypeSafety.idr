@@ -249,8 +249,24 @@ failing "Mismatch between"
   wrongNativeCoordinateStorage : AnyPtr -> NativeSize -> PrimIO Int
   wrongNativeCoordinateStorage renderer storage = prim__renderCoordinatesFromWindow renderer 1 2 storage
 
+failing "Mismatch between"
+  wrongTextureSizeUnits : Texture access -> IO (Either String (Size WindowUnits))
+  wrongTextureSizeUnits texture = getTextureSize texture
+
+failing "Mismatch between"
+  wrongTextureSizeHandle : Renderer -> IO (Either String (Size PixelUnits))
+  wrongTextureSizeHandle renderer = getTextureSize renderer
+
+failing "Mismatch between"
+  wrongNativeTexture : NativePoint -> PrimIO Int
+  wrongNativeTexture point = prim__getTextureSize point
+
+failing "Mismatch between"
+  untypedNativeTexture : AnyPtr -> PrimIO ()
+  untypedNativeTexture ptr = prim__destroyTexture ptr
+
 failing "Name SDL3.MkTexture is private"
-  forgeTexture : AnyPtr -> Texture TargetAccess
+  forgeTexture : NativeTexture -> Texture TargetAccess
   forgeTexture = MkTexture
 
 failing "Name SDL3.MkRectBuffer is private"

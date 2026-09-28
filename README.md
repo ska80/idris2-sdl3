@@ -324,6 +324,26 @@ loadImage renderer path = withBMP path (createTextureFromSurface renderer)
 
 The caller owns the returned texture and must destroy it before its renderer.
 
+`getTextureSize texture` returns `IO (Either String (Size PixelUnits))` for static, streaming, and
+target textures. The dimensions count pixels in that texture, not drawing units or display pixels.
+Rendering scale, logical presentation, clipping, texture modulation, and target selection do not
+change the stored dimensions. The unit type does not identify a particular texture or window.
+
+Call the query on the main thread, with the texture and its renderer alive. The returned size is a
+copied Idris record and remains valid after their destruction. A failed SDL query returns a copied
+error. The example queries once before its frame loop and reuses the dimensions for drawing and
+click bounds.
+
+The adapter calls `SDL_GetTextureSize` with its optional outputs set to null. After success, Chez
+reads the public integer `w` and `h` fields of `SDL_Texture`. This avoids conversion through SDL's
+floating-point outputs and needs no native output storage. It does not remove managed allocations
+for result values. SDL validation does not make use of a destroyed texture safe.
+
+Raw texture bindings now use `NativeTexture`, the typed pointer to SDL3's public texture layout,
+instead of `AnyPtr`. These pointers do not copy fields or track ownership. Do not change the fields,
+read a null pointer, or retain a view past texture destruction. C layout assertions and field tests
+cover this representation. Rebuild Idris clients when updating these raw signatures.
+
 `renderTextureRegion renderer texture source destination` draws part of a texture.  The `source` is
 an `FRect` in texture pixel coordinates. The `destination` is a `Maybe FRect` in the current
 target's rendering coordinates.  Pass `Nothing` as the destination to fill the current target.  This
@@ -582,7 +602,9 @@ No resource registry, finalizer, or automatic error-string copy runs on each suc
 call. Event polling uses multiple native calls and constructs Idris values.  A successful point
 conversion uses one foreign call and two direct struct field reads. The adapter allocates no native
 memory per conversion when you reuse a coordinate buffer. Idris still constructs result values.
-There are no general performance guarantees, and this project does not claim zero overhead.
+Texture-size queries use one foreign validation call and two direct reads of SDL's public integer
+fields. They allocate no native output buffer. There are no general performance guarantees, and this
+project does not claim zero overhead.
 
 ## Use from another package
 
@@ -676,6 +698,13 @@ clipping, fractional scaling, logical presentation, blending, renderer reuse, an
 They also cover input consumption before buffer mutation or release, scope results, and skipped
 callbacks on allocation failure. Compile-time tests reject integer rectangles, mixed buffer types,
 signed counts, and forged rectangle-buffer handles.
+
+Texture-size tests cover all access types, uploads, independent textures, rendering state, and
+copied sizes after texture, renderer, and window destruction. Layout tests cover every public
+texture field and signed dimension limits on a fabricated object, without calling SDL with it.
+Null-query tests cover failure, and compile-time tests reject wrong units, handles, and raw
+pointers.  Existing rendering, upload, rotation, and target-restoration tests also exercise typed
+texture pointers.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

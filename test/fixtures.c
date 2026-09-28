@@ -4,6 +4,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+SDL_Texture* idris_test_texture_fields(Sint32 width, Sint32 height) {
+    static SDL_Texture layout;
+    layout = (SDL_Texture){.format = (SDL_PixelFormat)0x89abcdefu, .w = width, .h = height, .refcount = 42};
+
+    return &layout;
+}
+
+SDL_Texture* idris_test_null_texture(void) {
+    return NULL;
+}
+
 void idris_test_size_fields(IdrisSDLSize* size, Sint32 width, Sint32 height) {
     size->width  = width;
     size->height = height;
@@ -19,7 +30,8 @@ int idris_test_resize_window(Uint32 identifier, Sint32 width, Sint32 height) {
 
 /* Used only on the main thread. No callback enters Idris. */
 static SDL_Texture* watched_targets[3];
-static const char*  target_watch_names[3] = {"idris.test.target.0", "idris.test.target.1", "idris.test.target.2"};
+
+static const char* target_watch_names[3] = {"idris.test.target.0", "idris.test.target.1", "idris.test.target.2"};
 
 static void SDLCALL target_destroyed(void* userdata, void* value) {
     (void)value;

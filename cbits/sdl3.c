@@ -2,7 +2,13 @@
 
 #include "sdl3.h"
 
+#include <stddef.h>
+
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
+
+_Static_assert(sizeof(SDL_PixelFormat) == 4 && sizeof(SDL_Texture) == 16 && offsetof(SDL_Texture, format) == 0 &&
+                   offsetof(SDL_Texture, w) == 4 && offsetof(SDL_Texture, h) == 8 && offsetof(SDL_Texture, refcount) == 12,
+               "Update SDL3.Raw.NativeTexture for this SDL_Texture layout");
 
 _Static_assert(SDL_VERSION_ATLEAST(3, 2, 12), "Bindings require SDL 3.2.12 or newer");
 
@@ -91,6 +97,11 @@ SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, 
 
 SDL_Texture* idris_sdl_create_streaming_texture(SDL_Renderer* renderer, int width, int height) {
     return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, width, height);
+}
+
+int idris_sdl_get_texture_size(SDL_Texture* texture) {
+    /* SDL permits NULL outputs. Validate without rounding dimensions through float. */
+    return SDL_GetTextureSize(texture, NULL, NULL);
 }
 
 static int update_texture_rgba(SDL_Texture* texture, const SDL_Rect* rect, const void* pixels, Uint64 size, Sint32 pitch) {
