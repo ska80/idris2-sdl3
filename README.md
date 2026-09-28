@@ -637,13 +637,28 @@ mixing them up. Neither query changes rendering state or converts input coordina
 
 Call these queries on the main thread while the window is alive. Their results are copied values and
 remain valid after destruction. Re-query after monitor moves or display-scaling changes rather than
-treating a copied value as current state. Display-scale change events are not yet decoded beyond
-`OtherEvent` or `UnknownEvent`. Avoid applying display scaling twice if your layout already accounts
-for it through logical presentation or rendering scale.
+treating a copied value as current state. Avoid applying display scaling twice if your layout
+already accounts for it through logical presentation or rendering scale.
 
 SDL returns these values as C `float`, with 0.0 for failure. The adapters widen them to C `double`
 for Idris `Double` and allocate no native output storage. Widening does not add precision.  The
 typed API copies the SDL error into `Left` on failure. Each query makes one foreign call.
+
+`WindowDisplayScaleChangedEvent timestamp identifier` reports SDL's window display-scale change
+notification. It contains a copied nanosecond timestamp and `WindowID`, not a scale value or size.
+Match the identifier to a window that you still own, then query `getWindowDisplayScale` on the main
+thread when updating your layout. Query `getWindowPixelDensity` separately if you need that ratio.
+The current values can differ from the state when the notification was queued.
+
+`pollEvent` returns the type-only `WindowDisplayScaleChanged` constructor for this notification.
+`pollEventData`, `waitEventData`, and `waitEventDataTimeout` use the same payload decoder.  The
+event buffer is reused without a new native allocation, and copied notifications survive its reuse
+or destruction. An identifier does not own the window or keep it alive. Zero identifies no
+window. The decoder does not query a window or reinterpret the event's integer fields as a scale.
+
+Update exhaustive event matches for both new constructors. This event is distinct from window
+resizing and pixel-size changes. Do not assume they arrive together or that the notification alone
+provides new dimensions. Synthetic tests cover decoding, not actual monitor transitions.
 
 `setWindowSize window (MkSize width height)` requests a new client-area size in window coordinates.
 Its size argument has type `Size WindowUnits`, not `Size PixelUnits`. Both `Int32` dimensions must
@@ -1052,6 +1067,12 @@ tests reject wrong handles and density values used as dimensions.
 
 These tests do not establish behavior on real high-density displays. Fractional factors, different
 pixel-density and display-scale values, monitor moves, and live scale changes need manual testing.
+
+Display-scale event tests cover type-only polling, payload polling, timed and blocking waits,
+identifiers with high bits or zero, and timestamps above 32 bits. They also cover copied values
+after buffer reuse and destruction. Unused integer payload fields contain extreme values to catch
+accidental size or scale decoding. Native tests cover classification and window access.
+Compile-time tests reject size records or owned windows used instead of event identifiers.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

@@ -329,6 +329,15 @@ int idris_test_queue_event(int kind) {
         event.edit.length = kind == 14 ? 2 : -1;
         break;
 
+    case 22:
+    case 23:
+        event.type = SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;
+        event.window.windowID = kind == 22 ? 0x80000001u : 0;
+        /* No scale payload exists. These fields must not become dimensions or a factor. */
+        event.window.data1 = SDL_MIN_SINT32;
+        event.window.data2 = SDL_MAX_SINT32;
+        break;
+
     case 18:
     case 19:
     case 20:

@@ -1,6 +1,7 @@
 module EventTests
 
 import SDL3
+import SDL3.Scoped
 import Data.List
 
 %default covering
@@ -140,10 +141,36 @@ sizeTests buffer = do
        Nothing <- pollEventData buffer | _ => pure (Left "Resize events were not consumed")
        pure (Right ())
 
+scaleLifetime : IO (Either String ())
+scaleLifetime = do
+  copied <- withEventBuffer $ \storage => do
+    Just event <- fixture storage 22 | _ => pure (Left "Cannot copy a display-scale notification")
+    pure (Right event)
+  Right (WindowDisplayScaleChangedEvent 0x100000002 (MkWindowID 0x80000001)) <- pure copied
+    | _ => pure (Left "Display-scale notification changed after buffer destruction")
+  pure (Right ())
+
+displayScaleTests : EventBuffer -> IO (Either String ())
+displayScaleTests buffer = do
+  Just copied <- fixture buffer 22 | _ => pure (Left "Display-scale notification was not polled")
+  1 <- primIO (prim__queueEvent 23) | _ => pure (Left "Cannot queue a display-scale notification")
+  Right (Just (WindowDisplayScaleChangedEvent timestamp (MkWindowID 0))) <- waitEventDataTimeout buffer 0
+    | _ => pure (Left "Timed wait lost the display-scale notification or zero identifier")
+  WindowDisplayScaleChangedEvent savedTime (MkWindowID 0x80000001) <- pure copied
+    | _ => pure (Left "Display-scale notification changed after buffer reuse")
+  if savedTime /= 0x100000002 || timestamp /= savedTime then pure (Left "Display-scale timestamps lost bits") else do
+    1 <- primIO (prim__queueEvent 22) | _ => pure (Left "Cannot queue a display-scale type")
+    Just WindowDisplayScaleChanged <- pollEvent buffer | _ => pure (Left "Display-scale type was not decoded")
+    1 <- primIO (prim__queueEvent 22) | _ => pure (Left "Cannot queue a display-scale wait")
+    Right (WindowDisplayScaleChangedEvent waitedTime (MkWindowID 0x80000001)) <- waitEventData buffer
+      | _ => pure (Left "Blocking wait did not decode the display-scale notification")
+    if waitedTime == savedTime then scaleLifetime else pure (Left "Wait changed the display-scale timestamp")
+
 export
 eventTests : EventBuffer -> IO (Either String ())
 eventTests buffer = do
   Right () <- sizeTests buffer | Left err => pure (Left err)
+  Right () <- displayScaleTests buffer | Left err => pure (Left err)
   Just (QuitEvent quitTime) <- fixture buffer 1
     | _ => pure (Left "Quit event was not decoded")
   Just (WindowCloseEvent closeTime target) <- fixture buffer 2

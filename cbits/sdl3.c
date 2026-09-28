@@ -612,6 +612,7 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
     case SDL_EVENT_WINDOW_RESIZED:
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+    case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
         return event->window.windowID;
     case SDL_EVENT_TEXT_INPUT:
         return event->text.windowID;
@@ -752,6 +753,8 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 11;
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
         return 12;
+    case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+        return 13;
     default:
         return 0;
     }

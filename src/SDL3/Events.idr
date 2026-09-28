@@ -181,6 +181,8 @@ data Event = QuitEvent Bits64
            | WindowCloseEvent Bits64 WindowID
            | WindowResizedEvent Bits64 WindowSizeData
            | WindowPixelSizeChangedEvent Bits64 PixelSizeData
+           -- Notification only. Query the live window for its current scale.
+           | WindowDisplayScaleChangedEvent Bits64 WindowID
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData

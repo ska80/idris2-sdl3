@@ -234,6 +234,14 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  sizeAsScaleNotification : Bits64 -> PixelSizeData -> Event
+  sizeAsScaleNotification timestamp dimensions = WindowDisplayScaleChangedEvent timestamp dimensions
+
+failing "Mismatch between"
+  windowAsScaleIdentifier : Bits64 -> Window -> Event
+  windowAsScaleIdentifier timestamp window = WindowDisplayScaleChangedEvent timestamp window
+
+failing "Mismatch between"
   rendererPixelDensity : Renderer -> IO (Either String Double)
   rendererPixelDensity renderer = getWindowPixelDensity renderer
 
