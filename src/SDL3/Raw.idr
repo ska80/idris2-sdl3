@@ -253,6 +253,26 @@ prim__drawPoints : AnyPtr -> AnyPtr -> Bits32 -> PrimIO Int
 export
 prim__drawLines : AnyPtr -> AnyPtr -> Bits32 -> PrimIO Int
 
+%foreign "C:idris_sdl_rects_new, libidris2_sdl3, sdl3.h"
+export
+prim__rectsNew : Bits32 -> PrimIO AnyPtr
+
+%foreign "C:idris_sdl_rects_free, libidris2_sdl3, sdl3.h"
+export
+prim__rectsFree : AnyPtr -> PrimIO ()
+
+%foreign "C:idris_sdl_rects_set, libidris2_sdl3, sdl3.h"
+export
+prim__rectsSet : AnyPtr -> Bits32 -> Double -> Double -> Double -> Double -> PrimIO Int
+
+%foreign "C:idris_sdl_draw_rects, libidris2_sdl3, sdl3.h"
+export
+prim__drawRects : AnyPtr -> AnyPtr -> Bits32 -> PrimIO Int
+
+%foreign "C:idris_sdl_fill_rects, libidris2_sdl3, sdl3.h"
+export
+prim__fillRects : AnyPtr -> AnyPtr -> Bits32 -> PrimIO Int
+
 %foreign "C:idris_sdl_draw_point, libidris2_sdl3, sdl3.h"
 export
 prim__drawPoint : AnyPtr -> Double -> Double -> PrimIO Int

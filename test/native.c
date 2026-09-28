@@ -60,6 +60,33 @@ static void point_buffer_tests(void) {
     idris_sdl_points_free(NULL);
 }
 
+static void rect_buffer_tests(void) {
+    assert(idris_sdl_rects_new(0) == NULL);
+    assert(idris_sdl_rects_new(0x80000000u) == NULL);
+    assert(idris_sdl_rects_new(SDL_MAX_UINT32) == NULL);
+    if (sizeof(size_t) == 4) assert(idris_sdl_rects_new(0x10000000u) == NULL);
+    assert(idris_sdl_rects_set(NULL, 0, 1, 2, 3, 4) == 0);
+    assert(idris_sdl_draw_rects(NULL, NULL, 0) == 0);
+    assert(idris_sdl_fill_rects(NULL, NULL, 0) == 0);
+
+    IdrisSDLRects* rects = idris_sdl_rects_new(3);
+    assert(rects);
+    assert(idris_sdl_rects_set(rects, 0, 1.25, -2.5, 3.75, 8.5) == 1);
+    assert(idris_sdl_rects_set(rects, 1, 0, 0, 0, -1) == 1);
+    assert(idris_sdl_rects_set(rects, 2, 4, 8, 2, 3) == 1);
+    assert(idris_sdl_rects_set(rects, 3, 0, 0, 1, 1) == 0);
+    assert(idris_sdl_rects_set(rects, SDL_MAX_UINT32, 0, 0, 1, 1) == 0);
+    assert(idris_sdl_draw_rects(NULL, rects, 4) == 0);
+    assert(idris_sdl_fill_rects(NULL, rects, SDL_MAX_UINT32) == 0);
+    assert(idris_sdl_draw_rects(NULL, rects, 0) == 0);
+    assert(idris_sdl_fill_rects(NULL, rects, 0) == 0);
+    assert(idris_sdl_draw_rects(NULL, rects, 3) == 0);
+    assert(idris_sdl_fill_rects(NULL, rects, 3) == 0);
+    assert(SDL_GetError()[0] != '\0');
+    idris_sdl_rects_free(rects);
+    idris_sdl_rects_free(NULL);
+}
+
 int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
@@ -185,6 +212,7 @@ int main(void) {
 
     size_tests();
     point_buffer_tests();
+    rect_buffer_tests();
     SDL_Quit();
 
     puts("Native tests passed");

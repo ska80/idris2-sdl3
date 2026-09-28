@@ -206,6 +206,22 @@ failing "Mismatch between"
   signedPointCount renderer buffer count = drawLines renderer buffer count
 
 failing "Mismatch between"
+  integerBatchRectangle : RectBuffer -> Rect -> IO Bool
+  integerBatchRectangle buffer rect = setRect buffer 0 rect
+
+failing "Mismatch between"
+  pointArrayRectangles : Renderer -> PointBuffer -> IO Bool
+  pointArrayRectangles renderer buffer = drawRects renderer buffer 1
+
+failing "Mismatch between"
+  rectangleArrayPoints : Renderer -> RectBuffer -> IO Bool
+  rectangleArrayPoints renderer buffer = drawPoints renderer buffer 1
+
+failing "Mismatch between"
+  signedRectCount : Renderer -> RectBuffer -> Int32 -> IO Bool
+  signedRectCount renderer buffer count = fillRects renderer buffer count
+
+failing "Mismatch between"
   integerOutline : Renderer -> Rect -> IO Bool
   integerOutline renderer rect = drawRect renderer (Just rect)
 
@@ -236,6 +252,10 @@ failing "Mismatch between"
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture
+
+failing "Name SDL3.MkRectBuffer is private"
+  forgeRectBuffer : AnyPtr -> RectBuffer
+  forgeRectBuffer = MkRectBuffer
 
 failing "Name SDL3.MkPointBuffer is private"
   forgePointBuffer : AnyPtr -> PointBuffer

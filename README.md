@@ -42,7 +42,7 @@ requirements.
 The typed API provides these guarantees:
 
 - Distinct opaque types for windows, renderers, surfaces, textures, event buffers, coordinate
-  buffers, and point buffers.
+  buffers, point buffers, and rectangle buffers.
 - Distinct point types for window and render coordinates.
 - Texture access types that restrict render targets to `Texture TargetAccess`.
 - Separate initialization and window flags, combined with `<+>` and empty flags through `neutral`.
@@ -54,12 +54,12 @@ The typed API provides these guarantees:
 
 The API does not enforce resource lifetimes or thread rules in the type system.  Call
 initialization, window, rendering, and event functions on the main thread.  Do not share event or
-coordinate or point buffers between threads.
+coordinate, point, or rectangle buffers between threads.
 
 Destroy each texture before its renderer, and each renderer before its window.  Free each event
-buffer, coordinate buffer, and point buffer exactly once. Destroy all owned resources before `quit`,
-and call `quit` even if initialization fails.  Do not use or destroy a handle after
-destruction. This can access freed memory.
+buffer, coordinate buffer, point buffer, and rectangle buffer exactly once. Destroy all owned
+resources before `quit`, and call `quit` even if initialization fails.  Do not use or destroy a
+handle after destruction. This can access freed memory.
 
 Creation calls copy the error into `Left` on failure.  Rendering, initialization, and text input
 start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
@@ -79,6 +79,7 @@ function returns.  The available helpers are:
 - `withEventBuffer action` allocates and frees an event buffer.
 - `withCoordinateBuffer action` allocates and frees a coordinate buffer.
 - `withPointBuffer capacity action` allocates and frees a point array for batched drawing.
+- `withRectBuffer capacity action` allocates and frees a rectangle array for batched drawing.
 - `withBMP path action` loads and destroys a BMP surface.
 
 The callback returns `IO (Either String a)`. Cleanup runs after both `Right` and `Left`, and the
@@ -166,7 +167,7 @@ These shapes use the current drawing color and blend mode.  Viewport, clipping, 
 logical presentation also apply.  Coordinates convert from `Double` to SDL `float`. Exact fractional
 pixel coverage depends on SDL's rendering backend.  Each call requires the main thread and returns
 `False` on failure. Read `getError` immediately after failure.  The adapters allocate no native heap
-memory. Batched rectangle drawing is not yet bound.
+memory.
 
 `newPointBuffer capacity` creates a reusable array of SDL floating-point positions and returns
 `Either String PointBuffer`. Capacity is a `Bits32` value from 1 through 2147483647, subject to
@@ -197,6 +198,35 @@ not a renderer. The write and draw adapters allocate no new point arrays.  Each 
 makes one foreign call. Each batch uses one foreign draw call, but SDL can allocate internal command
 storage and perform multiple GPU operations. This API does not promise a speed increase. See
 `test/src/BatchTests.idr` for buffer reuse and scope examples.
+
+`newRectBuffer capacity` creates a separate reusable array of SDL floating-point rectangles and
+returns `Either String RectBuffer`. Capacity uses `Bits32` and must be from 1 through 2147483647,
+subject to memory limits. Allocation size arithmetic is checked. Every entry starts as `MkFRect 0 0
+0 0`. The buffer has fixed capacity and does not grow.
+
+`setRect buffer index rect` replaces a zero-based entry with an `FRect` in drawing coordinates.  An
+out-of-range index returns `False` without changing entries. Fields narrow to SDL `float`.  Use
+finite values that fit that type. Width and height receive no extra validation.  Zero-size and
+negative-size rectangles follow SDL semantics, as with scalar rectangle drawing.  `FRect` does not
+track a coordinate space or renderer identity.
+
+`drawRects renderer buffer count` outlines the first `count` rectangles.  `fillRects renderer buffer
+count` fills them. Count uses `Bits32` and cannot exceed capacity.  An excessive count returns
+`False` before SDL reads the array or draws anything. Zero count succeeds without drawing on a valid
+renderer. Unlike `drawRect renderer Nothing`, an array entry cannot request an implicit full-target
+rectangle. Unwritten entries are zero-valued rectangles, not skipped entries, so choose the count
+explicitly.
+
+Both calls require the main thread and use the current rendering state, including clipping and
+logical presentation. SDL consumes the input during the call. Reuse, rewrite, or free the buffer
+after the call returns, not during a draw. The buffer owns CPU memory and can serve different
+renderers. It must not be shared between threads.
+
+Allocate outside the frame loop and call `freeRectBuffer` once during cleanup, or put the loop
+inside `withRectBuffer capacity`. The write and draw adapters allocate no new rectangle arrays.
+Each write still makes one foreign call, and each batch makes one foreign draw call. SDL can
+allocate command storage and perform multiple GPU operations, so no speed increase is promised.  See
+`test/src/RectBatchTests.idr` for examples and failure cases.
 
 `setDrawBlendMode renderer mode` selects blending for shapes such as filled rectangles, using the
 same `BlendMode` type as textures.  It does not change texture blending. Use `setTextureBlendMode`
@@ -641,6 +671,12 @@ consumption, buffer reuse and release, connected lines, empty batches, clipping,
 and texture targets. Compile-time tests reject window-space points, coordinate buffers used as point
 arrays, and signed draw counts. Native tests cover null pointers and capacity limits.
 
-Next work includes texture locking, audio streams, and batched rectangle drawing.  Keep each
-addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
-before adding performance claims or a larger abstraction layer.
+Rectangle batch tests cover outlines, fills, count prefixes, bounds rejection, empty batches,
+clipping, fractional scaling, logical presentation, blending, renderer reuse, and texture targets.
+They also cover input consumption before buffer mutation or release, scope results, and skipped
+callbacks on allocation failure. Compile-time tests reject integer rectangles, mixed buffer types,
+signed counts, and forged rectangle-buffer handles.
+
+Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
+test its failure paths.  Measure call overhead and allocations before adding performance claims or a
+larger abstraction layer.

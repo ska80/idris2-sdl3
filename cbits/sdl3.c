@@ -356,6 +356,70 @@ int idris_sdl_draw_lines(SDL_Renderer* renderer, const IdrisSDLPoints* points, U
     return SDL_RenderLines(renderer, points->values, (int)count);
 }
 
+struct IdrisSDLRects {
+    Uint32    capacity;
+    SDL_FRect values[];
+};
+
+IdrisSDLRects* idris_sdl_rects_new(Uint32 capacity) {
+    if (capacity == 0 || capacity > SDL_MAX_SINT32) {
+        SDL_SetError("Rectangle buffer capacity must be between 1 and 2147483647");
+
+        return NULL;
+    }
+
+    size_t bytes;
+
+    if (!SDL_size_mul_check_overflow(capacity, sizeof(SDL_FRect), &bytes) ||
+        !SDL_size_add_check_overflow(sizeof(IdrisSDLRects), bytes, &bytes)) {
+        SDL_SetError("Rectangle buffer capacity exceeds the native allocation limit");
+
+        return NULL;
+    }
+
+    IdrisSDLRects* rects = SDL_calloc(1, bytes);
+
+    if (!rects) {
+        SDL_SetError("Cannot allocate rectangle buffer");
+
+        return NULL;
+    }
+
+    rects->capacity = capacity;
+
+    return rects;
+}
+
+void idris_sdl_rects_free(IdrisSDLRects* rects) {
+    SDL_free(rects);
+}
+
+int idris_sdl_rects_set(IdrisSDLRects* rects, Uint32 index, double x, double y, double w, double h) {
+    if (!rects) return SDL_SetError("Rectangle buffer is null");
+
+    if (index >= rects->capacity) return SDL_SetError("Rectangle buffer index is out of range");
+
+    rects->values[index] = (SDL_FRect){(float)x, (float)y, (float)w, (float)h};
+
+    return 1;
+}
+
+int idris_sdl_draw_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count) {
+    if (!rects) return SDL_SetError("Rectangle buffer is null");
+
+    if (count > rects->capacity) return SDL_SetError("Rectangle count exceeds buffer capacity");
+
+    return SDL_RenderRects(renderer, rects->values, (int)count);
+}
+
+int idris_sdl_fill_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count) {
+    if (!rects) return SDL_SetError("Rectangle buffer is null");
+
+    if (count > rects->capacity) return SDL_SetError("Rectangle count exceeds buffer capacity");
+
+    return SDL_RenderFillRects(renderer, rects->values, (int)count);
+}
+
 int idris_sdl_draw_point(SDL_Renderer* renderer, double x, double y) {
     return SDL_RenderPoint(renderer, (float)x, (float)y);
 }

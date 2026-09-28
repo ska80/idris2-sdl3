@@ -75,6 +75,14 @@ IDRIS_SDL3 int idris_sdl_points_set(IdrisSDLPoints* points, Uint32 index, double
 IDRIS_SDL3 int idris_sdl_draw_points(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count);
 IDRIS_SDL3 int idris_sdl_draw_lines(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count);
 
+/* Fixed-capacity, caller-owned SDL_FRect array. All fields start at zero. */
+typedef struct IdrisSDLRects IdrisSDLRects;
+IDRIS_SDL3 IdrisSDLRects* idris_sdl_rects_new(Uint32 capacity);
+IDRIS_SDL3 void idris_sdl_rects_free(IdrisSDLRects* rects);
+IDRIS_SDL3 int idris_sdl_rects_set(IdrisSDLRects* rects, Uint32 index, double x, double y, double w, double h);
+IDRIS_SDL3 int idris_sdl_draw_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count);
+IDRIS_SDL3 int idris_sdl_fill_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count);
+
 IDRIS_SDL3 int idris_sdl_draw_point(SDL_Renderer* renderer, double x, double y);
 IDRIS_SDL3 int idris_sdl_draw_line(SDL_Renderer* renderer, double x1, double y1, double x2, double y2);
 IDRIS_SDL3 int idris_sdl_draw_rect(SDL_Renderer* renderer, Sint32 has_rect, double x, double y, double w, double h);

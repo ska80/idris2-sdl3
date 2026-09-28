@@ -18,6 +18,7 @@ import TargetTextureScopeTests
 import RotationTests
 import ShapeTests
 import BatchTests
+import RectBatchTests
 import SizeTests
 
 %default covering
@@ -80,6 +81,7 @@ resources window = do
       Right () <- renderTests window renderer | Left err => pure (Left err)
       Right () <- shapeTests window renderer | Left err => pure (Left err)
       Right () <- batchTests window renderer | Left err => pure (Left err)
+      Right () <- rectBatchTests window renderer | Left err => pure (Left err)
       Right () <- sizeTests window renderer | Left err => pure (Left err)
       Right () <- targetScopeTests window renderer | Left err => pure (Left err)
       Right () <- targetTextureScopeTests window renderer | Left err => pure (Left err)
