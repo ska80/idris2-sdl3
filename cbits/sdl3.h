@@ -68,6 +68,8 @@ IDRIS_SDL3 int idris_sdl_reset_render_viewport(SDL_Renderer* renderer);
 IDRIS_SDL3 int idris_sdl_set_render_clip_rect(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h);
 IDRIS_SDL3 int idris_sdl_reset_render_clip_rect(SDL_Renderer* renderer);
 IDRIS_SDL3 int idris_sdl_set_draw_blend_mode(SDL_Renderer* renderer, Uint32 mode);
+/* Unsigned 32-bit blend code, or -1 on failure. */
+IDRIS_SDL3 Sint64 idris_sdl_get_draw_blend_mode(SDL_Renderer* renderer);
 
 IDRIS_SDL3 SDL_Renderer* idris_sdl_create_renderer(SDL_Window* window);
 IDRIS_SDL3 int           idris_sdl_draw_color(SDL_Renderer* renderer, Uint8 r, Uint8 g, Uint8 b, Uint8 a);

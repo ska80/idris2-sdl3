@@ -241,6 +241,11 @@ prim__resetRenderClipRect : AnyPtr -> PrimIO Int
 export
 prim__setDrawBlendMode : AnyPtr -> Bits32 -> PrimIO Int
 
+||| Unsigned 32-bit blend code, or -1 on failure. Requires a live renderer on the main thread.
+%foreign "C:idris_sdl_get_draw_blend_mode, libidris2_sdl3, sdl3.h"
+export
+prim__getDrawBlendMode : AnyPtr -> PrimIO Int64
+
 %foreign "C:idris_sdl_draw_color, libidris2_sdl3, sdl3.h"
 export
 prim__drawColor : AnyPtr -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> PrimIO Int

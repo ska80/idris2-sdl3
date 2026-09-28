@@ -294,6 +294,14 @@ int idris_sdl_reset_render_clip_rect(SDL_Renderer* renderer) {
     return SDL_SetRenderClipRect(renderer, NULL);
 }
 
+Sint64 idris_sdl_get_draw_blend_mode(SDL_Renderer* renderer) {
+    SDL_BlendMode mode;
+
+    if (!SDL_GetRenderDrawBlendMode(renderer, &mode)) return -1;
+
+    return mode;
+}
+
 int idris_sdl_set_draw_blend_mode(SDL_Renderer* renderer, Uint32 mode) {
     return SDL_SetRenderDrawBlendMode(renderer, mode);
 }

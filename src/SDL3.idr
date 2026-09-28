@@ -413,12 +413,9 @@ setTextureScaleMode : Texture access -> ScaleMode -> IO Bool
 setTextureScaleMode (MkTexture ptr) mode =
   (/= 0) <$> primIO (prim__setTextureScaleMode ptr (scaleValue mode))
 
-||| Copy the texture blend mode on the main thread. Keep the texture and renderer alive.
-||| Preserve custom or unknown SDL codes as OtherBlendMode. Copies SDL errors on failure.
-export
-getTextureBlendMode : Texture access -> IO (Either String BlendMode)
-getTextureBlendMode (MkTexture ptr) = do
-  value <- primIO (prim__getTextureBlendMode ptr)
+queriedBlendMode : PrimIO Int64 -> IO (Either String BlendMode)
+queriedBlendMode action = do
+  value <- primIO action
   if value == -1 then Left <$> getError else
     pure (Right (case value of
       0 => NoBlend
@@ -429,6 +426,12 @@ getTextureBlendMode (MkTexture ptr) = do
       0x10 => PremultipliedAlphaBlend
       0x20 => PremultipliedAdditiveBlend
       other => OtherBlendMode (cast other)))
+
+||| Copy the texture blend mode on the main thread. Keep the texture and renderer alive.
+||| Preserve custom or unknown SDL codes as OtherBlendMode. Copies SDL errors on failure.
+export
+getTextureBlendMode : Texture access -> IO (Either String BlendMode)
+getTextureBlendMode (MkTexture ptr) = queriedBlendMode (prim__getTextureBlendMode ptr)
 
 ||| Copy the current texture filtering mode on the main thread. Keep the texture and renderer alive.
 ||| Unknown SDL codes are preserved as OtherScaleMode, not treated as query failures.
@@ -597,6 +600,13 @@ export
 setDrawBlendMode : Renderer -> BlendMode -> IO Bool
 setDrawBlendMode (MkRenderer ptr) mode =
   (/= 0) <$> primIO (prim__setDrawBlendMode ptr (blendBits mode))
+
+||| Copy blending for shapes, not textures. Call on the main thread with a live renderer.
+||| This state belongs to the renderer, not to individual render targets.
+||| Preserves custom or unknown SDL codes as OtherBlendMode. Copies SDL errors on failure.
+export
+getDrawBlendMode : Renderer -> IO (Either String BlendMode)
+getDrawBlendMode (MkRenderer ptr) = queriedBlendMode (prim__getDrawBlendMode ptr)
 
 ||| Rendering calls return False on failure. Call getError for details.
 export

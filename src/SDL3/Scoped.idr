@@ -115,6 +115,23 @@ withTextureBlendMode {a} texture mode action = do
     Left err => pure (Left err)
     Right value => if restored then pure (Right value) else Left <$> getError
 
+||| Temporarily set blending for renderer shapes, then attempt to restore the previous SDL code.
+||| Keep the renderer and its window alive on the main thread. This does not own either resource.
+||| Query or setting failure skips the action. A failed setting still triggers restoration.
+||| Setting or action errors take precedence over restoration errors. Left does not guarantee restoration.
+||| Restores only renderer draw blending, not draw color, texture state, or target selection.
+||| Runtime exceptions, process exit, and non-returning actions do not guarantee restoration.
+export
+withDrawBlendMode : Renderer -> BlendMode -> IO (Either String a) -> IO (Either String a)
+withDrawBlendMode {a} renderer mode action = do
+  Right previous <- getDrawBlendMode renderer | Left err => pure (Left err)
+  changed <- setDrawBlendMode renderer mode
+  result <- the (IO (Either String a)) (if changed then action else Left <$> getError)
+  restored <- setDrawBlendMode renderer previous
+  case result of
+    Left err => pure (Left err)
+    Right value => if restored then pure (Right value) else Left <$> getError
+
 ||| Allocate one event buffer for the callback and free it on Right or Left.
 ||| Poll or wait on the main thread. Do not share, free, or retain the buffer.
 ||| Copied events can outlive the callback. Runtime exceptions do not guarantee cleanup.

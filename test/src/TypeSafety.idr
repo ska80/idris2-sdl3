@@ -250,6 +250,18 @@ failing "Mismatch between"
   wrongNativeCoordinateStorage renderer storage = prim__renderCoordinatesFromWindow renderer 1 2 storage
 
 failing "Mismatch between"
+  textureDrawBlendQuery : Texture access -> IO (Either String BlendMode)
+  textureDrawBlendQuery texture = getDrawBlendMode texture
+
+failing "Mismatch between"
+  filteringAsDrawBlend : Renderer -> ScaleMode -> IO (Either String ())
+  filteringAsDrawBlend renderer mode = withDrawBlendMode renderer mode (pure (Right ()))
+
+failing "Mismatch between"
+  textureDrawBlendScope : Texture access -> IO (Either String ())
+  textureDrawBlendScope texture = withDrawBlendMode texture AlphaBlend (pure (Right ()))
+
+failing "Mismatch between"
   wrongBlendQueryHandle : Renderer -> IO (Either String BlendMode)
   wrongBlendQueryHandle renderer = getTextureBlendMode renderer
 

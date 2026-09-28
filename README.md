@@ -234,6 +234,27 @@ for that.  Viewport, clip, and draw blend controls require the main thread and r
 failure.  Call `getError` immediately after failure. SDL can choose the closest supported draw blend
 mode.
 
+`getDrawBlendMode renderer` returns `IO (Either String BlendMode)` for shape drawing.  It does not
+query texture blending. Call it on the main thread while the renderer and its window remain
+alive. The result is copied and can outlive the renderer. Unknown and custom codes use
+`OtherBlendMode`, as with texture queries. The adapter uses one stack mode value and returns the
+unsigned 32-bit code through a signed 64-bit integer, with -1 reserved for failure.
+
+`withDrawBlendMode renderer mode action`, exported by `SDL3.Scoped`, saves draw blending and
+attempts restoration after an ordinary `Right` or `Left` return. Nested scopes save their own entry
+mode. Draw blending belongs to the renderer, so target switches do not restore it.  The helper does
+not restore draw color, texture state, viewport, clipping, or target selection.  It does not create
+or destroy resources. Keep the renderer and its window alive on the main thread.
+
+A failed query skips the action. A failed setting also skips the action but still triggers
+restoration. Setting and action errors take precedence over restoration errors. If only restoration
+fails, the helper returns that SDL error. A `Left` result does not guarantee restoration, and SDL
+can select the closest supported mode. Runtime exceptions, process exit, and actions that never
+return do not guarantee restoration either.
+
+A successful scope makes three foreign state calls in addition to its action. It uses no native heap
+storage for the saved mode. Use `withTextureBlendMode` for texture blending instead.
+
 A render target is the destination for drawing commands.  `createTargetTexture renderer width
 height` creates an RGBA32 texture for off-screen drawing.  Creation returns `Either String (Texture
 TargetAccess)`. Dimensions must be positive 32-bit integers.  The texture starts with undefined
@@ -843,6 +864,14 @@ also test that alpha and filtering changes survive a blend scope. Pixel tests co
 blending with restored additive blending. Native and raw tests cover null-query failure.
 Compile-time tests reject wrong handles, result types, and filtering modes used as blend modes.
 Successful custom-mode restoration and restoration failures still need tests on suitable renderers.
+
+Draw-blend tests cover every named mode, cached queries, nested scopes, action errors, invalid-code
+rejection, skipped actions, independent renderers, and copied mode lifetime. Target-switch tests
+show that draw blending belongs to the renderer and does not change texture blending.  Pixel tests
+cover scoped alpha blending, restored additive blending, and unchanged draw color.  Native and raw
+tests cover null-query failure. Compile-time tests reject textures used as renderers and filtering
+modes used as draw blend modes. Custom-mode restoration and restoration failures still need tests on
+suitable renderers.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a
