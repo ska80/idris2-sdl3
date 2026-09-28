@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+
 #include "fixtures.h"
 #include <SDL3/SDL.h>
 #include <stdlib.h>
@@ -333,19 +334,19 @@ int idris_test_queue_event(int kind) {
     case 48:
     case 49:
     case 50:
-        event.type = (kind == 47 || kind == 49) ? SDL_EVENT_WINDOW_ENTER_FULLSCREEN : SDL_EVENT_WINDOW_LEAVE_FULLSCREEN;
+        event.type            = (kind == 47 || kind == 49) ? SDL_EVENT_WINDOW_ENTER_FULLSCREEN : SDL_EVENT_WINDOW_LEAVE_FULLSCREEN;
         event.window.windowID = kind >= 49 ? 0 : kind == 47 ? 0x80000001u : 0xffffffffu;
-        event.window.data1 = SDL_MIN_SINT32;
-        event.window.data2 = SDL_MAX_SINT32;
+        event.window.data1    = SDL_MIN_SINT32;
+        event.window.data2    = SDL_MAX_SINT32;
         break;
 
     case 44:
     case 45:
     case 46:
-        event.type = SDL_EVENT_WINDOW_MOVED;
+        event.type            = SDL_EVENT_WINDOW_MOVED;
         event.window.windowID = kind == 44 ? 0x80000001u : kind == 45 ? 0 : 0xffffffffu;
-        event.window.data1 = kind == 44 ? -320 : kind == 45 ? 0 : SDL_MIN_SINT32;
-        event.window.data2 = kind == 44 ? 240 : kind == 45 ? 0 : SDL_MAX_SINT32;
+        event.window.data1    = kind == 44 ? -320 : kind == 45 ? 0 : SDL_MIN_SINT32;
+        event.window.data2    = kind == 44 ? 240 : kind == 45 ? 0 : SDL_MAX_SINT32;
         break;
 
     case 38:
@@ -354,11 +355,11 @@ int idris_test_queue_event(int kind) {
     case 41:
     case 42:
     case 43: {
-        const Uint32 types[] = {SDL_EVENT_WINDOW_SHOWN, SDL_EVENT_WINDOW_HIDDEN, SDL_EVENT_WINDOW_EXPOSED};
-        event.type = types[(kind - 38) % 3];
+        const Uint32 types[]  = {SDL_EVENT_WINDOW_SHOWN, SDL_EVENT_WINDOW_HIDDEN, SDL_EVENT_WINDOW_EXPOSED};
+        event.type            = types[(kind - 38) % 3];
         event.window.windowID = kind >= 41 ? 0 : kind == 38 ? 0x80000001u : kind == 39 ? 0xffffffffu : 42;
-        event.window.data1 = SDL_MIN_SINT32;
-        event.window.data2 = SDL_MAX_SINT32;
+        event.window.data1    = SDL_MIN_SINT32;
+        event.window.data2    = SDL_MAX_SINT32;
         break;
     }
 
@@ -368,11 +369,11 @@ int idris_test_queue_event(int kind) {
     case 35:
     case 36:
     case 37: {
-        const Uint32 types[] = {SDL_EVENT_WINDOW_MINIMIZED, SDL_EVENT_WINDOW_MAXIMIZED, SDL_EVENT_WINDOW_RESTORED};
-        event.type = types[(kind - 32) % 3];
+        const Uint32 types[]  = {SDL_EVENT_WINDOW_MINIMIZED, SDL_EVENT_WINDOW_MAXIMIZED, SDL_EVENT_WINDOW_RESTORED};
+        event.type            = types[(kind - 32) % 3];
         event.window.windowID = kind >= 35 ? 0 : kind == 32 ? 0x80000001u : kind == 33 ? 0xffffffffu : 42;
-        event.window.data1 = SDL_MIN_SINT32;
-        event.window.data2 = SDL_MAX_SINT32;
+        event.window.data1    = SDL_MIN_SINT32;
+        event.window.data2    = SDL_MAX_SINT32;
         break;
     }
 
@@ -380,30 +381,30 @@ int idris_test_queue_event(int kind) {
     case 29:
     case 30:
     case 31:
-        event.type = (kind == 28 || kind == 30) ? SDL_EVENT_WINDOW_MOUSE_ENTER : SDL_EVENT_WINDOW_MOUSE_LEAVE;
+        event.type            = (kind == 28 || kind == 30) ? SDL_EVENT_WINDOW_MOUSE_ENTER : SDL_EVENT_WINDOW_MOUSE_LEAVE;
         event.window.windowID = kind >= 30 ? 0 : kind == 28 ? 0x80000001u : 0xffffffffu;
         /* These are window events, not mouse motion events. */
-        event.window.data1 = SDL_MIN_SINT32;
-        event.window.data2 = SDL_MAX_SINT32;
+        event.window.data1    = SDL_MIN_SINT32;
+        event.window.data2    = SDL_MAX_SINT32;
         break;
 
     case 24:
     case 25:
     case 26:
     case 27:
-        event.type = (kind == 24 || kind == 26) ? SDL_EVENT_WINDOW_FOCUS_GAINED : SDL_EVENT_WINDOW_FOCUS_LOST;
+        event.type            = (kind == 24 || kind == 26) ? SDL_EVENT_WINDOW_FOCUS_GAINED : SDL_EVENT_WINDOW_FOCUS_LOST;
         event.window.windowID = kind >= 26 ? 0 : kind == 24 ? 0x80000001u : 0xffffffffu;
-        event.window.data1 = SDL_MIN_SINT32;
-        event.window.data2 = SDL_MAX_SINT32;
+        event.window.data1    = SDL_MIN_SINT32;
+        event.window.data2    = SDL_MAX_SINT32;
         break;
 
     case 22:
     case 23:
-        event.type = SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;
+        event.type            = SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED;
         event.window.windowID = kind == 22 ? 0x80000001u : 0;
         /* No scale payload exists. These fields must not become dimensions or a factor. */
-        event.window.data1 = SDL_MIN_SINT32;
-        event.window.data2 = SDL_MAX_SINT32;
+        event.window.data1    = SDL_MIN_SINT32;
+        event.window.data2    = SDL_MAX_SINT32;
         break;
 
     case 18:

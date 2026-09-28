@@ -16,6 +16,7 @@ import ScalingTests
 import CoordinateTests
 import StreamingTests
 import TextureLockTests
+import AudioTests
 import TimerTests
 import VSyncTests
 import WaitTests
@@ -151,8 +152,10 @@ smoke = do
 
 main : IO ()
 main = do
-  ok <- SDL3.init video
-  result <- the (IO (Either String ())) (if ok then smoke else Left <$> SDL3.getError)
+  ok <- SDL3.init (video <+> audio)
+  result <- the (IO (Either String ())) (if not ok then Left <$> SDL3.getError else do
+    Right () <- audioTests | Left err => pure (Left err)
+    smoke)
   quit
   case result of
     Right () => putStrLn "SDL3 smoke test passed"

@@ -6,6 +6,6 @@ depends = sdl3
 
 sourcedir = "."
 
-main = Main
+main = Hello
 
 executable = sdl3-hello

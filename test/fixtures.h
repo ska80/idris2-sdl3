@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../cbits/sdl3.h"
+#include "../cbits/core.h"
 
 /* Fabricated public layout for field tests only. Never pass this object to SDL. */
 SDL_Texture* idris_test_texture_fields(Sint32 width, Sint32 height);

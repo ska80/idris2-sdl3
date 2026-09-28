@@ -1,4 +1,4 @@
-#include "sdl3.h"
+#include "core.h"
 
 #include <assert.h>
 #include <float.h>

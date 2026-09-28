@@ -2,6 +2,7 @@ module Locking
 
 import SDL3
 import SDL3.Scoped
+
 import System
 
 %default covering

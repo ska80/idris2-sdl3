@@ -234,6 +234,38 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  windowAsPlayback : Window -> IO Bool
+  windowAsPlayback window = pausePlayback window
+
+failing "Mismatch between"
+  playbackAsTexture : PlaybackStream -> IO ()
+  playbackAsTexture stream = destroyTexture stream
+
+failing "Mismatch between"
+  surfaceAsWAV : PlaybackStream -> Surface -> IO Bool
+  surfaceAsWAV stream surface = queueWAV stream surface
+
+failing "Mismatch between"
+  flagsAsAudioSpec : IO (Either String PlaybackStream)
+  flagsAsAudioSpec = openPlaybackStream audio
+
+failing "Mismatch between"
+  signedAudioRange : PlaybackStream -> Buffer -> Int32 -> IO Bool
+  signedAudioRange stream buffer length = queueAudio stream buffer 0 length
+
+failing "Mismatch between"
+  pixelFormatAsAudio : AudioSpec
+  pixelFormatAsAudio = MkAudioSpec NearestScale 2 48000
+
+failing "Name SDL3.MkPlaybackStream is private"
+  forgePlaybackStream : AnyPtr -> AudioSpec -> PlaybackStream
+  forgePlaybackStream = MkPlaybackStream
+
+failing "Name SDL3.MkWAV is private"
+  forgeWAV : NativeWAV -> AudioSpec -> Bits32 -> WAV
+  forgeWAV = MkWAV
+
+failing "Mismatch between"
   targetTextureLock : TextureLockBuffer -> Texture TargetAccess -> IO (Either String LockedRGBA)
   targetTextureLock storage texture = lockTextureRGBA storage texture Nothing
 

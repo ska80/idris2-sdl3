@@ -1,0 +1,11 @@
+package sdl3-audio
+
+version = 0.0.0
+
+depends = sdl3
+
+sourcedir = "."
+
+main = Audio
+
+executable = sdl3-audio

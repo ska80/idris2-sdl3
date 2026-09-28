@@ -14,6 +14,19 @@ withResource acquire release action = do
   release resource
   pure result
 
+||| Open paused playback, then destroy its stream and owned device on ordinary callback return.
+||| Initialize SDL audio first. Do not destroy or retain the stream. Runtime exceptions do not guarantee cleanup.
+export
+withPlaybackStream : AudioSpec -> (PlaybackStream -> IO (Either String a)) -> IO (Either String a)
+withPlaybackStream spec = withResource (openPlaybackStream spec) destroyPlaybackStream
+
+||| Load an entire WAV, then free its decoded samples on ordinary callback return.
+||| Queue operations copy samples, so playback can continue after this scope. Do not free or retain this WAV.
+||| Runtime exceptions, process exit, and non-returning callbacks do not guarantee cleanup.
+export
+withWAV : String -> (WAV -> IO (Either String a)) -> IO (Either String a)
+withWAV path = withResource (loadWAV path) freeWAV
+
 ||| Create a window, run the callback, then destroy the window on Right or Left.
 ||| Call on the main thread. Creation failure skips the callback.
 ||| Destroy dependent renderers before the callback returns. Do not destroy the window yourself.

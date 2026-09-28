@@ -3,7 +3,9 @@
 Thin bindings for games and multimedia applications. This initial version covers initialization,
 windows, 2D rendering, BMP loading, and static, streaming, and render-target textures.  It also
 covers keyboard, mouse, text input, window-close and size-change events, and timers.  It does not
-yet bind other image formats, audio streams, gamepads, or the GPU API.
+yet bind other image formats, SDL3_mixer, gamepads, or the GPU API. `SDL3` also provides core
+playback streams, WAV loading, and separate music and sound controls.  Future extension bindings
+will use separate `SDL3.Mixer`, `SDL3.Image`, and `SDL3.TTF` modules.
 
 The build uses the SDL3 headers in `/usr/local/include/SDL3` through `pkg-config`.  Chez is the only
 supported backend. Tests run on Linux with SDL 3.4.16 and Idris 2 0.8.0.  Other platforms are not
@@ -35,7 +37,7 @@ driver, so it does not need a display. The Makefile rejects backends other than 
 `make run-locking` runs `examples/Locking.idr`. It reuses one lock buffer while updating a streaming
 texture each frame. A fill initializes the pixels, then a pixel write moves a marker across the
 texture. The callback unlocks before rendering. Close the window or press Escape to exit.  `make
-example` builds both examples. For a three-frame headless run after building:
+example` builds all examples. For a three-frame headless run after building:
 
 ```sh
 SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software \
@@ -1102,6 +1104,31 @@ Event timestamps use nanoseconds since SDL initialization. `ticksNS` uses the sa
 unsupported event data.  Keyboard device identifiers and platform-specific key codes are not exposed
 yet.
 
+## Audio playback
+
+`SDL3` provides core playback streams, WAV loading, queueing, pause, resume, stop, and gain (volume)
+controls. Import `SDL3.Scoped` for `withPlaybackStream` and `withWAV`. Initialize SDL with `audio`,
+or `video <+> audio` when using graphics too. Streams start paused and own their logical audio
+devices. Separate streams let music and sound effects play with independent controls.
+
+Use `playWAV` to start or restart a loaded WAV and `stopPlayback` to pause and discard its queue.
+WAV loading reads the entire file into memory. This is not compressed music streaming, automatic
+looping, or a track mixer. Those features belong in the planned SDL3_mixer binding.  See [Core audio
+playback](docs/audio.md) for formats, buffer bounds, ownership, threading, and limits.
+
+`examples/Audio.idr` demonstrates music and sound playback with commands on standard input.  After
+`make example`, run it with two WAV paths:
+
+```sh
+LD_LIBRARY_PATH="$PWD/cbits:/usr/local/lib:${LD_LIBRARY_PATH:-}" \
+  examples/build/exec/sdl3-audio music.wav sound.wav
+```
+
+Music plays once. Commands include `p` pause, `r` resume, `m` restart music, `s` stop music, `f`
+play a sound, and `q` quit. Each command needs Enter. Sound retriggers replace that stream's
+previous sound. Multiple overlapping sound instances need separate streams. `make test` selects the
+dummy audio driver, so automated tests produce no audible output.
+
 ## Timing and frame pacing
 
 Frame pacing controls the time between rendered frames.  `ticksNS : IO Bits64` returns nanoseconds
@@ -1508,6 +1535,13 @@ during storage cleanup. The locking example has a three-frame headless mode.  Ha
 pitches, driver failures, runtime exceptions, and locking performance remain untested. The software
 tests do not establish behavior on every renderer.
 
-Next work includes audio streams.  Keep each addition close to SDL's API and test its failure paths.
-Measure call overhead and allocations before adding performance claims or a larger abstraction
-layer.
+Audio tests cover paused startup, whole-frame queue bounds, source copying, WAV metadata and
+cleanup, format mismatch, gain validation, scoped results, and independent music/sound
+controls. Native tests also confirm that stream destruction closes its owned logical
+device. Dummy-driver playback and an interactive example exercise basic controls without audio
+callbacks into Idris. Actual sound, latency, device changes, and backend-specific failures need
+manual testing.
+
+Next work includes SDL3_mixer support for decoded music, tracks, looping, and fades.  Keep each
+addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
+before adding performance claims or a larger abstraction layer.

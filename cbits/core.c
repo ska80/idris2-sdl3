@@ -1,8 +1,9 @@
 /* -*- external-format: utf-8; -*- */
 
-#include "sdl3.h"
+#include "core.h"
 
 #include <stddef.h>
+#include <float.h>
 
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
 
@@ -986,4 +987,100 @@ int idris_sdl_event_kind(const SDL_Event* event) {
     default:
         return 0;
     }
+}
+
+/* Core audio playback. */
+_Static_assert(sizeof(int) == sizeof(Sint32), "Audio ABI requires 32-bit C int");
+_Static_assert(SDL_AUDIO_U8 == 0x0008 && SDL_AUDIO_S8 == 0x8008 &&
+               SDL_AUDIO_S16LE == 0x8010 && SDL_AUDIO_S16BE == 0x9010 &&
+               SDL_AUDIO_S32LE == 0x8020 && SDL_AUDIO_S32BE == 0x9020 &&
+               SDL_AUDIO_F32LE == 0x8120 && SDL_AUDIO_F32BE == 0x9120,
+               "Audio format codes must match Idris");
+
+static int valid_spec(const SDL_AudioSpec* spec) {
+    switch (spec->format) {
+    case SDL_AUDIO_U8: case SDL_AUDIO_S8:
+    case SDL_AUDIO_S16LE: case SDL_AUDIO_S16BE:
+    case SDL_AUDIO_S32LE: case SDL_AUDIO_S32BE:
+    case SDL_AUDIO_F32LE: case SDL_AUDIO_F32BE:
+        break;
+    default:
+        return SDL_SetError("Unsupported PCM audio format");
+    }
+    if (spec->channels < 1 || spec->channels > 8 || spec->freq <= 0)
+        return SDL_SetError("Audio requires 1 to 8 channels and a positive sample rate");
+    return 1;
+}
+
+SDL_AudioStream* idris_sdl_audio_open(Uint32 format, Sint32 channels, Sint32 frequency) {
+    const SDL_AudioSpec spec = {(SDL_AudioFormat)format, channels, frequency};
+    if (!valid_spec(&spec)) return NULL;
+    /* SDL owns the device with this stream. No callback enters Idris from an audio thread. */
+    return SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+}
+
+static int put_range(SDL_AudioStream* stream, const SDL_AudioSpec* spec, const void* data,
+                     Uint64 capacity, Uint32 offset, Uint32 length) {
+    if (!valid_spec(spec)) return 0;
+    const Uint32 frame_bytes = (Uint32)SDL_AUDIO_FRAMESIZE(*spec);
+    if (length > SDL_MAX_SINT32 || (Uint64)offset + length > capacity ||
+        (Uint64)offset + length > SIZE_MAX || offset % frame_bytes || length % frame_bytes)
+        return SDL_SetError("Audio range must fit the buffer and contain aligned whole sample frames");
+    if (length == 0) return 1;
+    if (!data) return SDL_SetError("Audio data must not be null");
+    return SDL_PutAudioStreamData(stream, (const Uint8*)data + offset, (int)length);
+}
+
+int idris_sdl_audio_put(SDL_AudioStream* stream, const void* data, Uint64 capacity, Uint32 offset, Uint32 length) {
+    SDL_AudioSpec spec;
+    if (!SDL_GetAudioStreamFormat(stream, &spec, NULL)) return 0;
+    return put_range(stream, &spec, data, capacity, offset, length);
+}
+
+int idris_sdl_audio_pause(SDL_AudioStream* stream) { return SDL_PauseAudioStreamDevice(stream); }
+int idris_sdl_audio_resume(SDL_AudioStream* stream) { return SDL_ResumeAudioStreamDevice(stream); }
+int idris_sdl_audio_paused(SDL_AudioStream* stream) { return SDL_AudioStreamDevicePaused(stream); }
+int idris_sdl_audio_clear(SDL_AudioStream* stream) { return SDL_ClearAudioStream(stream); }
+int idris_sdl_audio_flush(SDL_AudioStream* stream) { return SDL_FlushAudioStream(stream); }
+
+int idris_sdl_audio_set_gain(SDL_AudioStream* stream, double gain) {
+    if (!(gain >= 0.0 && gain <= FLT_MAX))
+        return SDL_SetError("Audio gain must be finite, nonnegative, and fit a float");
+    return SDL_SetAudioStreamGain(stream, (float)gain);
+}
+
+double idris_sdl_audio_get_gain(SDL_AudioStream* stream) { return (double)SDL_GetAudioStreamGain(stream); }
+
+IdrisSDLWAV* idris_sdl_wav_load(const char* path) {
+    IdrisSDLWAV* wav = SDL_calloc(1, sizeof(*wav));
+    if (!wav) { SDL_SetError("Cannot allocate WAV metadata"); return NULL; }
+    SDL_AudioSpec spec;
+    if (!SDL_LoadWAV(path, &spec, &wav->data, &wav->length)) {
+        SDL_free(wav);
+        return NULL;
+    }
+    if (!valid_spec(&spec)) {
+        SDL_free(wav->data);
+        SDL_free(wav);
+        return NULL;
+    }
+    wav->format = (Uint32)spec.format;
+    wav->channels = spec.channels;
+    wav->frequency = spec.freq;
+    return wav;
+}
+
+void idris_sdl_wav_free(IdrisSDLWAV* wav) {
+    if (!wav) return;
+    SDL_free(wav->data);
+    SDL_free(wav);
+}
+
+int idris_sdl_audio_put_wav(SDL_AudioStream* stream, const IdrisSDLWAV* wav, Uint32 offset, Uint32 length) {
+    if (!wav) return SDL_SetError("WAV data must not be null");
+    SDL_AudioSpec spec;
+    if (!SDL_GetAudioStreamFormat(stream, &spec, NULL)) return 0;
+    if ((Uint32)spec.format != wav->format || spec.channels != wav->channels || spec.freq != wav->frequency)
+        return SDL_SetError("WAV format must match the playback stream input");
+    return put_range(stream, &spec, wav->data, wav->length, offset, length);
 }

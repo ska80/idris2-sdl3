@@ -202,3 +202,24 @@ IDRIS_SDL3 char*  idris_sdl_event_text(const SDL_Event* event);
 /* Requires a text editing event. */
 IDRIS_SDL3 Sint32 idris_sdl_event_edit_start(const SDL_Event* event);
 IDRIS_SDL3 Sint32 idris_sdl_event_edit_length(const SDL_Event* event);
+
+/* Core audio playback and owned WAV samples. */
+typedef struct IdrisSDLWAV {
+    Uint32 format;
+    Sint32 channels, frequency;
+    Uint32 length;
+    Uint8* data;
+} IdrisSDLWAV;
+
+IDRIS_SDL3 SDL_AudioStream* idris_sdl_audio_open(Uint32 format, Sint32 channels, Sint32 frequency);
+IDRIS_SDL3 int idris_sdl_audio_put(SDL_AudioStream* stream, const void* data, Uint64 capacity, Uint32 offset, Uint32 length);
+IDRIS_SDL3 int idris_sdl_audio_pause(SDL_AudioStream* stream);
+IDRIS_SDL3 int idris_sdl_audio_resume(SDL_AudioStream* stream);
+IDRIS_SDL3 int idris_sdl_audio_paused(SDL_AudioStream* stream);
+IDRIS_SDL3 int idris_sdl_audio_clear(SDL_AudioStream* stream);
+IDRIS_SDL3 int idris_sdl_audio_flush(SDL_AudioStream* stream);
+IDRIS_SDL3 int idris_sdl_audio_set_gain(SDL_AudioStream* stream, double gain);
+IDRIS_SDL3 double idris_sdl_audio_get_gain(SDL_AudioStream* stream);
+IDRIS_SDL3 IdrisSDLWAV* idris_sdl_wav_load(const char* path);
+IDRIS_SDL3 void idris_sdl_wav_free(IdrisSDLWAV* wav);
+IDRIS_SDL3 int idris_sdl_audio_put_wav(SDL_AudioStream* stream, const IdrisSDLWAV* wav, Uint32 offset, Uint32 length);

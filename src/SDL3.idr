@@ -1402,3 +1402,187 @@ delayNS ns = primIO (prim__delayNS ns)
 export
 delayPrecise : Bits64 -> IO ()
 delayPrecise ns = primIO (prim__delayPrecise ns)
+
+||| PCM sample representation and byte order. Channels are interleaved.
+public export
+data AudioFormat = AudioU8 | AudioS8 | AudioS16LE | AudioS16BE
+                 | AudioS32LE | AudioS32BE | AudioF32LE | AudioF32BE
+
+formatCode : AudioFormat -> Bits32
+formatCode AudioU8 = 0x0008
+formatCode AudioS8 = 0x8008
+formatCode AudioS16LE = 0x8010
+formatCode AudioS16BE = 0x9010
+formatCode AudioS32LE = 0x8020
+formatCode AudioS32BE = 0x9020
+formatCode AudioF32LE = 0x8120
+formatCode AudioF32BE = 0x9120
+
+formatFromCode : Bits32 -> Maybe AudioFormat
+formatFromCode 0x0008 = Just AudioU8
+formatFromCode 0x8008 = Just AudioS8
+formatFromCode 0x8010 = Just AudioS16LE
+formatFromCode 0x9010 = Just AudioS16BE
+formatFromCode 0x8020 = Just AudioS32LE
+formatFromCode 0x9020 = Just AudioS32BE
+formatFromCode 0x8120 = Just AudioF32LE
+formatFromCode 0x9120 = Just AudioF32BE
+formatFromCode _ = Nothing
+
+public export
+Eq AudioFormat where
+  x == y = formatCode x == formatCode y
+
+||| Input format, channel count (1..8), and sample frames per second (positive).
+||| This is the application's format. SDL converts to the device format as needed.
+public export
+record AudioSpec where
+  constructor MkAudioSpec
+  format : AudioFormat
+  channels : Int32
+  frequency : Int32
+
+public export
+Eq AudioSpec where
+  MkAudioSpec f c r == MkAudioSpec g d s = f == g && c == d && r == s
+
+||| Owns one stream and its logical playback device. Destroy before SDL quit.
+||| No callback enters Idris from an audio thread. Do not rebind or reformat it through raw SDL calls.
+export
+data PlaybackStream = MkPlaybackStream AnyPtr AudioSpec
+
+||| Owned decoded WAV samples. Free exactly once. Queue calls copy samples before returning.
+export
+data WAV = MkWAV NativeWAV AudioSpec Bits32
+
+||| Copied application-side format. Does not query the physical device.
+export
+playbackSpec : PlaybackStream -> AudioSpec
+playbackSpec (MkPlaybackStream _ spec) = spec
+
+||| Copied format and length remain valid after WAV cleanup.
+export
+wavSpec : WAV -> AudioSpec
+wavSpec (MkWAV _ spec _) = spec
+
+export
+wavByteLength : WAV -> Bits32
+wavByteLength (MkWAV _ _ length) = length
+
+||| Open default playback, initially paused. Initialize SDL's audio subsystem first.
+||| Each call owns a separate logical device. Destroying the stream closes that device too.
+export
+openPlaybackStream : AudioSpec -> IO (Either String PlaybackStream)
+openPlaybackStream spec@(MkAudioSpec format channels frequency) = do
+  ptr <- primIO (prim__openPlayback (formatCode format) channels frequency)
+  0 <- primIO (prim__isNull ptr) | _ => Left <$> getError
+  pure (Right (MkPlaybackStream ptr spec))
+
+||| Drop queued audio and close the owned device. Do not use the stream afterward.
+||| Serialize destruction with all users. Destroy before SDL quit.
+export
+destroyPlaybackStream : PlaybackStream -> IO ()
+destroyPlaybackStream (MkPlaybackStream ptr _) = primIO (prim__destroyPlayback ptr)
+
+||| Queue copied PCM bytes without starting playback. Offset and count must contain aligned whole frames.
+||| The count must fit a positive C int or be zero. Bounds are checked before SDL copies.
+||| Do not modify the source during this call. It can be reused afterward. Read getError after False.
+export
+queueAudio : PlaybackStream -> Buffer -> Bits32 -> Bits32 -> IO Bool
+queueAudio (MkPlaybackStream ptr _) buffer offset length = do
+  size <- rawSize buffer
+  (/= 0) <$> primIO (prim__queueAudio ptr buffer (cast size) offset length)
+
+||| Pause the owned device, retaining queued audio. Read getError after False.
+export
+pausePlayback : PlaybackStream -> IO Bool
+pausePlayback (MkPlaybackStream ptr _) = (/= 0) <$> primIO (prim__pausePlayback ptr)
+
+||| Resume the owned device. An empty stream stays silent until data is queued.
+export
+resumePlayback : PlaybackStream -> IO Bool
+resumePlayback (MkPlaybackStream ptr _) = (/= 0) <$> primIO (prim__resumePlayback ptr)
+
+||| State, not a success indicator. Requires a live stream. Does not mean samples are queued or audible.
+export
+isPlaybackPaused : PlaybackStream -> IO Bool
+isPlaybackPaused (MkPlaybackStream ptr _) = (/= 0) <$> primIO (prim__playbackPaused ptr)
+
+||| Discard pending stream data without pausing the device. Already submitted device audio cannot be recalled.
+export
+clearPlayback : PlaybackStream -> IO Bool
+clearPlayback (MkPlaybackStream ptr _) = (/= 0) <$> primIO (prim__clearPlayback ptr)
+
+||| End the current input sequence so SDL can emit buffered conversion data. This does not discard samples.
+||| More input is allowed later, but flushing between continuous chunks can introduce gaps.
+export
+flushPlayback : PlaybackStream -> IO Bool
+flushPlayback (MkPlaybackStream ptr _) = (/= 0) <$> primIO (prim__flushPlayback ptr)
+
+||| Pause, then discard queued samples. This is not an atomic operation or a fade.
+||| On failure, stop immediately and leave the partial state. Read getError after False.
+export
+stopPlayback : PlaybackStream -> IO Bool
+stopPlayback stream = do
+  True <- pausePlayback stream | False => pure False
+  clearPlayback stream
+
+||| Input bytes still queued, clamped by SDL at 2147483647. Not a playback-completion or audible-silence test.
+export
+getPlaybackQueued : PlaybackStream -> IO (Either String Bits32)
+getPlaybackQueued (MkPlaybackStream ptr _) = do
+  count <- primIO (prim__playbackQueued ptr)
+  if count < 0 then Left <$> getError else pure (Right (cast count))
+
+||| Set stream volume: zero is silent, one is unchanged, above one amplifies and can clip.
+||| Requires finite, nonnegative gain representable as C float. Read getError after False.
+export
+setPlaybackGain : PlaybackStream -> Double -> IO Bool
+setPlaybackGain (MkPlaybackStream ptr _) gain = (/= 0) <$> primIO (prim__setPlaybackGain ptr gain)
+
+||| Copied SDL float widened to Double. Changes apply during consumption, not when data is queued.
+export
+getPlaybackGain : PlaybackStream -> IO (Either String Double)
+getPlaybackGain (MkPlaybackStream ptr _) = do
+  gain <- primIO (prim__getPlaybackGain ptr)
+  if gain == -1.0 then Left <$> getError else pure (Right gain)
+
+||| Load and decode an entire WAV into native memory. No MP3/OGG decoding or incremental file streaming.
+||| Paths are UTF-8 C strings: embedded NUL ends the path. Allocation and format errors return Left.
+export
+loadWAV : String -> IO (Either String WAV)
+loadWAV path = do
+  ptr <- primIO (prim__loadWAV path)
+  0 <- primIO (prim__wavIsNull ptr) | _ => Left <$> getError
+  let Just format = formatFromCode (getField ptr "format") | Nothing => do
+    primIO (prim__freeWAV ptr)
+    pure (Left "Unsupported WAV audio format")
+  pure (Right (MkWAV ptr (MkAudioSpec format (getField ptr "channels") (getField ptr "frequency"))
+                    (getField ptr "length")))
+
+export
+freeWAV : WAV -> IO ()
+freeWAV (MkWAV ptr _ _) = primIO (prim__freeWAV ptr)
+
+||| Copy a range of WAV samples into a matching stream. Does not start playback.
+||| Offset/count are bytes aligned to whole sample frames. The WAV must remain alive through this call.
+export
+queueWAVRange : PlaybackStream -> WAV -> Bits32 -> Bits32 -> IO Bool
+queueWAVRange (MkPlaybackStream stream _) (MkWAV wav _ _) offset length =
+  (/= 0) <$> primIO (prim__queueWAV stream wav offset length)
+
+||| Queue the whole WAV. A single queue call is limited to 2147483647 bytes.
+export
+queueWAV : PlaybackStream -> WAV -> IO Bool
+queueWAV stream wav = queueWAVRange stream wav 0 (wavByteLength wav)
+
+||| Restart one WAV: pause/clear, queue, flush, resume. The WAV format must match the stream input.
+||| This replaces pending playback, not other streams. It is not atomic and does not loop.
+||| Failure stops the sequence and leaves partial state. Read getError after False.
+export
+playWAV : PlaybackStream -> WAV -> IO Bool
+playWAV stream wav = do
+  True <- stopPlayback stream | False => pure False
+  True <- queueWAV stream wav | False => pure False
+  True <- flushPlayback stream | False => pure False
+  resumePlayback stream
