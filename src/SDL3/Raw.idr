@@ -62,6 +62,10 @@ export
 prim__getWindowFlags : AnyPtr -> PrimIO Bits64
 
 ||| Zero means false. Nonzero means true. The adapter converts both C boolean boundaries.
+%foreign "C:idris_sdl_set_window_fullscreen, libidris2_sdl3, sdl3.h"
+export
+prim__setWindowFullscreen : AnyPtr -> Int32 -> PrimIO Int
+
 %foreign "C:idris_sdl_set_window_bordered, libidris2_sdl3, sdl3.h"
 export
 prim__setWindowBordered : AnyPtr -> Int32 -> PrimIO Int

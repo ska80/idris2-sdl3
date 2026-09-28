@@ -234,6 +234,18 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererFullscreenRequest : Renderer -> IO Bool
+  rendererFullscreenRequest renderer = setWindowFullscreen renderer True
+
+failing "Mismatch between"
+  flagsAsFullscreenRequest : Window -> WindowFlags -> IO Bool
+  flagsAsFullscreenRequest window flags = setWindowFullscreen window flags
+
+failing "Mismatch between"
+  textureFullscreenQuery : Texture access -> IO Bool
+  textureFullscreenQuery texture = isWindowFullscreen texture
+
+failing "Mismatch between"
   windowAsFullscreenIdentifier : Bits64 -> Window -> Event
   windowAsFullscreenIdentifier timestamp window = WindowEnterFullscreenEvent timestamp window
 

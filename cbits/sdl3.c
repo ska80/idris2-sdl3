@@ -79,6 +79,10 @@ double idris_sdl_get_window_display_scale(SDL_Window* window) {
     return (double)SDL_GetWindowDisplayScale(window);
 }
 
+int idris_sdl_set_window_fullscreen(SDL_Window* window, Sint32 fullscreen) {
+    return SDL_SetWindowFullscreen(window, fullscreen != 0);
+}
+
 int idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered) {
     return SDL_SetWindowBordered(window, bordered != 0);
 }

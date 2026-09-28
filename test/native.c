@@ -17,6 +17,13 @@ static void size_tests(void) {
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) == 0);
     assert(idris_sdl_hide_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
+    assert(idris_sdl_set_window_fullscreen(window, -1) == 1);
+    assert(idris_sdl_sync_window(window) == 1);
+    assert((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0);
+    assert(idris_sdl_set_window_fullscreen(window, 2) == 1);
+    assert(idris_sdl_set_window_fullscreen(window, 0) == 1);
+    assert(idris_sdl_sync_window(window) == 1);
+    assert((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) == 0);
     /* The dummy driver accepts style requests without applying them. */
     assert(idris_sdl_set_window_bordered(window, 0) == 1);
     assert(idris_sdl_set_window_bordered(window, -1) == 1);
@@ -115,6 +122,8 @@ int main(void) {
     assert(idris_sdl_get_window_pixel_density(NULL) == 0.0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_get_window_display_scale(NULL) == 0.0);
+    assert(SDL_GetError()[0] != '\0');
+    assert(idris_sdl_set_window_fullscreen(NULL, 1) == 0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_set_window_bordered(NULL, 1) == 0);
     assert(SDL_GetError()[0] != '\0');

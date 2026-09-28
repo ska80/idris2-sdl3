@@ -630,6 +630,28 @@ without new native storage per notification. Update exhaustive matches for the t
 and three new payload constructors. This binding does not install SDL event watchers or draw from
 callbacks.
 
+`setWindowFullscreen window enabled` returns `IO Bool`. With `enabled = True`, it requests
+fullscreen mode. With `enabled = False`, it requests windowed mode. Call it on the main thread with
+a live window. If it returns `False`, read `getError` immediately. SDL uses borderless desktop
+fullscreen by default. This function does not select or clear an exclusive display mode configured
+through external SDL code.
+
+A successful request can take effect later or be denied by the window system. Use transition events
+or `syncWindow` when waiting for a change, then inspect the reported state. Synchronization can
+block or time out. Neither request success nor synchronization alone proves that SDL reached the
+requested state, and neither waits for GPU work.
+
+`isWindowFullscreen window` reads SDL's `SDL_WINDOW_FULLSCREEN` flag and returns `IO Bool`.  Call it
+on the main thread while the window is alive. Its result is a state, not a success indicator.  It
+does not distinguish desktop and exclusive fullscreen or establish physical visibility. A hidden
+window can carry the fullscreen flag without being shown. The copied boolean remains valid after
+window destruction, but it does not track later changes.
+
+The setter adapter converts the boolean input and result for the C interface. The query uses the
+direct window-flag binding. Neither allocates native output storage. SDL and the window system can
+perform work internally. Keep normal resource cleanup order: textures, renderer, then window.  Size
+and scale can change during a transition, so query them when updating layout.
+
 `WindowEnterFullscreenEvent timestamp identifier` reports that a window entered fullscreen mode.
 `WindowLeaveFullscreenEvent timestamp identifier` reports that it left fullscreen mode.  Each
 contains a copied nanosecond timestamp and `WindowID`. Neither includes a display mode, dimensions,
@@ -1215,6 +1237,14 @@ preserve wide timestamps, high-bit or zero identifiers, and copied values after 
 Native tests use SDL's event constants. Compile-time tests reject owned windows and size records as
 notification identifiers. These synthetic events do not switch a window into fullscreen mode.
 Actual fullscreen transitions, display-mode selection, and related event ordering need manual tests.
+
+Fullscreen-control tests cover windowed and hidden-fullscreen creation, repeated requests, cached
+actions, independent windows, stable identifiers and titles, and copied state after cleanup.
+Dummy-driver tests match real entry and exit notifications to the requesting window. They also
+retain a selected texture target and its pixels across transitions. Native tests cover zero/nonzero
+input conversion and null-window failure. Compile-time tests reject wrong handles and flag
+arguments.  These tests do not establish exclusive display-mode changes, GPU resource survival on
+all backends, or window-manager denial and synchronization failures. Those paths need manual tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

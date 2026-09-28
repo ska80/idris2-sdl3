@@ -361,6 +361,23 @@ export
 setWindowTitle : Window -> String -> IO Bool
 setWindowTitle (MkWindow ptr _) title = (/= 0) <$> primIO (prim__setWindowTitle ptr title)
 
+||| Request fullscreen (True) or windowed mode (False) on the main thread.
+||| Keep the window alive. Read getError immediately after False.
+||| A successful request can be delayed or denied. Use events or syncWindow to observe completion.
+||| SDL defaults to desktop fullscreen unless an exclusive display mode was selected outside this API.
+export
+setWindowFullscreen : Window -> Bool -> IO Bool
+setWindowFullscreen (MkWindow ptr _) enabled =
+  (/= 0) <$> primIO (prim__setWindowFullscreen ptr (if enabled then 1 else 0))
+
+||| Read SDL_WINDOW_FULLSCREEN on the main thread, while the window is alive.
+||| Reports SDL's flag, not physical visibility, display mode, or completion of GPU work.
+export
+isWindowFullscreen : Window -> IO Bool
+isWindowFullscreen (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  pure ((flags .&. windowBits fullscreen) /= 0)
+
 ||| Request a window border change on the main thread. True requests a border.
 ||| SDL cannot change fullscreen window borders. Repeating the current state does nothing.
 ||| Some backends accept requests without changing the flags. Query the reported state afterward.
