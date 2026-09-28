@@ -66,14 +66,11 @@ runRenderer : WindowID -> Renderer -> IO (Either String ())
 runRenderer identifier renderer = do
   Right () <- require (setRenderLogicalPresentation renderer 640 480 PresentationLetterbox)
     | Left err => pure (Left err)
-  Right texture <- createTargetTexture renderer 200 180 | Left err => pure (Left err)
-  result <- do
+  withTargetTexture renderer 200 180 $ \texture => do
     Right () <- prepareTexture renderer texture | Left err => pure (Left err)
     withCoordinateBuffer $ \coordinates =>
       withEventBuffer $ \buffer =>
         loop identifier renderer texture coordinates buffer
-  destroyTexture texture
-  pure result
 
 runWindow : Window -> IO (Either String ())
 runWindow window = do

@@ -35,8 +35,8 @@ driver, so it does not need a display. The Makefile rejects backends other than 
 ## API and safety
 
 Import `SDL3` for the typed API. `examples/Main.idr` shows an event loop, callback-based cleanup,
-and explicit texture destruction.  `SDL3.Raw` is the unsafe foreign-function interface, which calls
-native C functions.  Do not use the raw module unless you can enforce its pointer and lifetime
+and scoped texture cleanup. `SDL3.Raw` is the unsafe foreign-function interface, which calls native
+C functions.  Do not use the raw module unless you can enforce its pointer and lifetime
 requirements.
 
 The typed API provides these guarantees:
@@ -72,6 +72,8 @@ function returns.  The available helpers are:
 - `withWindow title width height flags action` creates and destroys a window.
 - `withRenderer window action` creates and destroys a renderer.
 - `withStreamingTexture renderer width height action` creates and destroys a streaming texture.
+- `withTargetTexture renderer width height action` creates and destroys a target texture without
+  selecting it for drawing.
 - `withTextureFromSurface renderer surface action` creates and destroys a static texture. The caller
   still owns the surface.
 - `withEventBuffer action` allocates and frees an event buffer.
@@ -93,8 +95,12 @@ copied from a surface, can outlive the corresponding buffer or surface helper.
 
 Keep buffer helpers around the event loop, not inside each frame or event handler.  Each helper
 entry creates a new resource. These resource helpers do not cache resources or restore rendering
-state.  Keep texture helpers inside the creating renderer's lifetime.  Target-texture cleanup
-remains explicit. Use the separate `withRenderTarget` helper for temporary target selection.
+state. Keep texture helpers inside the creating renderer's lifetime.  Use `withRenderTarget` inside
+the `withTargetTexture` callback for temporary target selection.  The selection scope must finish
+before the texture is destroyed. Do not leave the supplied texture selected when the callback
+returns. If target restoration fails, do not assume the previous target is active. The ownership
+helper still destroys its texture after an ordinary callback return.  The example keeps one target
+texture alive around the entire event loop.
 
 A logical resolution is a fixed coordinate size for drawing.  `setRenderLogicalPresentation renderer
 width height mode` fits that size to the current target.  Use positive `Int32` dimensions for
@@ -594,6 +600,11 @@ accessors. Idris `Double` describes a C `double`, not a C `float`.  Coordinate a
 convert SDL float results into a separate double-valued result struct.  They do not reinterpret
 `SDL_FPoint` memory as doubles.
 
-Next work includes texture locking, audio streams, and target-texture cleanup helpers.  Keep each
-addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
-before adding performance claims or a larger abstraction layer.
+Target-texture ownership tests observe SDL property cleanup on the main thread, without inspecting
+freed texture handles or calling Idris from C. They cover nested ownership and selection scopes,
+cleanup after successful and failed callbacks, preserved results, and skipped callbacks on creation
+failure. Compile-time tests reject streaming-only uploads inside a target-texture callback.
+
+Next work includes texture locking, audio streams, and batched shape drawing.  Keep each addition
+close to SDL's API and test its failure paths.  Measure call overhead and allocations before adding
+performance claims or a larger abstraction layer.

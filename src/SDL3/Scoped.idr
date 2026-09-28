@@ -43,6 +43,17 @@ withStreamingTexture : Renderer -> Int -> Int ->
 withStreamingTexture renderer width height =
   withResource (createStreamingTexture renderer width height) destroyTexture
 
+||| Create a target texture for the callback and destroy it on Right or Left.
+||| Call on the main thread. Keep the renderer alive. Creation failure skips the callback.
+||| This owns the texture, not target selection. Use withRenderTarget inside the callback.
+||| Restore target selection before returning. Do not destroy or retain the texture.
+||| Runtime exceptions, process exit, and non-returning callbacks do not guarantee cleanup.
+export
+withTargetTexture : Renderer -> Int -> Int ->
+                    (Texture TargetAccess -> IO (Either String a)) -> IO (Either String a)
+withTargetTexture renderer width height =
+  withResource (createTargetTexture renderer width height) destroyTexture
+
 ||| Copy a surface into a static texture, then destroy the texture on Right or Left.
 ||| Call on the main thread. The caller still owns the surface.
 ||| Keep the renderer alive. Do not destroy or retain the supplied texture.

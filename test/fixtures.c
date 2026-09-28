@@ -17,6 +17,53 @@ int idris_test_resize_window(Uint32 identifier, Sint32 width, Sint32 height) {
     return SDL_SyncWindow(window);
 }
 
+/* Used only on the main thread. No callback enters Idris. */
+static SDL_Texture* watched_targets[3];
+static const char*  target_watch_names[3] = {"idris.test.target.0", "idris.test.target.1", "idris.test.target.2"};
+
+static void SDLCALL target_destroyed(void* userdata, void* value) {
+    (void)value;
+    *(SDL_Texture**)userdata = NULL;
+}
+
+int idris_test_watch_target(Uint32 identifier, int slot) {
+    if (slot < 0 || slot >= 3 || watched_targets[slot]) return SDL_SetError("Target watch slot is invalid or occupied");
+
+    SDL_Window*   window   = SDL_GetWindowFromID(identifier);
+    SDL_Renderer* renderer = window ? SDL_GetRenderer(window) : NULL;
+    SDL_Texture*  texture  = renderer ? SDL_GetRenderTarget(renderer) : NULL;
+
+    if (!texture) return SDL_SetError("No target texture is selected for observation");
+
+    SDL_PropertiesID properties = SDL_GetTextureProperties(texture);
+
+    if (!properties) return 0;
+    if (!SDL_SetPointerPropertyWithCleanup(properties, target_watch_names[slot], &watched_targets[slot], target_destroyed,
+                                           &watched_targets[slot]))
+        return 0;
+
+    watched_targets[slot] = texture;
+
+    return 1;
+}
+
+int idris_test_target_alive(int slot) {
+    return slot >= 0 && slot < 3 ? watched_targets[slot] != NULL : -1;
+}
+
+int idris_test_target_selected(Uint32 identifier, int slot) {
+    SDL_Window*   window   = SDL_GetWindowFromID(identifier);
+    SDL_Renderer* renderer = window ? SDL_GetRenderer(window) : NULL;
+
+    if (!renderer) return 0;
+
+    SDL_Texture* selected = SDL_GetRenderTarget(renderer);
+
+    if (slot == -1) return selected == NULL;
+
+    return slot >= 0 && slot < 3 && watched_targets[slot] && selected == watched_targets[slot];
+}
+
 /* Linux test fixture. Return a unique file path, copied by Idris. */
 char* idris_test_make_bmp(void) {
     static char path[64];

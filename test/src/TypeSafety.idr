@@ -172,6 +172,12 @@ failing "Mismatch between"
     pure (Right ())
 
 failing "Mismatch between"
+  wrongTargetTextureCallback : Renderer -> Buffer -> IO (Either String ())
+  wrongTargetTextureCallback renderer buffer = withTargetTexture renderer 8 8 $ \texture => do
+    _ <- updateTextureRGBA texture buffer 32
+    pure (Right ())
+
+failing "Mismatch between"
   wrongTextureFlip : Renderer -> Texture StaticAccess -> IO Bool
   wrongTextureFlip renderer texture = renderTextureRotated renderer texture Nothing Nothing 0 Nothing AlphaBlend
 

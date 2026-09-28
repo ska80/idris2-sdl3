@@ -14,6 +14,7 @@ import VSyncTests
 import WaitTests
 import ScopedTests
 import TargetScopeTests
+import TargetTextureScopeTests
 import RotationTests
 import ShapeTests
 import SizeTests
@@ -79,6 +80,7 @@ resources window = do
       Right () <- shapeTests window renderer | Left err => pure (Left err)
       Right () <- sizeTests window renderer | Left err => pure (Left err)
       Right () <- targetScopeTests window renderer | Left err => pure (Left err)
+      Right () <- targetTextureScopeTests window renderer | Left err => pure (Left err)
       Right () <- scalingTests window renderer | Left err => pure (Left err)
       Right () <- coordinateTests renderer | Left err => pure (Left err)
       Right () <- streamingTests window renderer | Left err => pure (Left err)
