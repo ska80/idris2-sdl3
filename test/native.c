@@ -19,8 +19,10 @@ static void size_tests(void) {
     assert(size->width == 37 && size->height == 23);
     assert(idris_sdl_get_window_size(NULL, size) == 0);
     assert(idris_sdl_get_window_size_pixels(NULL, size) == 0);
-    assert(SDL_SetWindowSize(window, 53, 31));
-    assert(SDL_SyncWindow(window));
+    assert(idris_sdl_set_window_size(window, 53, 31) == 1);
+    assert(idris_sdl_sync_window(window) == 1);
+    assert(idris_sdl_set_window_size(window, 0, 31) == 0);
+    assert(idris_sdl_set_window_size(window, 53, -1) == 0);
     assert(idris_sdl_get_window_size(window, size) == 1);
     assert(size->width == 53 && size->height == 31);
     assert(idris_sdl_get_window_size(window, NULL) == 0);
@@ -91,6 +93,10 @@ int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
     assert(idris_sdl_create_renderer(NULL) == NULL);
+    assert(idris_sdl_set_window_size(NULL, 1, 1) == 0);
+    assert(SDL_GetError()[0] != '\0');
+    assert(idris_sdl_sync_window(NULL) == 0);
+    assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_get_window_size(NULL, NULL) == 0);
     assert(idris_sdl_get_window_size_pixels(NULL, NULL) == 0);
     assert(idris_sdl_get_error()[0] != '\0');

@@ -16,9 +16,6 @@ expect query width height = do
 %foreign "C:idris_test_size_fields, libidris2_sdl3_test, fixtures.h"
 prim__sizeFields : NativeSize -> Int32 -> Int32 -> PrimIO ()
 
-%foreign "C:idris_test_resize_window, libidris2_sdl3_test, fixtures.h"
-prim__resizeWindow : Bits32 -> Int32 -> Int32 -> PrimIO Int
-
 checkFields : NativeSize -> Int32 -> Int32 -> IO (Either String ())
 checkFields storage w h = do
   primIO (prim__sizeFields storage w h)
@@ -38,16 +35,44 @@ layoutTests = do
   primIO (prim__freeSize storage)
   pure result
 
+rejectedSizes : Window -> List (Size WindowUnits) -> IO (Either String ())
+rejectedSizes window [] = pure (Right ())
+rejectedSizes window (dimensions :: rest) = do
+  False <- setWindowSize window dimensions | True => pure (Left "Invalid window dimensions were accepted")
+  err <- getError
+  if err == "" then pure (Left "Rejected window size lost its SDL error") else do
+    True <- syncWindow window | False => Left <$> getError
+    Right () <- expect (getWindowSize window) 53 31 | Left err => pure (Left err)
+    rejectedSizes window rest
+
+resizeChecks : Window -> IO (Either String ())
+resizeChecks window = do
+  let resize = setWindowSize window (MkSize 53 31)
+  let wait = syncWindow window
+  True <- resize | False => Left <$> getError
+  True <- wait | False => Left <$> getError
+  Right () <- expect (getWindowSize window) 53 31 | Left err => pure (Left err)
+  Right () <- rejectedSizes window [MkSize 0 31, MkSize 53 0, MkSize (-1) 31,
+    MkSize 53 (-1), MkSize (-2147483648) 31, MkSize 53 (-2147483648)] | Left err => pure (Left err)
+  True <- setWindowSize window (MkSize 1 1) | False => Left <$> getError
+  True <- wait | False => Left <$> getError
+  Right () <- expect (getWindowSize window) 1 1 | Left err => pure (Left err)
+  True <- resize | False => Left <$> getError
+  True <- wait | False => Left <$> getError
+  Right () <- expect (getWindowSize window) 53 31 | Left err => pure (Left err)
+  -- Waiting with no pending change also succeeds on the dummy driver.
+  True <- wait | False => Left <$> getError
+  pure (Right ())
+
 reuseTests : Window -> IO (Either String ())
 reuseTests other = do
   -- Retain only copied Idris values outside both native lifetimes.
   copied <- withWindow "size reuse" 37 23 hidden $ \window => do
-    Right (MkWindowID identifier) <- getWindowID window | Left err => pure (Left err)
     let windowQuery = getWindowSize window
     let pixelQuery = getWindowSizeInPixels window
     Right initial <- windowQuery | Left err => pure (Left err)
     Right () <- expect pixelQuery 37 23 | Left err => pure (Left err)
-    1 <- primIO (prim__resizeWindow identifier 53 31) | _ => Left <$> getError
+    Right () <- resizeChecks window | Left err => pure (Left err)
     Right () <- expect windowQuery 53 31 | Left err => pure (Left err)
     Right () <- expect pixelQuery 53 31 | Left err => pure (Left err)
     Right () <- expect (getWindowSize other) 64 64 | Left err => pure (Left err)
@@ -57,11 +82,41 @@ reuseTests other = do
   if w == 37 && h == 23 then pure (Right ())
      else pure (Left "Size changed after storage reuse or destruction")
 
+findResize : EventBuffer -> WindowID -> Nat -> IO (Either String ())
+findResize buffer identifier Z = pure (Left "Resize event was not found within the test limit")
+findResize buffer identifier (S remaining) = do
+  event <- pollEventData buffer
+  case event of
+    -- A poll-cycle boundary can precede events queued since the previous poll.
+    Nothing => findResize buffer identifier remaining
+    Just (WindowResizedEvent _ (MkWindowSizeData target width height)) =>
+      if target == identifier && width == 53 && height == 31 then pure (Right ())
+         else findResize buffer identifier remaining
+    _ => findResize buffer identifier remaining
+
+rendererResize : IO (Either String ())
+rendererResize = withWindow "renderer resize" 37 23 (hidden <+> resizable) $ \window =>
+  withRenderer window $ \renderer =>
+    withTargetTexture renderer 7 9 $ \texture =>
+      withEventBuffer $ \buffer => do
+        Right identifier <- getWindowID window | Left err => pure (Left err)
+        Right () <- withRenderTarget renderer (Just texture) (do
+          True <- setRenderLogicalPresentation renderer 4 3 PresentationStretch | False => Left <$> getError
+          True <- setWindowSize window (MkSize 53 31) | False => Left <$> getError
+          True <- syncWindow window | False => Left <$> getError
+          Right () <- expect (getWindowSize window) 53 31 | Left err => pure (Left err)
+          Right () <- expect (getWindowSizeInPixels window) 53 31 | Left err => pure (Left err)
+          expect (getTextureSize texture) 7 9) | Left err => pure (Left err)
+        Right after <- getWindowID window | Left err => pure (Left err)
+        if after /= identifier then pure (Left "Window resizing changed its identifier")
+           else findResize buffer identifier 256
+
 export
 sizeTests : Window -> Renderer -> IO (Either String ())
 sizeTests window renderer = do
   Right () <- layoutTests | Left err => pure (Left err)
   Right () <- reuseTests window | Left err => pure (Left err)
+  Right () <- rendererResize | Left err => pure (Left err)
   Right () <- expect (getWindowSize window) 64 64 | Left err => pure (Left err)
   -- Dummy video uses one physical pixel per window coordinate.
   Right () <- expect (getWindowSizeInPixels window) 64 64 | Left err => pure (Left err)

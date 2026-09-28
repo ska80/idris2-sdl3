@@ -69,6 +69,14 @@ int idris_sdl_is_null(const void* ptr) {
     return ptr == NULL;
 }
 
+int idris_sdl_set_window_size(SDL_Window* window, Sint32 width, Sint32 height) {
+    return SDL_SetWindowSize(window, width, height);
+}
+
+int idris_sdl_sync_window(SDL_Window* window) {
+    return SDL_SyncWindow(window);
+}
+
 IdrisSDLSize* idris_sdl_size_new(void) {
     IdrisSDLSize* size = SDL_calloc(1, sizeof(*size));
 

@@ -575,6 +575,34 @@ presentation.  A returned `Size` owns its values, not the window, and remains va
 destruction.  Its units do not track window identity or later resizing. If dimensions are zero,
 defer size-dependent drawing or allocation. Errors return through `Left`.
 
+`setWindowSize window (MkSize width height)` requests a new client-area size in window coordinates.
+Its size argument has type `Size WindowUnits`, not `Size PixelUnits`. Both `Int32` dimensions must
+be positive. Call it on the main thread while the window is alive. It returns `Bool`.  Read
+`getError` immediately after `False`. The C adapter only converts SDL's boolean result.
+
+A successful request does not guarantee an immediate or exact size change. The window system can
+delay, adjust, or deny it. SDL ignores this request for fullscreen or maximized windows.  Query the
+actual dimensions or handle resize events before updating size-dependent resources.  The request
+does not change the meaning of drawing coordinates or texture dimensions.
+
+`syncWindow window` waits for pending window state on the main thread and returns `Bool`.  It can
+block for window-system animations, or return `False` on timeout. Read `getError` after failure. On
+systems that apply changes immediately, it does nothing. It does not synchronize GPU work or
+guarantee the exact requested dimensions. Avoid adding this wait to every frame.
+
+When you need to wait before querying the result, use both calls explicitly:
+
+```idris
+resizeAndRead : Window -> Size WindowUnits -> IO (Either String (Size WindowUnits))
+resizeAndRead window dimensions = do
+  True <- setWindowSize window dimensions | False => Left <$> getError
+  True <- syncWindow window | False => Left <$> getError
+  getWindowSize window
+```
+
+Neither adapter allocates native output storage. SDL can still allocate internal window or rendering
+resources. Existing copied sizes remain snapshots, not live views of the resized window.
+
 Each window owns one native size struct, allocated during `createWindow` and freed by
 `destroyWindow`. If SDL window creation fails, the binding frees this storage and preserves the
 error.  Both queries reuse the same struct. C fills it and returns success separately. Chez reads
@@ -913,6 +941,18 @@ and repeated composition. Integration tests apply a composed mode through both s
 and handle either support or rejection. Compile-time tests reject swapped factors and operations,
 and filtering modes used as equations. The software tests cover custom-mode rejection, not hardware
 rendering with custom equations.
+
+Window-resize tests use the public size request and synchronization calls instead of a private
+fixture. They cover repeated actions, one-unit dimensions, rejected zero and negative dimensions,
+unchanged size after rejection, stable window identifiers, and independent windows. A renderer test
+resizes a window while a texture target is selected, then checks the window, pixel, and texture
+sizes.  It also receives the real resize event through a reusable buffer, across SDL poll-cycle
+boundaries.  Native tests cover null-window failures. Compile-time tests reject pixel-unit sizes and
+wrong handles.
+
+These tests use the dummy window system, which applies size changes immediately. Window-manager
+adjustments, denied requests, synchronization timeouts, fullscreen behavior, and real
+display-density changes still need manual tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

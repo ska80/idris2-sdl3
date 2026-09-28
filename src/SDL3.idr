@@ -302,6 +302,21 @@ createWindow title width height flags =
      then pure (Left "Window dimensions must be positive 32-bit integers")
      else newWindow title width height flags
 
+||| Request positive window-coordinate dimensions, not pixel dimensions, on the main thread.
+||| The window system can delay, adjust, or deny the request. True does not guarantee the requested size.
+||| Use syncWindow if you need to wait, then query the actual dimensions. Read getError after False.
+export
+setWindowSize : Window -> Size WindowUnits -> IO Bool
+setWindowSize (MkWindow ptr _) (MkSize width height) =
+  (/= 0) <$> primIO (prim__setWindowSize ptr width height)
+
+||| Wait for pending window state on the main thread. This can block for window-system animations.
+||| Does nothing when changes are immediate. False can indicate a timeout. Read getError after False.
+||| Does not synchronize GPU work or guarantee that a size request was granted exactly.
+export
+syncWindow : Window -> IO Bool
+syncWindow (MkWindow ptr _) = (/= 0) <$> primIO (prim__syncWindow ptr)
+
 ||| Do not use the window after this call. Destroy its renderer first.
 export
 destroyWindow : Window -> IO ()

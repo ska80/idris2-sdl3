@@ -26,6 +26,14 @@ prim__isNull : AnyPtr -> PrimIO Int
 export
 prim__createWindow : String -> Int -> Int -> Bits64 -> PrimIO AnyPtr
 
+%foreign "C:idris_sdl_set_window_size, libidris2_sdl3, sdl3.h"
+export
+prim__setWindowSize : AnyPtr -> Int32 -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_sync_window, libidris2_sdl3, sdl3.h"
+export
+prim__syncWindow : AnyPtr -> PrimIO Int
+
 %foreign "C:SDL_DestroyWindow, libSDL3, SDL3/SDL.h"
 export
 prim__destroyWindow : AnyPtr -> PrimIO ()

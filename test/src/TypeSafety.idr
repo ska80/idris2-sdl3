@@ -234,6 +234,18 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  pixelResize : Window -> Size PixelUnits -> IO Bool
+  pixelResize window dimensions = setWindowSize window dimensions
+
+failing "Mismatch between"
+  rendererResize : Renderer -> Size WindowUnits -> IO Bool
+  rendererResize renderer dimensions = setWindowSize renderer dimensions
+
+failing "Mismatch between"
+  rendererWindowSync : Renderer -> IO Bool
+  rendererWindowSync renderer = syncWindow renderer
+
+failing "Mismatch between"
   wrongSizeUnits : Window -> IO (Either String (Size PixelUnits))
   wrongSizeUnits window = getWindowSize window
 

@@ -57,14 +57,6 @@ void idris_test_size_fields(IdrisSDLSize* size, Sint32 width, Sint32 height) {
     size->height = height;
 }
 
-int idris_test_resize_window(Uint32 identifier, Sint32 width, Sint32 height) {
-    SDL_Window* window = SDL_GetWindowFromID(identifier);
-
-    if (!SDL_SetWindowSize(window, width, height)) return 0;
-
-    return SDL_SyncWindow(window);
-}
-
 /* Used only on the main thread. No callback enters Idris. */
 static SDL_Texture* watched_targets[3];
 

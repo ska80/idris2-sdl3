@@ -7,7 +7,6 @@ SDL_Texture* idris_test_texture_fields(Sint32 width, Sint32 height);
 SDL_Texture* idris_test_null_texture(void);
 Uint32 idris_test_compose_blend(int slot, int choice);
 void idris_test_size_fields(IdrisSDLSize* size, Sint32 width, Sint32 height);
-int  idris_test_resize_window(Uint32 identifier, Sint32 width, Sint32 height);
 
 int idris_test_pixel_near(Uint32 window_id, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a, Uint8 tolerance);
 
