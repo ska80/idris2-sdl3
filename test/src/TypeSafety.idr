@@ -234,6 +234,14 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererRaiseRequest : Renderer -> IO Bool
+  rendererRaiseRequest renderer = raiseWindow renderer
+
+failing "Mismatch between"
+  textureKeyboardFocus : Texture access -> IO Bool
+  textureKeyboardFocus texture = hasKeyboardFocus texture
+
+failing "Mismatch between"
   rendererFullscreenRequest : Renderer -> IO Bool
   rendererFullscreenRequest renderer = setWindowFullscreen renderer True
 

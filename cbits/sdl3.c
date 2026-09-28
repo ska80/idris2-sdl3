@@ -8,6 +8,8 @@ _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
 
 _Static_assert(sizeof(SDL_WindowFlags) == 8, "Bindings require 64-bit SDL window flags");
 
+_Static_assert(SDL_WINDOW_INPUT_FOCUS == 0x200, "Keyboard-focus mask must match the Idris query");
+
 _Static_assert(sizeof(SDL_ScaleMode) == 4, "Bindings require 32-bit SDL scale mode codes");
 
 _Static_assert(sizeof(SDL_BlendMode) == 4, "Bindings require 32-bit SDL blend mode codes");
@@ -77,6 +79,10 @@ double idris_sdl_get_window_pixel_density(SDL_Window* window) {
 
 double idris_sdl_get_window_display_scale(SDL_Window* window) {
     return (double)SDL_GetWindowDisplayScale(window);
+}
+
+int idris_sdl_raise_window(SDL_Window* window) {
+    return SDL_RaiseWindow(window);
 }
 
 int idris_sdl_set_window_fullscreen(SDL_Window* window, Sint32 fullscreen) {

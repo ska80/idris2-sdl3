@@ -564,10 +564,26 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
-Keyboard focus identifies the window that receives keyboard input.  `WindowFocusGainedEvent
-timestamp identifier` and `WindowFocusLostEvent timestamp identifier` report changes in that
-focus. Their copied values contain a nanosecond timestamp and `WindowID`.  They do not report mouse
-entry, mouse exit, window visibility, or minimization.
+Keyboard focus identifies the window that receives keyboard input.  `raiseWindow window` requests
+that SDL raise a window above others and give it keyboard focus.  It returns `IO Bool`. Call it on
+the main thread with a live window. If it returns `False`, read `getError`
+immediately. Window-manager policy can reject focus changes. A `True` result does not prove that
+stacking or focus changed. Use `showWindow` separately when the window is hidden.
+
+`hasKeyboardFocus window` returns `IO Bool` from SDL's `SDL_WINDOW_INPUT_FOCUS` flag.  Its result is
+a state, not a success indicator. Call it on the main thread while the window is alive.  Process
+events normally to keep SDL's reported state current. The query does not report mouse focus, window
+visibility, or whether other windows cover it. Its copied result survives window destruction but
+does not track later changes.
+
+The raise adapter only converts SDL's boolean result to a C integer. The focus query uses the direct
+window-flag binding, with its bit mask checked against the SDL header during the native build.
+Neither allocates native output storage. Keep textures and their renderer alive while using them,
+then destroy them before their window. Raising does not transfer resource ownership.
+
+`WindowFocusGainedEvent timestamp identifier` and `WindowFocusLostEvent timestamp identifier` report
+changes in that focus. Their copied values contain a nanosecond timestamp and `WindowID`.  They do
+not report mouse entry, mouse exit, window visibility, or minimization.
 
 Match the identifier to your window before changing application input state.  On lost focus, you can
 clear your application's held-key state or pause keyboard-driven actions.  The binding does not
@@ -1245,6 +1261,14 @@ retain a selected texture target and its pixels across transitions. Native tests
 input conversion and null-window failure. Compile-time tests reject wrong handles and flag
 arguments.  These tests do not establish exclusive display-mode changes, GPU resource survival on
 all backends, or window-manager denial and synchronization failures. Those paths need manual tests.
+
+Raise and focus-query tests cover hidden and shown windows, repeated requests, cached actions,
+stable identifiers and titles, and copied states after cleanup. Under the dummy driver, showing
+windows transfers keyboard focus, but raising succeeds without changing it. Tests preserve that
+behavior rather than assuming successful requests gain focus. They also draw with an existing
+renderer and texture target after raising. Native tests cover null-window failure and hidden-window
+raising. Compile-time tests reject wrong handles. Real stacking, focus-policy decisions, and focus
+changes between applications need manual testing.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

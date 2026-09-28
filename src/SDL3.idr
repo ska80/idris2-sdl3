@@ -361,6 +361,22 @@ export
 setWindowTitle : Window -> String -> IO Bool
 setWindowTitle (MkWindow ptr _) title = (/= 0) <$> primIO (prim__setWindowTitle ptr title)
 
+||| Request that a live window be raised and gain keyboard focus on the main thread.
+||| Window-manager policy can deny focus. True does not prove that focus changed.
+||| Read getError immediately after False. Use showWindow separately for a hidden window.
+export
+raiseWindow : Window -> IO Bool
+raiseWindow (MkWindow ptr _) = (/= 0) <$> primIO (prim__raiseWindow ptr)
+
+||| Read SDL_WINDOW_INPUT_FOCUS on the main thread, while the window is alive.
+||| Returns a state, not a success indicator. This is keyboard focus, not mouse focus or visibility.
+export
+hasKeyboardFocus : Window -> IO Bool
+hasKeyboardFocus (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  -- The native build checks this SDL mask. It is not a window creation flag.
+  pure ((flags .&. 0x200) /= 0)
+
 ||| Request fullscreen (True) or windowed mode (False) on the main thread.
 ||| Keep the window alive. Read getError immediately after False.
 ||| A successful request can be delayed or denied. Use events or syncWindow to observe completion.

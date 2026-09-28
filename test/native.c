@@ -13,6 +13,8 @@ static void size_tests(void) {
     assert(idris_sdl_get_window_pixel_density(window) == 1.0);
     assert(idris_sdl_get_window_display_scale(window) == 1.0);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
+    assert(idris_sdl_raise_window(window) == 1);
+    assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0);
     assert(idris_sdl_show_window(window) == 1);
     assert((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) == 0);
     assert(idris_sdl_hide_window(window) == 1);
@@ -122,6 +124,8 @@ int main(void) {
     assert(idris_sdl_get_window_pixel_density(NULL) == 0.0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_get_window_display_scale(NULL) == 0.0);
+    assert(SDL_GetError()[0] != '\0');
+    assert(idris_sdl_raise_window(NULL) == 0);
     assert(SDL_GetError()[0] != '\0');
     assert(idris_sdl_set_window_fullscreen(NULL, 1) == 0);
     assert(SDL_GetError()[0] != '\0');
