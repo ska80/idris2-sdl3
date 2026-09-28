@@ -14,6 +14,15 @@ import System.FFI
 export
 data Window = MkWindow AnyPtr NativeSize
 
+||| Request or cancel a window's attention indication. Appearance and duration depend on the platform.
+public export
+data FlashOperation = CancelFlash | FlashBriefly | FlashUntilFocused
+
+flashOperationCode : FlashOperation -> Int32
+flashOperationCode CancelFlash = 0
+flashOperationCode FlashBriefly = 1
+flashOperationCode FlashUntilFocused = 2
+
 ||| Owned renderer. Its window must remain alive.
 export
 data Renderer = MkRenderer AnyPtr
@@ -396,6 +405,14 @@ isWindowMaximized : Window -> IO Bool
 isWindowMaximized (MkWindow ptr _) = do
   flags <- primIO (prim__getWindowFlags ptr)
   pure ((flags .&. 0x80) /= 0)
+
+||| Request or cancel user attention for a live window on the main thread.
+||| Read getError immediately after False. Unsupported platforms can reject every operation, including cancellation.
+||| Does not request keyboard focus, raise the window, or wait for the indication to finish.
+export
+flashWindow : Window -> FlashOperation -> IO Bool
+flashWindow (MkWindow ptr _) operation =
+  (/= 0) <$> primIO (prim__flashWindow ptr (flashOperationCode operation))
 
 ||| Request always-on-top placement (True) or remove it (False) on the main thread.
 ||| Keep the window alive. Read getError immediately after False.

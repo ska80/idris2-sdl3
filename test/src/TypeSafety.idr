@@ -234,6 +234,22 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererFlashRequest : Renderer -> IO Bool
+  rendererFlashRequest renderer = flashWindow renderer FlashBriefly
+
+failing "Mismatch between"
+  booleanFlashRequest : Window -> IO Bool
+  booleanFlashRequest window = flashWindow window True
+
+failing "Mismatch between"
+  flagsFlashRequest : Window -> IO Bool
+  flagsFlashRequest window = flashWindow window alwaysOnTop
+
+failing "Mismatch between"
+  flashAsCreationFlags : IO (Either String Window)
+  flashAsCreationFlags = createWindow "wrong flags" 16 16 FlashUntilFocused
+
+failing "Mismatch between"
   rendererAlwaysOnTopRequest : Renderer -> IO Bool
   rendererAlwaysOnTopRequest renderer = setWindowAlwaysOnTop renderer True
 

@@ -564,6 +564,23 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+`flashWindow window operation` returns `IO Bool` and requests an indication that asks for user
+attention. The operation has type `FlashOperation`. `FlashBriefly` requests a brief indication.
+`FlashUntilFocused` requests one until the window gains focus. `CancelFlash` requests cancellation.
+
+The window system determines the indication's appearance and brief duration. This is not a drawing
+operation or a request to raise the window and give it focus. The call does not wait for completion.
+
+Call `flashWindow` on the main thread with a live window. If it returns `False`, read `getError`
+immediately. A `True` result does not prove that the user saw an indication. Unsupported platforms
+can reject every operation, including cancellation. The dummy driver does so in these tests.  There
+is no flash-state query or automatic retry in this binding.
+
+The adapter converts a fixed-width operation code to SDL's enum and widens its boolean result.  The
+native build checks the three codes against SDL headers. It allocates no native output storage and
+creates no caller-owned resource. Keep the window alive for cancellation too. Do not call it after
+window destruction. Normal cleanup order remains textures, renderer, then window.
+
 `alwaysOnTop` is a `WindowFlags` value that requests always-on-top placement at creation.  Combine
 it with other window flags, for example `hidden <+> alwaysOnTop`.  `setWindowAlwaysOnTop window
 enabled` returns `IO Bool`. With `enabled = True`, it requests that the window stay above
@@ -1328,6 +1345,13 @@ state, and drawing with an existing texture target. Native tests cover null-wind
 zero/nonzero inputs. Compile-time tests reject wrong handles, flags used as booleans, and window
 flags used for initialization. Actual desktop stacking and successful flag changes need manual
 tests.
+
+Flash tests cover all three operations, repeated and cached requests, shown and hidden windows, and
+the dummy driver's rejection errors. They preserve focus, hidden and stacking flags, identity,
+title, dimensions, and use of an existing renderer and texture target. Native tests cover all three
+codes and null-window errors with cleared error state. Compile-time tests reject wrong handles,
+booleans or flags as operations, and flash operations as creation flags. Visible indications,
+backend acceptance, brief duration, cancellation, and stopping on focus need manual platform tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

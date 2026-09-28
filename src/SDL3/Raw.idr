@@ -74,6 +74,11 @@ prim__maximizeWindow : AnyPtr -> PrimIO Int
 export
 prim__restoreWindow : AnyPtr -> PrimIO Int
 
+||| SDL flash codes: cancel 0, briefly 1, until focused 2. Result is a widened C boolean.
+%foreign "C:idris_sdl_flash_window, libidris2_sdl3, sdl3.h"
+export
+prim__flashWindow : AnyPtr -> Int32 -> PrimIO Int
+
 %foreign "C:idris_sdl_set_window_always_on_top, libidris2_sdl3, sdl3.h"
 export
 prim__setWindowAlwaysOnTop : AnyPtr -> Int32 -> PrimIO Int

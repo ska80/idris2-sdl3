@@ -12,6 +12,8 @@ _Static_assert(SDL_WINDOW_INPUT_FOCUS == 0x200, "Keyboard-focus mask must match 
 
 _Static_assert(SDL_WINDOW_ALWAYS_ON_TOP == 0x10000, "Always-on-top mask must match the Idris flag");
 
+_Static_assert(SDL_FLASH_CANCEL == 0 && SDL_FLASH_BRIEFLY == 1 && SDL_FLASH_UNTIL_FOCUSED == 2, "Flash operation codes must match Idris");
+
 _Static_assert(SDL_WINDOW_MINIMIZED == 0x40, "Minimized mask must match the Idris query");
 
 _Static_assert(SDL_WINDOW_MAXIMIZED == 0x80, "Maximized mask must match the Idris query");
@@ -97,6 +99,10 @@ int idris_sdl_maximize_window(SDL_Window* window) {
 
 int idris_sdl_restore_window(SDL_Window* window) {
     return SDL_RestoreWindow(window);
+}
+
+int idris_sdl_flash_window(SDL_Window* window, Sint32 operation) {
+    return SDL_FlashWindow(window, (SDL_FlashOperation)operation);
 }
 
 int idris_sdl_set_window_always_on_top(SDL_Window* window, Sint32 enabled) {

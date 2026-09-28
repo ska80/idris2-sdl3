@@ -9,6 +9,20 @@ static void size_tests(void) {
     SDL_Window* window = SDL_CreateWindow("size storage", 37, 23, SDL_WINDOW_HIDDEN);
     assert(window);
 
+    const SDL_FlashOperation flashes[] = {SDL_FLASH_CANCEL, SDL_FLASH_BRIEFLY, SDL_FLASH_UNTIL_FOCUSED};
+
+    for (int i = 0; i < 3; ++i) {
+        SDL_ClearError();
+
+        assert(idris_sdl_flash_window(NULL, (Sint32)flashes[i]) == 0);
+        assert(SDL_GetError()[0] != '\0');
+
+        SDL_ClearError();
+
+        /* Flashing, including cancellation, is unsupported on the dummy driver. */
+        assert(idris_sdl_flash_window(window, (Sint32)flashes[i]) == 0);
+        assert(SDL_GetError()[0] != '\0');
+    }
     int (*state_requests[])(SDL_Window*) = {idris_sdl_minimize_window, idris_sdl_maximize_window, idris_sdl_restore_window};
 
     for (int i = 0; i < 3; ++i) {
