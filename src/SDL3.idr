@@ -406,6 +406,22 @@ isWindowMaximized (MkWindow ptr _) = do
   flags <- primIO (prim__getWindowFlags ptr)
   pure ((flags .&. 0x80) /= 0)
 
+||| Set a live window's opacity on the main thread. Zero is transparent, one is opaque.
+||| Clamps to 0..1 before conversion to SDL float, including infinities. Rejects NaN without changing state.
+||| Unsupported setters can fail. Read getError immediately after False. This is not texture alpha modulation.
+export
+setWindowOpacity : Window -> Double -> IO Bool
+setWindowOpacity (MkWindow ptr _) opacity = (/= 0) <$> primIO (prim__setWindowOpacity ptr opacity)
+
+||| Query a live window's opacity on the main thread. Copies the SDL error on failure.
+||| Unsupported transparency returns Right 1.0, not an error. SDL float precision is widened to Double.
+||| The copied value survives window destruction but does not track later changes.
+export
+getWindowOpacity : Window -> IO (Either String Double)
+getWindowOpacity (MkWindow ptr _) = do
+  value <- primIO (prim__getWindowOpacity ptr)
+  if value == -1.0 then Left <$> getError else pure (Right value)
+
 ||| Request or cancel user attention for a live window on the main thread.
 ||| Read getError immediately after False. Unsupported platforms can reject every operation, including cancellation.
 ||| Does not request keyboard focus, raise the window, or wait for the indication to finish.

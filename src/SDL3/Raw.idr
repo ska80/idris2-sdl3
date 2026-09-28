@@ -74,6 +74,16 @@ prim__maximizeWindow : AnyPtr -> PrimIO Int
 export
 prim__restoreWindow : AnyPtr -> PrimIO Int
 
+||| Clamps before conversion to SDL float. Rejects NaN. Result is a widened C boolean.
+%foreign "C:idris_sdl_set_window_opacity, libidris2_sdl3, sdl3.h"
+export
+prim__setWindowOpacity : AnyPtr -> Double -> PrimIO Int
+
+||| SDL float widened to Double. -1 means failure, with an SDL error.
+%foreign "C:idris_sdl_get_window_opacity, libidris2_sdl3, sdl3.h"
+export
+prim__getWindowOpacity : AnyPtr -> PrimIO Double
+
 ||| SDL flash codes: cancel 0, briefly 1, until focused 2. Result is a widened C boolean.
 %foreign "C:idris_sdl_flash_window, libidris2_sdl3, sdl3.h"
 export

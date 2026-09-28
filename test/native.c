@@ -1,6 +1,8 @@
 #include "sdl3.h"
 
 #include <assert.h>
+#include <float.h>
+#include <math.h>
 #include <stdio.h>
 
 static void size_tests(void) {
@@ -8,6 +10,34 @@ static void size_tests(void) {
 
     SDL_Window* window = SDL_CreateWindow("size storage", 37, 23, SDL_WINDOW_HIDDEN);
     assert(window);
+
+    assert(idris_sdl_get_window_opacity(window) == (double)SDL_GetWindowOpacity(window));
+    assert(idris_sdl_get_window_opacity(window) == 1.0);
+
+    const double opacities[] = {0.0, 0.5, 1.0, -2.0, 2.0, -DBL_MAX, DBL_MAX, -INFINITY, INFINITY};
+
+    for (unsigned i = 0; i < sizeof(opacities) / sizeof(opacities[0]); ++i) {
+        SDL_ClearError();
+
+        assert(idris_sdl_set_window_opacity(window, opacities[i]) == 0);
+        assert(SDL_GetError()[0] != '\0');
+        assert(idris_sdl_get_window_opacity(window) == 1.0);
+    }
+
+    SDL_ClearError();
+
+    assert(idris_sdl_set_window_opacity(window, NAN) == 0);
+    assert(SDL_strcmp(SDL_GetError(), "Window opacity must not be NaN") == 0);
+    assert(idris_sdl_get_window_opacity(window) == 1.0);
+
+    SDL_ClearError();
+    assert(idris_sdl_get_window_opacity(NULL) == -1.0);
+    assert(SDL_GetError()[0] != '\0');
+
+    SDL_ClearError();
+
+    assert(idris_sdl_set_window_opacity(NULL, 0.5) == 0);
+    assert(SDL_GetError()[0] != '\0');
 
     const SDL_FlashOperation flashes[] = {SDL_FLASH_CANCEL, SDL_FLASH_BRIEFLY, SDL_FLASH_UNTIL_FOCUSED};
 

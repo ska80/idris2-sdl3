@@ -234,6 +234,22 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  textureWindowOpacity : Texture access -> IO Bool
+  textureWindowOpacity texture = setWindowOpacity texture 0.5
+
+failing "Mismatch between"
+  rendererWindowOpacity : Renderer -> IO (Either String Double)
+  rendererWindowOpacity renderer = getWindowOpacity renderer
+
+failing "Mismatch between"
+  byteWindowOpacity : Window -> Bits8 -> IO Bool
+  byteWindowOpacity window alpha = setWindowOpacity window alpha
+
+failing "Mismatch between"
+  windowOpacityAsAlpha : Window -> IO (Either String Bits8)
+  windowOpacityAsAlpha window = getWindowOpacity window
+
+failing "Mismatch between"
   rendererFlashRequest : Renderer -> IO Bool
   rendererFlashRequest renderer = flashWindow renderer FlashBriefly
 

@@ -564,6 +564,25 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+Window opacity controls how transparent the whole window appears. `setWindowOpacity window value`
+returns `IO Bool` and accepts a `Double`. Zero is transparent and one is opaque. Values outside 0..1
+are clamped to that range, including infinities. NaN, a value that means "not a number", is rejected
+with an SDL error before changing the window. This is separate from texture alpha modulation.
+
+`getWindowOpacity window` returns `IO (Either String Double)`. SDL reports 1.0 without error when
+transparency is unsupported. The query returning `Right 1.0` does not establish setter support.  The
+dummy driver rejects every tested setter value, including 1.0, while its getter returns 1.0.
+
+Call both functions on the main thread with a live window. After a setter returns `False`, read
+`getError` immediately. The getter copies SDL's error into `Left` on failure. Successful getter
+results remain valid after window destruction but do not track later changes. Opacity alone does not
+guarantee visibility, keyboard focus, or any particular mouse-input behavior.
+
+SDL uses C `float`, while Idris uses `Double`. The setter clamps before narrowing to avoid
+converting large doubles outside the float range. The getter widens SDL's float without adding
+precision.  The adapters allocate no native output storage. SDL and the window system can perform
+work internally.  Normal cleanup order still applies: textures, renderer, then window.
+
 `flashWindow window operation` returns `IO Bool` and requests an indication that asks for user
 attention. The operation has type `FlashOperation`. `FlashBriefly` requests a brief indication.
 `FlashUntilFocused` requests one until the window gains focus. `CancelFlash` requests cancellation.
@@ -1352,6 +1371,14 @@ title, dimensions, and use of an existing renderer and texture target. Native te
 codes and null-window errors with cleared error state. Compile-time tests reject wrong handles,
 booleans or flags as operations, and flash operations as creation flags. Visible indications,
 backend acceptance, brief duration, cancellation, and stopping on focus need manual platform tests.
+
+Window-opacity tests cover dummy-driver setter rejection, a successful getter despite a stale SDL
+error, cached queries, independent windows, and copied values after cleanup. Native tests include
+NaN rejection, infinities, values beyond float range, and null-window failures. Tests preserve
+window identity, title, dimensions, texture alpha, and use of an existing renderer and target.
+Compile-time tests reject wrong handles and byte alpha values used as opacity. Successful setter
+changes, fractional getter values, clamped results on a supported backend, and visible transparency
+need manual platform tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

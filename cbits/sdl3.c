@@ -101,6 +101,17 @@ int idris_sdl_restore_window(SDL_Window* window) {
     return SDL_RestoreWindow(window);
 }
 
+int idris_sdl_set_window_opacity(SDL_Window* window, double opacity) {
+    if (opacity != opacity) return SDL_SetError("Window opacity must not be NaN");
+    /* Apply SDL's range clamp before narrowing, including values beyond float range. */
+    opacity = SDL_clamp(opacity, 0.0, 1.0);
+    return SDL_SetWindowOpacity(window, (float)opacity);
+}
+
+double idris_sdl_get_window_opacity(SDL_Window* window) {
+    return (double)SDL_GetWindowOpacity(window);
+}
+
 int idris_sdl_flash_window(SDL_Window* window, Sint32 operation) {
     return SDL_FlashWindow(window, (SDL_FlashOperation)operation);
 }
