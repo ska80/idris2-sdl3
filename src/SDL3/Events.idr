@@ -186,6 +186,9 @@ data Event = QuitEvent Bits64
            -- Keyboard focus notifications, not mouse entry or visibility changes.
            | WindowFocusGainedEvent Bits64 WindowID
            | WindowFocusLostEvent Bits64 WindowID
+           -- Mouse focus notifications. No pointer position or mouse identifier is supplied.
+           | WindowMouseEnterEvent Bits64 WindowID
+           | WindowMouseLeaveEvent Bits64 WindowID
            | KeyboardEvent Bits64 KeyboardData
            | MouseMotionEvent Bits64 MouseMotionData
            | MouseButtonEvent Bits64 MouseButtonData

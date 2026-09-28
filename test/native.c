@@ -261,9 +261,10 @@ int main(void) {
     assert(idris_sdl_event_kind(&size_event) == 12);
     assert(idris_sdl_event_window(&size_event) == 0x80000001u);
 
-    const Uint32 focus_types[] = {SDL_EVENT_WINDOW_FOCUS_GAINED, SDL_EVENT_WINDOW_FOCUS_LOST};
+    const Uint32 focus_types[] = {SDL_EVENT_WINDOW_FOCUS_GAINED, SDL_EVENT_WINDOW_FOCUS_LOST,
+                                  SDL_EVENT_WINDOW_MOUSE_ENTER, SDL_EVENT_WINDOW_MOUSE_LEAVE};
 
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 4; ++i) {
         size_event.type = focus_types[i];
         assert(idris_sdl_event_kind(&size_event) == 14 + i);
         assert(idris_sdl_event_type(&size_event) == focus_types[i]);

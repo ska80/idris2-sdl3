@@ -249,6 +249,8 @@ data EventType = QuitRequested
                | WindowDisplayScaleChanged
                | WindowFocusGained
                | WindowFocusLost
+               | WindowMouseEnter
+               | WindowMouseLeave
                | KeyDown
                | KeyUp
                | MouseMotion
@@ -948,6 +950,8 @@ pollEvent (MkEventBuffer ptr) = do
       13 => pure WindowDisplayScaleChanged
       14 => pure WindowFocusGained
       15 => pure WindowFocusLost
+      16 => pure WindowMouseEnter
+      17 => pure WindowMouseLeave
       _ => OtherEvent <$> primIO (prim__eventType ptr)
     pure (Just event)
 
@@ -1054,6 +1058,12 @@ eventData ptr = do
     15 => do
       window <- MkWindowID <$> primIO (prim__eventWindow ptr)
       pure (WindowFocusLostEvent timestamp window)
+    16 => do
+      window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+      pure (WindowMouseEnterEvent timestamp window)
+    17 => do
+      window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+      pure (WindowMouseLeaveEvent timestamp window)
     _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
 
 ||| Consume one event on the main thread. Nothing means the queue is empty.

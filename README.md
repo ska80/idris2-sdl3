@@ -580,6 +580,22 @@ on the main thread and reuse the caller-owned event buffer.  Copied notification
 reuse and destruction. No new native storage is allocated for each notification. Update exhaustive
 matches for the two new type-only and two new payload constructors.
 
+`WindowMouseEnterEvent timestamp identifier` reports that a window gained mouse focus.
+`WindowMouseLeaveEvent timestamp identifier` reports that it lost mouse focus.  Both carry a copied
+nanosecond timestamp and `WindowID`. They contain no position, mouse device identifier, movement, or
+button state. They are distinct from keyboard-focus and mouse-motion events.
+
+Match the window identifier before updating application hover state. A leave notification is not a
+button release. The decoder does not clear application state or change SDL's input configuration.
+Queued notifications describe past changes, and their identifiers do not keep windows alive.  A zero
+identifier means no associated window.
+
+`pollEvent` returns the type-only `WindowMouseEnter` or `WindowMouseLeave` constructor.  Payload
+polling and both wait APIs decode the corresponding events through the shared decoder.  Use the
+caller-owned buffer on the main thread. Copied values survive buffer reuse and destruction, without
+new native storage for each notification. Update exhaustive matches for these four new
+constructors. Actual pointer movement, mouse capture, and relative mouse mode need platform tests.
+
 `showWindow window` and `hideWindow window` return `IO Bool`. Call them on the main thread while the
 window is alive, and read `getError` immediately after `False`. Hiding does not destroy the window,
 renderer, or textures. Keep their normal cleanup order and show the same window again when
@@ -1096,6 +1112,13 @@ identifiers, and copied values after buffer cleanup. Native tests cover the SDL 
 window fields. Compile-time tests reject owned windows or keycodes used as focus-event identifiers.
 Synthetic events do not establish window-manager focus behavior. Actual focus transfers between
 windows or applications need manual testing.
+
+Mouse-focus tests cover entry and departure through type-only polling, payload polling, and both
+wait APIs. They preserve distinct high-bit identifiers, zero identifiers, and timestamps above 32
+bits. Copied values survive buffer reuse and destruction. Synthetic window events contain extreme
+unused integer fields, not mouse-motion payloads. Native tests cover classification and window
+access. Compile-time tests reject owned windows and motion records as event identifiers.  These
+tests do not simulate real pointer movement or establish mouse-capture behavior.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

@@ -234,6 +234,14 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  windowAsMouseEntryIdentifier : Bits64 -> Window -> Event
+  windowAsMouseEntryIdentifier timestamp window = WindowMouseEnterEvent timestamp window
+
+failing "Mismatch between"
+  motionAsMouseDepartureIdentifier : Bits64 -> MouseMotionData -> Event
+  motionAsMouseDepartureIdentifier timestamp motion = WindowMouseLeaveEvent timestamp motion
+
+failing "Mismatch between"
   windowAsFocusIdentifier : Bits64 -> Window -> Event
   windowAsFocusIdentifier timestamp window = WindowFocusGainedEvent timestamp window
 

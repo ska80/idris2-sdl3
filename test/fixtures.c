@@ -329,6 +329,17 @@ int idris_test_queue_event(int kind) {
         event.edit.length = kind == 14 ? 2 : -1;
         break;
 
+    case 28:
+    case 29:
+    case 30:
+    case 31:
+        event.type = (kind == 28 || kind == 30) ? SDL_EVENT_WINDOW_MOUSE_ENTER : SDL_EVENT_WINDOW_MOUSE_LEAVE;
+        event.window.windowID = kind >= 30 ? 0 : kind == 28 ? 0x80000001u : 0xffffffffu;
+        /* These are window events, not mouse motion events. */
+        event.window.data1 = SDL_MIN_SINT32;
+        event.window.data2 = SDL_MAX_SINT32;
+        break;
+
     case 24:
     case 25:
     case 26:
