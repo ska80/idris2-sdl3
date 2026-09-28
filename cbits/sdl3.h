@@ -13,6 +13,8 @@ IDRIS_SDL3 char* idris_sdl_get_error(void);
 IDRIS_SDL3 int idris_sdl_set_window_size(SDL_Window* window, Sint32 width, Sint32 height);
 IDRIS_SDL3 int idris_sdl_sync_window(SDL_Window* window);
 IDRIS_SDL3 int idris_sdl_set_window_title(SDL_Window* window, const char* title);
+IDRIS_SDL3 int idris_sdl_show_window(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_hide_window(SDL_Window* window);
 
 IDRIS_SDL3 SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, int height);
 IDRIS_SDL3 SDL_Texture* idris_sdl_create_streaming_texture(SDL_Renderer* renderer, int width, int height);

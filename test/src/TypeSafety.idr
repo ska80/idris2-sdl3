@@ -234,6 +234,18 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  rendererShowWindow : Renderer -> IO Bool
+  rendererShowWindow renderer = showWindow renderer
+
+failing "Mismatch between"
+  textureHideWindow : Texture access -> IO Bool
+  textureHideWindow texture = hideWindow texture
+
+failing "Mismatch between"
+  flagsHiddenQuery : WindowFlags -> IO Bool
+  flagsHiddenQuery flags = isWindowHidden flags
+
+failing "Mismatch between"
   rendererTitleQuery : Renderer -> IO String
   rendererTitleQuery renderer = getWindowTitle renderer
 

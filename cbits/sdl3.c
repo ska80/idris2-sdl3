@@ -6,6 +6,8 @@
 
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
 
+_Static_assert(sizeof(SDL_WindowFlags) == 8, "Bindings require 64-bit SDL window flags");
+
 _Static_assert(sizeof(SDL_ScaleMode) == 4, "Bindings require 32-bit SDL scale mode codes");
 
 _Static_assert(sizeof(SDL_BlendMode) == 4, "Bindings require 32-bit SDL blend mode codes");
@@ -67,6 +69,14 @@ char* idris_sdl_get_error(void) {
 
 int idris_sdl_is_null(const void* ptr) {
     return ptr == NULL;
+}
+
+int idris_sdl_show_window(SDL_Window* window) {
+    return SDL_ShowWindow(window);
+}
+
+int idris_sdl_hide_window(SDL_Window* window) {
+    return SDL_HideWindow(window);
 }
 
 int idris_sdl_set_window_title(SDL_Window* window, const char* title) {

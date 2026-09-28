@@ -564,6 +564,20 @@ polling when the application must render continuously.
 Identifiers do not own windows or extend their lifetimes. A zero identifier in an event means no
 associated window.
 
+`showWindow window` and `hideWindow window` return `IO Bool`. Call them on the main thread while the
+window is alive, and read `getError` immediately after `False`. Hiding does not destroy the window,
+renderer, or textures. Keep their normal cleanup order and show the same window again when
+needed. Creating a window with `hidden` lets you prepare resources before showing it.
+
+`isWindowHidden window` returns `IO Bool` from SDL's `SDL_WINDOW_HIDDEN` flag. Its result is a
+state, not a success indicator. Call it on the main thread with a live window. `False` does not
+prove that the window is visible: it can be minimized or covered by other windows. Showing a window
+does not guarantee keyboard focus or immediate display by the window manager.
+
+The hidden-state query binds directly to `SDL_GetWindowFlags` and tests one bit of its 64-bit mask.
+The show/hide adapters only convert SDL boolean results to C integers. These bindings allocate no
+native output storage, but SDL and the window system can perform work internally.
+
 `getWindowTitle window` returns `IO String`. It copies SDL's UTF-8 title into an Idris string.  An
 empty result is valid for an untitled window, not an error marker. The copy remains valid after
 later title changes or window destruction. The getter binds directly to SDL, with no C adapter.
@@ -974,6 +988,12 @@ destruction.  They also change the title with an active texture target and confi
 stay unchanged.  Native tests cover setter failure for a null window. Compile-time tests reject
 renderer and texture handles used as windows. Visible title rendering still needs manual testing
 with a window manager.
+
+Window-visibility tests cover hidden and shown creation, other flag bits, repeated show/hide calls,
+cached actions, independent windows, copied state, and stable identity, title, and dimensions.  A
+pixel test uses an existing renderer and texture after hide/show. Native tests cover null-window
+failures. Compile-time tests reject wrong handles and flag values used as windows. The dummy driver
+tests SDL state, not focus, occlusion, minimization, or physical display behavior.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

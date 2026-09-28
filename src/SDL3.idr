@@ -5,6 +5,7 @@ import public SDL3.Flags
 import SDL3.Raw
 
 import Data.Buffer
+import Data.Bits
 import System.FFI
 
 %default total
@@ -345,6 +346,26 @@ getWindowTitle (MkWindow ptr _) = primIO (prim__getWindowTitle ptr)
 export
 setWindowTitle : Window -> String -> IO Bool
 setWindowTitle (MkWindow ptr _) title = (/= 0) <$> primIO (prim__setWindowTitle ptr title)
+
+||| Show a live window on the main thread. Read getError immediately after False.
+||| Does not guarantee keyboard focus or that other windows will not cover it.
+export
+showWindow : Window -> IO Bool
+showWindow (MkWindow ptr _) = (/= 0) <$> primIO (prim__showWindow ptr)
+
+||| Hide a live window on the main thread, without destroying it or its renderer.
+||| Read getError immediately after False. Show it again with showWindow.
+export
+hideWindow : Window -> IO Bool
+hideWindow (MkWindow ptr _) = (/= 0) <$> primIO (prim__hideWindow ptr)
+
+||| Read SDL_WINDOW_HIDDEN on the main thread, while the window is alive.
+||| False does not imply visibility: the window can be minimized or covered by another window.
+export
+isWindowHidden : Window -> IO Bool
+isWindowHidden (MkWindow ptr _) = do
+  flags <- primIO (prim__getWindowFlags ptr)
+  pure ((flags .&. windowBits hidden) /= 0)
 
 ||| Select SDL's default renderer. Call on the main thread.
 export

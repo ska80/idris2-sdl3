@@ -47,6 +47,19 @@ prim__getWindowTitle : AnyPtr -> PrimIO String
 export
 prim__setWindowTitle : AnyPtr -> String -> PrimIO Int
 
+||| Full SDL flag mask. Requires a live window on the main thread.
+%foreign "C:SDL_GetWindowFlags, libSDL3, SDL3/SDL.h"
+export
+prim__getWindowFlags : AnyPtr -> PrimIO Bits64
+
+%foreign "C:idris_sdl_show_window, libidris2_sdl3, sdl3.h"
+export
+prim__showWindow : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_hide_window, libidris2_sdl3, sdl3.h"
+export
+prim__hideWindow : AnyPtr -> PrimIO Int
+
 %foreign "C:SDL_GetWindowID, libSDL3, SDL3/SDL.h"
 export
 prim__getWindowID : AnyPtr -> PrimIO Bits32
