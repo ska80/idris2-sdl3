@@ -194,6 +194,18 @@ failing "Mismatch between"
   windowLineDrawing renderer start end = drawLine renderer start end
 
 failing "Mismatch between"
+  windowPointBatch : PointBuffer -> Point WindowSpace -> IO Bool
+  windowPointBatch buffer point = setPoint buffer 0 point
+
+failing "Mismatch between"
+  wrongPointBuffer : Renderer -> CoordinateBuffer -> IO Bool
+  wrongPointBuffer renderer buffer = drawPoints renderer buffer 1
+
+failing "Mismatch between"
+  signedPointCount : Renderer -> PointBuffer -> Int32 -> IO Bool
+  signedPointCount renderer buffer count = drawLines renderer buffer count
+
+failing "Mismatch between"
   integerOutline : Renderer -> Rect -> IO Bool
   integerOutline renderer rect = drawRect renderer (Just rect)
 
@@ -224,6 +236,10 @@ failing "Mismatch between"
 failing "Name SDL3.MkTexture is private"
   forgeTexture : AnyPtr -> Texture TargetAccess
   forgeTexture = MkTexture
+
+failing "Name SDL3.MkPointBuffer is private"
+  forgePointBuffer : AnyPtr -> PointBuffer
+  forgePointBuffer = MkPointBuffer
 
 failing "Name SDL3.MkWindow is private"
   forgeWindow : AnyPtr -> Window

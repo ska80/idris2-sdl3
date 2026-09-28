@@ -78,6 +78,14 @@ export
 withCoordinateBuffer : (CoordinateBuffer -> IO (Either String a)) -> IO (Either String a)
 withCoordinateBuffer = withResource newCoordinateBuffer freeCoordinateBuffer
 
+||| Allocate a point array for the callback and free it on Right or Left.
+||| Allocate outside the frame loop. Do not share, free, or retain the buffer.
+||| Draw on the main thread. Allocation failure skips the callback.
+||| Runtime exceptions and process exit do not guarantee cleanup.
+export
+withPointBuffer : Bits32 -> (PointBuffer -> IO (Either String a)) -> IO (Either String a)
+withPointBuffer capacity = withResource (newPointBuffer capacity) freePointBuffer
+
 ||| Load a BMP surface for the callback and destroy it on Right or Left.
 ||| Loading failure skips the callback. Do not destroy, share, or retain the surface.
 ||| A texture copied from the surface can outlive this callback, but not its renderer.

@@ -233,6 +233,26 @@ prim__getRenderVSync : AnyPtr -> PrimIO Int32
 export
 prim__present : AnyPtr -> PrimIO Int
 
+%foreign "C:idris_sdl_points_new, libidris2_sdl3, sdl3.h"
+export
+prim__pointsNew : Bits32 -> PrimIO AnyPtr
+
+%foreign "C:idris_sdl_points_free, libidris2_sdl3, sdl3.h"
+export
+prim__pointsFree : AnyPtr -> PrimIO ()
+
+%foreign "C:idris_sdl_points_set, libidris2_sdl3, sdl3.h"
+export
+prim__pointsSet : AnyPtr -> Bits32 -> Double -> Double -> PrimIO Int
+
+%foreign "C:idris_sdl_draw_points, libidris2_sdl3, sdl3.h"
+export
+prim__drawPoints : AnyPtr -> AnyPtr -> Bits32 -> PrimIO Int
+
+%foreign "C:idris_sdl_draw_lines, libidris2_sdl3, sdl3.h"
+export
+prim__drawLines : AnyPtr -> AnyPtr -> Bits32 -> PrimIO Int
+
 %foreign "C:idris_sdl_draw_point, libidris2_sdl3, sdl3.h"
 export
 prim__drawPoint : AnyPtr -> Double -> Double -> PrimIO Int

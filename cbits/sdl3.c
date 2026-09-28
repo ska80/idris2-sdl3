@@ -292,6 +292,70 @@ int idris_sdl_present(SDL_Renderer* r) {
     return SDL_RenderPresent(r);
 }
 
+struct IdrisSDLPoints {
+    Uint32     capacity;
+    SDL_FPoint values[];
+};
+
+IdrisSDLPoints* idris_sdl_points_new(Uint32 capacity) {
+    if (capacity == 0 || capacity > SDL_MAX_SINT32) {
+        SDL_SetError("Point buffer capacity must be between 1 and 2147483647");
+
+        return NULL;
+    }
+
+    size_t bytes;
+
+    if (!SDL_size_mul_check_overflow(capacity, sizeof(SDL_FPoint), &bytes) ||
+        !SDL_size_add_check_overflow(sizeof(IdrisSDLPoints), bytes, &bytes)) {
+        SDL_SetError("Point buffer capacity exceeds the native allocation limit");
+
+        return NULL;
+    }
+
+    IdrisSDLPoints* points = SDL_calloc(1, bytes);
+
+    if (!points) {
+        SDL_SetError("Cannot allocate point buffer");
+
+        return NULL;
+    }
+
+    points->capacity = capacity;
+
+    return points;
+}
+
+void idris_sdl_points_free(IdrisSDLPoints* points) {
+    SDL_free(points);
+}
+
+int idris_sdl_points_set(IdrisSDLPoints* points, Uint32 index, double x, double y) {
+    if (!points) return SDL_SetError("Point buffer is null");
+
+    if (index >= points->capacity) return SDL_SetError("Point buffer index is out of range");
+
+    points->values[index] = (SDL_FPoint){(float)x, (float)y};
+
+    return 1;
+}
+
+int idris_sdl_draw_points(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count) {
+    if (!points) return SDL_SetError("Point buffer is null");
+
+    if (count > points->capacity) return SDL_SetError("Point count exceeds buffer capacity");
+
+    return SDL_RenderPoints(renderer, points->values, (int)count);
+}
+
+int idris_sdl_draw_lines(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count) {
+    if (!points) return SDL_SetError("Point buffer is null");
+
+    if (count > points->capacity) return SDL_SetError("Point count exceeds buffer capacity");
+
+    return SDL_RenderLines(renderer, points->values, (int)count);
+}
+
 int idris_sdl_draw_point(SDL_Renderer* renderer, double x, double y) {
     return SDL_RenderPoint(renderer, (float)x, (float)y);
 }

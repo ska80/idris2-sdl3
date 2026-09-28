@@ -41,8 +41,8 @@ requirements.
 
 The typed API provides these guarantees:
 
-- Distinct opaque types for windows, renderers, surfaces, textures, event buffers, and coordinate
-  buffers.
+- Distinct opaque types for windows, renderers, surfaces, textures, event buffers, coordinate
+  buffers, and point buffers.
 - Distinct point types for window and render coordinates.
 - Texture access types that restrict render targets to `Texture TargetAccess`.
 - Separate initialization and window flags, combined with `<+>` and empty flags through `neutral`.
@@ -54,12 +54,12 @@ The typed API provides these guarantees:
 
 The API does not enforce resource lifetimes or thread rules in the type system.  Call
 initialization, window, rendering, and event functions on the main thread.  Do not share event or
-coordinate buffers between threads.
+coordinate or point buffers between threads.
 
 Destroy each texture before its renderer, and each renderer before its window.  Free each event
-buffer and coordinate buffer exactly once. Destroy all owned resources before `quit`, and call
-`quit` even if initialization fails.  Do not use or destroy a handle after destruction. This can
-access freed memory.
+buffer, coordinate buffer, and point buffer exactly once. Destroy all owned resources before `quit`,
+and call `quit` even if initialization fails.  Do not use or destroy a handle after
+destruction. This can access freed memory.
 
 Creation calls copy the error into `Left` on failure.  Rendering, initialization, and text input
 start and stop controls return `Bool`, with `False` for failure.  Call `getError` immediately after
@@ -78,6 +78,7 @@ function returns.  The available helpers are:
   still owns the surface.
 - `withEventBuffer action` allocates and frees an event buffer.
 - `withCoordinateBuffer action` allocates and frees a coordinate buffer.
+- `withPointBuffer capacity action` allocates and frees a point array for batched drawing.
 - `withBMP path action` loads and destroys a BMP surface.
 
 The callback returns `IO (Either String a)`. Cleanup runs after both `Right` and `Left`, and the
@@ -165,7 +166,37 @@ These shapes use the current drawing color and blend mode.  Viewport, clipping, 
 logical presentation also apply.  Coordinates convert from `Double` to SDL `float`. Exact fractional
 pixel coverage depends on SDL's rendering backend.  Each call requires the main thread and returns
 `False` on failure. Read `getError` immediately after failure.  The adapters allocate no native heap
-memory. Batched point, line, and rectangle drawing are not yet bound.
+memory. Batched rectangle drawing is not yet bound.
+
+`newPointBuffer capacity` creates a reusable array of SDL floating-point positions and returns
+`Either String PointBuffer`. Capacity is a `Bits32` value from 1 through 2147483647, subject to
+native memory limits. Allocation size arithmetic is checked before allocation. All entries start at
+`(0, 0)`. The buffer has fixed capacity and does not grow.
+
+`setPoint buffer index point` replaces one zero-based entry with a `Point RenderSpace`.  It returns
+`False` for an index outside capacity, without changing any entry.  Coordinates narrow from `Double`
+to SDL `float`, as with scalar drawing. Use finite coordinates that fit SDL floats. The point type
+does not track renderer identity or later rendering-state changes.
+
+`drawPoints renderer buffer count` draws the first `count` entries independently.  `drawLines
+renderer buffer count` joins consecutive entries into `count - 1` connected segments when `count` is
+at least two. It does not close the path automatically. Repeat the first point at the end to close a
+path. Counts use `Bits32` and cannot exceed capacity. An excessive count returns `False` before SDL
+reads the array or draws anything. Zero points and fewer than two line points succeed without
+drawing on a valid renderer.
+
+Both draw calls use the current target, color, blend mode, viewport, clip, scale, and logical
+presentation. Call them on the main thread. SDL consumes the input during the call, so the buffer
+can be rewritten, reused with another renderer, or freed after the call returns.  Do not mutate or
+free it while a draw is in progress. Unwritten entries remain valid zero points, not an indication
+that they are outside the draw count.
+
+Allocate the buffer outside the frame loop, then call `freePointBuffer` once during cleanup.
+Alternatively, put the loop inside `withPointBuffer capacity`. This resource owns only CPU memory,
+not a renderer. The write and draw adapters allocate no new point arrays.  Each `setPoint` still
+makes one foreign call. Each batch uses one foreign draw call, but SDL can allocate internal command
+storage and perform multiple GPU operations. This API does not promise a speed increase. See
+`test/src/BatchTests.idr` for buffer reuse and scope examples.
 
 `setDrawBlendMode renderer mode` selects blending for shapes such as filled rectangles, using the
 same `BlendMode` type as textures.  It does not change texture blending. Use `setTextureBlendMode`
@@ -605,6 +636,11 @@ freed texture handles or calling Idris from C. They cover nested ownership and s
 cleanup after successful and failed callbacks, preserved results, and skipped callbacks on creation
 failure. Compile-time tests reject streaming-only uploads inside a target-texture callback.
 
-Next work includes texture locking, audio streams, and batched shape drawing.  Keep each addition
-close to SDL's API and test its failure paths.  Measure call overhead and allocations before adding
-performance claims or a larger abstraction layer.
+Batch tests cover initialized entries, count prefixes, index and count rejection, queued input
+consumption, buffer reuse and release, connected lines, empty batches, clipping, scaling, blending,
+and texture targets. Compile-time tests reject window-space points, coordinate buffers used as point
+arrays, and signed draw counts. Native tests cover null pointers and capacity limits.
+
+Next work includes texture locking, audio streams, and batched rectangle drawing.  Keep each
+addition close to SDL's API and test its failure paths.  Measure call overhead and allocations
+before adding performance claims or a larger abstraction layer.

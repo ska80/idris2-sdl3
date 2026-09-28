@@ -34,6 +34,32 @@ static void size_tests(void) {
     assert(copied.width == 37 && copied.height == 23);
 }
 
+static void point_buffer_tests(void) {
+    assert(idris_sdl_points_new(0) == NULL);
+    assert(idris_sdl_points_new(0x80000000u) == NULL);
+    assert(idris_sdl_points_new(SDL_MAX_UINT32) == NULL);
+    if (sizeof(size_t) == 4) assert(idris_sdl_points_new(0x20000000u) == NULL);
+    assert(idris_sdl_points_set(NULL, 0, 1, 2) == 0);
+    assert(idris_sdl_draw_points(NULL, NULL, 0) == 0);
+    assert(idris_sdl_draw_lines(NULL, NULL, 0) == 0);
+
+    IdrisSDLPoints* points = idris_sdl_points_new(3);
+    assert(points);
+    assert(idris_sdl_points_set(points, 0, 1.25, -2.5) == 1);
+    assert(idris_sdl_points_set(points, 2, 4.5, 8.25) == 1);
+    assert(idris_sdl_points_set(points, 3, 0, 0) == 0);
+    assert(idris_sdl_points_set(points, SDL_MAX_UINT32, 0, 0) == 0);
+    assert(idris_sdl_draw_points(NULL, points, 4) == 0);
+    assert(idris_sdl_draw_lines(NULL, points, SDL_MAX_UINT32) == 0);
+    assert(idris_sdl_draw_points(NULL, points, 0) == 0);
+    assert(idris_sdl_draw_lines(NULL, points, 0) == 0);
+    assert(idris_sdl_draw_points(NULL, points, 3) == 0);
+    assert(idris_sdl_draw_lines(NULL, points, 3) == 0);
+    assert(SDL_GetError()[0] != '\0');
+    idris_sdl_points_free(points);
+    idris_sdl_points_free(NULL);
+}
+
 int main(void) {
     assert(idris_sdl_init(SDL_INIT_EVENTS) == 1);
     assert(idris_sdl_is_null(NULL) == 1);
@@ -158,6 +184,7 @@ int main(void) {
     idris_sdl_event_free(buffer);
 
     size_tests();
+    point_buffer_tests();
     SDL_Quit();
 
     puts("Native tests passed");

@@ -149,6 +149,10 @@ record Size (unit : SizeUnit) where
 export
 data CoordinateBuffer = MkCoordinateBuffer NativePoint
 
+||| Fixed-capacity native array of render-space points. Free exactly once.
+export
+data PointBuffer = MkPointBuffer AnyPtr
+
 ||| Reusable native event storage. Free exactly once.
 export
 data EventBuffer = MkEventBuffer AnyPtr
@@ -535,6 +539,39 @@ present (MkRenderer ptr) = (/= 0) <$> primIO (prim__present ptr)
 export
 fillRect : Renderer -> Double -> Double -> Double -> Double -> IO Bool
 fillRect (MkRenderer ptr) x y w h = (/= 0) <$> primIO (prim__fillRect ptr x y w h)
+
+||| Allocate once for repeated batches. Capacity is 1 through 2147483647, subject to memory limits.
+||| All entries start at (0, 0). Do not share the buffer between threads.
+export
+newPointBuffer : Bits32 -> IO (Either String PointBuffer)
+newPointBuffer capacity = owned MkPointBuffer (prim__pointsNew capacity)
+
+||| Free after all draws using this buffer return. Do not use it afterward.
+export
+freePointBuffer : PointBuffer -> IO ()
+freePointBuffer (MkPointBuffer ptr) = primIO (prim__pointsFree ptr)
+
+||| Replace a zero-based entry. Out-of-range indices fail without changing entries.
+||| Reuses the native array. Values narrow to SDL floats.
+export
+setPoint : PointBuffer -> Bits32 -> Point RenderSpace -> IO Bool
+setPoint (MkPointBuffer ptr) index (MkPoint x y) = (/= 0) <$> primIO (prim__pointsSet ptr index x y)
+
+||| Draw the first count entries. Count cannot exceed capacity. Zero draws nothing.
+||| Call on the main thread. The buffer can be reused after this call returns.
+||| Uses current target, color, blending, viewport, clip, scale, and logical presentation.
+export
+drawPoints : Renderer -> PointBuffer -> Bits32 -> IO Bool
+drawPoints (MkRenderer renderer) (MkPointBuffer points) count =
+  (/= 0) <$> primIO (prim__drawPoints renderer points count)
+
+||| Join consecutive entries in the first count points. Does not close the path automatically.
+||| Counts below two draw nothing. Count cannot exceed capacity. Call on the main thread.
+||| Uses current rendering state. The buffer can be reused after this call returns.
+export
+drawLines : Renderer -> PointBuffer -> Bits32 -> IO Bool
+drawLines (MkRenderer renderer) (MkPointBuffer points) count =
+  (/= 0) <$> primIO (prim__drawLines renderer points count)
 
 ||| Draw a point in render coordinates using the current drawing color and blend mode.
 ||| Call on the main thread. Coordinates convert to SDL float. False means failure.
