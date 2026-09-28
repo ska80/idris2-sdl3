@@ -156,6 +156,15 @@ record TextEditingData where
   start : Int32
   length : Int32
 
+||| SDL window-position coordinates, not local mouse or rendering coordinates.
+||| Signed values are copied without validation. The identifier does not own the window.
+public export
+record WindowPositionData where
+  constructor MkWindowPositionData
+  windowID : WindowID
+  x : Int32
+  y : Int32
+
 ||| Window dimensions in window coordinates, not necessarily physical pixels.
 ||| Dimensions are copied without validation. The identifier does not own the window.
 public export
@@ -179,6 +188,7 @@ record PixelSizeData where
 public export
 data Event = QuitEvent Bits64
            | WindowCloseEvent Bits64 WindowID
+           | WindowMovedEvent Bits64 WindowPositionData
            | WindowResizedEvent Bits64 WindowSizeData
            | WindowPixelSizeChangedEvent Bits64 PixelSizeData
            -- Notification only. Query the live window for its current scale.

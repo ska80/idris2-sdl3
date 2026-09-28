@@ -234,6 +234,22 @@ failing "Mismatch between"
   mixedPixelUnits timestamp dimensions = WindowPixelSizeChangedEvent timestamp dimensions
 
 failing "Mismatch between"
+  sizeAsWindowPosition : Bits64 -> WindowSizeData -> Event
+  sizeAsWindowPosition timestamp size = WindowMovedEvent timestamp size
+
+failing "Mismatch between"
+  motionAsWindowPosition : Bits64 -> MouseMotionData -> Event
+  motionAsWindowPosition timestamp motion = WindowMovedEvent timestamp motion
+
+failing "Mismatch between"
+  windowPositionAsLocalPoint : WindowPositionData -> Point WindowSpace
+  windowPositionAsLocalPoint position = position
+
+failing "Mismatch between"
+  ownedWindowAsPositionIdentifier : Window -> WindowPositionData
+  ownedWindowAsPositionIdentifier window = MkWindowPositionData window 0 0
+
+failing "Mismatch between"
   windowAsShownIdentifier : Bits64 -> Window -> Event
   windowAsShownIdentifier timestamp window = WindowShownEvent timestamp window
 

@@ -329,6 +329,15 @@ int idris_test_queue_event(int kind) {
         event.edit.length = kind == 14 ? 2 : -1;
         break;
 
+    case 44:
+    case 45:
+    case 46:
+        event.type = SDL_EVENT_WINDOW_MOVED;
+        event.window.windowID = kind == 44 ? 0x80000001u : kind == 45 ? 0 : 0xffffffffu;
+        event.window.data1 = kind == 44 ? -320 : kind == 45 ? 0 : SDL_MIN_SINT32;
+        event.window.data2 = kind == 44 ? 240 : kind == 45 ? 0 : SDL_MAX_SINT32;
+        break;
+
     case 38:
     case 39:
     case 40:

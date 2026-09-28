@@ -764,6 +764,24 @@ window destruction. The raw query signatures changed to accept output storage.  
 queries remain unbound pending investigation of software-driver behavior that differs from the
 installed header documentation.
 
+`WindowMovedEvent timestamp position` reports a window-position change through
+`WindowPositionData`. Its `windowID` identifies the window. Its `x` and `y` fields copy SDL's signed
+32-bit `data1` and `data2` values without conversion or validation. Negative positions remain
+negative.  These coordinates describe window placement, not a mouse position inside the window or a
+renderer point. The record is distinct from size records and `Point WindowSpace`.
+
+Match the identifier to a window that you still own before using it for application state.  The
+copied identifier does not keep the window alive. A queued position describes the reported move, not
+necessarily the current position. Coordinate reporting depends on the window system.  This binding
+does not move windows or infer a display scale from their positions.
+
+`pollEvent` returns the type-only `WindowMoved` constructor. Payload polling and both wait APIs
+return the copied position and nanosecond timestamp through the shared decoder. Process events on
+the main thread with a caller-owned buffer. Returned records survive buffer reuse and destruction.
+No new native output storage is allocated per move. Update exhaustive event matches for both new
+constructors. Do not assume move, resize, and display-scale notifications arrive together or in a
+fixed order.
+
 `WindowResizedEvent timestamp dimensions` reports a size in window coordinates through
 `WindowSizeData`.  `WindowPixelSizeChangedEvent timestamp dimensions` reports a size in physical
 pixels through `PixelSizeData`.  Both records contain `windowID`, `width`, and `height`. Dimensions
@@ -1168,6 +1186,13 @@ used as notification identifiers. Dummy-driver integration tests also match real
 notifications to the window after `showWindow` and `hideWindow` calls. Exposed-event tests use
 synthetic notifications. Actual covering, uncovering, and redraw behavior need manual platform
 tests.
+
+Window-move tests cover both polling APIs and both wait APIs. They preserve negative positions, zero
+coordinates, signed 32-bit extremes, wide timestamps, and high-bit or zero window identifiers.
+Copied positions survive buffer reuse and destruction. Native tests use SDL's moved-event constant
+and signed window fields. Compile-time tests reject size and motion records used as move payloads,
+and window positions used as local points. These synthetic tests do not establish actual window
+movement or cross-monitor coordinate reporting. Those behaviors need manual platform tests.
 
 Next work includes texture locking and audio streams.  Keep each addition close to SDL's API and
 test its failure paths.  Measure call overhead and allocations before adding performance claims or a

@@ -283,6 +283,14 @@ int main(void) {
         assert(idris_sdl_event_timestamp(&size_event) == SDL_UINT64_C(0x100000002));
     }
 
+    size_event.type = SDL_EVENT_WINDOW_MOVED;
+    assert(idris_sdl_event_kind(&size_event) == 24);
+    assert(idris_sdl_event_type(&size_event) == SDL_EVENT_WINDOW_MOVED);
+    assert(idris_sdl_event_window(&size_event) == 0x80000001u);
+    assert(idris_sdl_event_timestamp(&size_event) == SDL_UINT64_C(0x100000002));
+    assert(idris_sdl_event_window_data1(&size_event) == SDL_MIN_SINT32);
+    assert(idris_sdl_event_window_data2(&size_event) == SDL_MAX_SINT32);
+
     idris_sdl_event_free(buffer);
 
     size_tests();

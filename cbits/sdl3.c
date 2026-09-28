@@ -623,6 +623,7 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
     case SDL_EVENT_WINDOW_SHOWN:
     case SDL_EVENT_WINDOW_HIDDEN:
     case SDL_EVENT_WINDOW_EXPOSED:
+    case SDL_EVENT_WINDOW_MOVED:
         return event->window.windowID;
     case SDL_EVENT_TEXT_INPUT:
         return event->text.windowID;
@@ -785,6 +786,8 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 22;
     case SDL_EVENT_WINDOW_EXPOSED:
         return 23;
+    case SDL_EVENT_WINDOW_MOVED:
+        return 24;
     default:
         return 0;
     }
