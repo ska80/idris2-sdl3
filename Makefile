@@ -39,6 +39,19 @@ test: all
 		$(PACK) --no-prompt --cg=chez run test/test.ipkg
 
 
+.PHONY: mixer test-mixer example-mixer
+mixer: all
+	$(PACK) --no-prompt --cg=chez build sdl3-mixer.ipkg
+
+test-mixer: export LD_LIBRARY_PATH := $(ROOT)/test/build:$(LD_LIBRARY_PATH)
+test-mixer: mixer
+	$(MAKE) -C test mixer-native
+	$(RM) test/build/exec/sdl3-mixer-test
+	SDL_AUDIO_DRIVER=dummy $(PACK) --no-prompt --cg=chez run test/mixer.ipkg
+
+example-mixer: mixer
+	$(PACK) --no-prompt --cg=chez build examples/mixer.ipkg
+
 .PHONY: clean
 clean:
 	$(PACK) clean examples/hello.ipkg
@@ -46,5 +59,8 @@ clean:
 	$(PACK) clean examples/audio.ipkg
 	$(PACK) clean test/test.ipkg
 	$(PACK) clean sdl3.ipkg
+	$(PACK) clean examples/mixer.ipkg
+	$(PACK) clean test/mixer.ipkg
+	$(PACK) clean sdl3-mixer.ipkg
 	$(MAKE) -C cbits clean
 	$(MAKE) -C test clean

@@ -2,7 +2,8 @@
 
 Thin SDL3 bindings for windows, 2D rendering, textures, keyboard, mouse, gamepads, text input,
 clipboard text, file drops, timers, audio playback, and file/memory I/O. BMP images and WAV audio
-are supported. SDL3_mixer, SDL3_image, SDL3_ttf, and the GPU API are not bound.
+are supported. The optional `sdl3-mixer` package adds audio tracks, looping, and fades.
+SDL3_image, SDL3_ttf, and the GPU API are not bound.
 
 Chez is the only supported backend. The current build targets Linux and produces a shared
 library. Other platforms are not tested.
@@ -72,6 +73,7 @@ The subsystem guides describe the APIs, ownership, thread rules, and limits:
 - [Gamepads](docs/gamepads.md): Discovery, controls, connection events, and rumble.
 - [I/O streams](docs/io.md): File and memory access, partial transfers, and cleanup.
 - [Audio](docs/audio.md): PCM queues, WAV files, and playback controls.
+- [Mixer](docs/mixer.md): Optional SDL3_mixer package, shared audio assets, tracks, loops, and fades.
 - [Timing](docs/timing.md): Clocks, frame pacing, and display synchronization.
 - [Resource ownership](docs/resources.md): Initialization, errors, cleanup, and scopes.
 - [Native implementation](docs/internals.md): C adapters, reusable storage, and test limits.

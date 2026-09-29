@@ -35,6 +35,16 @@ build/libidris2_sdl3_test.so: fixtures.c fixtures.h audio_fixtures.c audio_fixtu
 		$(shell $(PKG_CONFIG) --libs sdl3)
 
 
+.PHONY: mixer-native
+mixer-native: build/mixer-native build/libidris2_sdl3_test.so
+	SDL_AUDIO_DRIVER=dummy ./build/mixer-native
+
+build/mixer-native: mixer_native.c audio_fixtures.c audio_fixtures.h ../cbits/mixer.c ../cbits/mixer.h
+	$(MKDIR) -p build
+	$(CC) $(CFLAGS) -std=c11 -Wall -Wextra -Werror -I../cbits \
+		$(shell $(PKG_CONFIG) --cflags sdl3-mixer) mixer_native.c audio_fixtures.c \
+		../cbits/mixer.c -o $@ $(shell $(PKG_CONFIG) --libs sdl3-mixer)
+
 .PHONY: clean
 clean:
-	$(RM) build/native build/audio-native build/subset-native build/libidris2_sdl3_test.so
+	$(RM) build/native build/audio-native build/subset-native build/mixer-native build/libidris2_sdl3_test.so

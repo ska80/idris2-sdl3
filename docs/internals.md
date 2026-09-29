@@ -53,7 +53,8 @@ update strategy.
 
 Run `make test` from the repository root. It builds the package, native tests, and Idris tests.
 Dummy video and audio drivers avoid display and sound-device requirements.  Rendering tests use the
-software renderer. `make example` builds all examples separately.
+software renderer. `make example` builds the core examples separately. Optional mixer tests and
+examples use `make test-mixer` and `make example-mixer`.
 
 Native tests cover adapter validation, byte layout, enum mappings, and resource cleanup.  Idris
 tests cover typed operations, copied values, scopes, state restoration, and pixel results.
@@ -64,3 +65,8 @@ Synthetic events establish decoding, not physical input or event ordering.  Dumm
 establish real window-manager policy, display density, audio latency, GPU behavior, or restoration
 failures on hardware. Runtime exceptions and nonreturning callbacks are outside ordinary-return
 scope guarantees. Use manual tests and measurements for those cases.
+
+The installed SDL3_mixer 3.2.4 build reports 104 leaked bytes during FluidSynth loading under
+LeakSanitizer. A direct `MIX_Init`/`MIX_Quit`/`SDL_Quit` program reproduces this without binding code.
+The mixer native tests pass AddressSanitizer and UndefinedBehaviorSanitizer with only
+`FLUIDSYNTH_init` leaks suppressed. This is not a leak-free result for the full dependency stack.

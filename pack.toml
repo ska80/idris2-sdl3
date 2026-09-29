@@ -4,6 +4,12 @@ path = "."
 ipkg = "sdl3.ipkg"
 test = "test/test.ipkg"
 
+[custom.all.sdl3-mixer]
+type = "local"
+path = "."
+ipkg = "sdl3-mixer.ipkg"
+test = "test/mixer.ipkg"
+
 [custom.all.sdl3-test]
 type = "local"
 path = "test"

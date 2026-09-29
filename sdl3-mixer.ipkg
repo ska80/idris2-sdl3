@@ -1,0 +1,16 @@
+package sdl3-mixer
+
+version = 0.0.0
+brief = "Typed SDL3_mixer assets and tracks"
+license = "MIT"
+readme = "docs/mixer.md"
+
+langversion >= 0.8.0
+depends = sdl3
+sourcedir = "src"
+
+modules = SDL3.Mixer
+        , SDL3.Mixer.Raw
+        , SDL3.Mixer.Scoped
+
+prebuild = "make -C cbits mixer"
