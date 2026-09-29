@@ -165,13 +165,3 @@ results and errors, independent streams, WAV replay, queue counts, and copied me
 tests reject wrong handles and formats. The example also runs with piped commands under the dummy
 driver. Real sound quality, latency, hotplug, backend failures, and device policy need manual
 testing. The tests do not establish audible timing or mixer behavior.
-
-## Relationship to SDL3_mixer
-
-SDL3 core supplies streams, devices, sample conversion, and mixing of device-bound streams.
-SDL3_mixer adds decoded assets, tracks, looping, fades, and other game-audio controls.  Available
-compressed formats depend on its build. Music and sound effects use the same asset and track model.
-
-This library does not bind or link SDL3_mixer. Its core playback streams own their devices and are
-not mixer tracks. Future extension bindings belong in `SDL3.Mixer`, separate from core audio in
-`SDL3`.

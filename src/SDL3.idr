@@ -288,6 +288,9 @@ data EventType = QuitRequested
                | WindowMoved
                | WindowEnterFullscreen
                | WindowLeaveFullscreen
+               | GamepadAdded | GamepadRemoved | GamepadRemapped | GamepadAxisMotion
+               | GamepadButtonDown | GamepadButtonUp
+               | DropFile | DropText | DropBegin | DropComplete | DropPosition
                | KeyDown
                | KeyUp
                | MouseMotion
@@ -1185,6 +1188,17 @@ pollEvent (MkEventBuffer ptr) = do
       24 => pure WindowMoved
       25 => pure WindowEnterFullscreen
       26 => pure WindowLeaveFullscreen
+      27 => pure GamepadAdded
+      28 => pure GamepadRemoved
+      29 => pure GamepadRemapped
+      30 => pure GamepadAxisMotion
+      31 => pure GamepadButtonDown
+      32 => pure GamepadButtonUp
+      33 => pure DropFile
+      34 => pure DropText
+      35 => pure DropBegin
+      36 => pure DropComplete
+      37 => pure DropPosition
       _ => OtherEvent <$> primIO (prim__eventType ptr)
     pure (Just event)
 
@@ -1270,6 +1284,28 @@ pixelSizeData ptr = do
   height <- primIO (prim__eventWindowData2 ptr)
   pure (MkPixelSizeData window width height)
 
+gamepadAxisData : AnyPtr -> IO GamepadAxisData
+gamepadAxisData ptr = do
+  identifier <- MkGamepadID <$> primIO (prim__eventGamepad ptr)
+  axis <- MkGamepadAxis <$> primIO (prim__eventGamepadControl ptr)
+  value <- primIO (prim__eventGamepadValue ptr)
+  pure (MkGamepadAxisData identifier axis value)
+
+gamepadButtonData : AnyPtr -> KeyAction -> IO GamepadButtonData
+gamepadButtonData ptr action = do
+  identifier <- MkGamepadID <$> primIO (prim__eventGamepad ptr)
+  button <- MkGamepadButton <$> primIO (prim__eventGamepadControl ptr)
+  pure (MkGamepadButtonData identifier button action)
+
+dropData : AnyPtr -> IO DropData
+dropData ptr = do
+  window <- MkWindowID <$> primIO (prim__eventWindow ptr)
+  x <- primIO (prim__eventDropX ptr)
+  y <- primIO (prim__eventDropY ptr)
+  source <- primIO (prim__eventDropSource ptr)
+  text <- primIO (prim__eventDropData ptr)
+  pure (MkDropData window x y source text)
+
 eventData : AnyPtr -> IO Event
 eventData ptr = do
   kind <- primIO (prim__eventKind ptr)
@@ -1329,6 +1365,17 @@ eventData ptr = do
     26 => do
       window <- MkWindowID <$> primIO (prim__eventWindow ptr)
       pure (WindowLeaveFullscreenEvent timestamp window)
+    27 => GamepadAddedEvent timestamp . MkGamepadID <$> primIO (prim__eventGamepad ptr)
+    28 => GamepadRemovedEvent timestamp . MkGamepadID <$> primIO (prim__eventGamepad ptr)
+    29 => GamepadRemappedEvent timestamp . MkGamepadID <$> primIO (prim__eventGamepad ptr)
+    30 => GamepadAxisEvent timestamp <$> gamepadAxisData ptr
+    31 => GamepadButtonEvent timestamp <$> gamepadButtonData ptr Pressed
+    32 => GamepadButtonEvent timestamp <$> gamepadButtonData ptr Released
+    33 => DropFileEvent timestamp <$> dropData ptr
+    34 => DropTextEvent timestamp <$> dropData ptr
+    35 => DropBeginEvent timestamp . MkWindowID <$> primIO (prim__eventWindow ptr)
+    36 => DropCompleteEvent timestamp . MkWindowID <$> primIO (prim__eventWindow ptr)
+    37 => DropPositionEvent timestamp <$> dropData ptr
     _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
 
 ||| Consume one event on the main thread. Nothing means the queue is empty.
@@ -1586,3 +1633,279 @@ playWAV stream wav = do
   True <- queueWAV stream wav | False => pure False
   True <- flushPlayback stream | False => pure False
   resumePlayback stream
+
+||| Owned open reference. Close exactly once, including after device removal.
+export
+data Gamepad = MkGamepad AnyPtr
+
+copyGamepadIDs : NativeGamepads -> Bits32 -> Nat -> IO (List GamepadID)
+copyGamepadIDs list index Z = pure []
+copyGamepadIDs list index (S count) = do
+  identifier <- MkGamepadID <$> primIO (prim__gamepadsAt list index)
+  rest <- copyGamepadIDs list (index + 1) count
+  pure (identifier :: rest)
+
+||| Snapshot of connected gamepad IDs, not open handles. Initialize gamepad first.
+export
+listGamepads : IO (Either String (List GamepadID))
+listGamepads = do
+  ptr <- primIO prim__gamepadsNew
+  0 <- primIO (prim__gamepadsIsNull ptr) | _ => Left <$> getError
+  let count : Int32 = getField ptr "count"
+  identifiers <- copyGamepadIDs ptr 0 (cast count)
+  primIO (prim__gamepadsFree ptr)
+  pure (Right identifiers)
+
+export
+openGamepad : GamepadID -> IO (Either String Gamepad)
+openGamepad (MkGamepadID identifier) = owned MkGamepad (prim__openGamepad identifier)
+
+export
+closeGamepad : Gamepad -> IO ()
+closeGamepad (MkGamepad ptr) = primIO (prim__closeGamepad ptr)
+
+export
+getGamepadID : Gamepad -> IO (Either String GamepadID)
+getGamepadID (MkGamepad ptr) = do
+  identifier <- primIO (prim__gamepadID ptr)
+  if identifier == 0 then Left <$> getError else pure (Right (MkGamepadID identifier))
+
+||| Copied name. It remains valid after disconnect or close.
+export
+getGamepadName : Gamepad -> IO (Either String String)
+getGamepadName (MkGamepad ptr) = do
+  text <- primIO (prim__gamepadName ptr)
+  0 <- primIO (prim__isNull text) | _ => Left <$> getError
+  Right <$> primIO (prim__copyString text)
+
+export
+gamepadConnected : Gamepad -> IO Bool
+gamepadConnected (MkGamepad ptr) = (/= 0) <$> primIO (prim__gamepadConnected ptr)
+
+||| Signed stick range -32768..32767; triggers 0..32767. SDL returns zero on failure.
+||| Poll events or call updateGamepads before querying. No dead zone is applied.
+export
+getGamepadAxis : Gamepad -> GamepadAxis -> IO Int16
+getGamepadAxis (MkGamepad ptr) (MkGamepadAxis axis) = primIO (prim__gamepadAxis ptr (cast axis))
+
+||| Button state, not a success indicator. SDL returns False for unavailable controls.
+export
+getGamepadButton : Gamepad -> GamepadButton -> IO Bool
+getGamepadButton (MkGamepad ptr) (MkGamepadButton button) = (/= 0) <$> primIO (prim__gamepadButton ptr (cast button))
+
+||| Intensities 0..65535, duration in milliseconds. Zero intensities stop rumble.
+export
+rumbleGamepad : Gamepad -> Bits16 -> Bits16 -> Bits32 -> IO Bool
+rumbleGamepad (MkGamepad ptr) low high duration = (/= 0) <$> primIO (prim__gamepadRumble ptr low high duration)
+
+||| Explicit update for applications not pumping events. SDL permits calls from any thread.
+export
+updateGamepads : IO ()
+updateGamepads = primIO prim__updateGamepads
+
+||| Main-thread request. Flushes pending mouse motion for this window.
+export
+setWindowRelativeMouseMode : Window -> Bool -> IO Bool
+setWindowRelativeMouseMode (MkWindow ptr _) enabled =
+  (/= 0) <$> primIO (prim__relativeMouse ptr (if enabled then 1 else 0))
+
+export
+getWindowRelativeMouseMode : Window -> IO Bool
+getWindowRelativeMouseMode (MkWindow ptr _) = (/= 0) <$> primIO (prim__relativeMouseEnabled ptr)
+
+||| Capture outside-window input without cursor confinement. Main thread, backend-dependent.
+export
+captureMouse : Bool -> IO Bool
+captureMouse enabled = (/= 0) <$> primIO (prim__captureMouse (if enabled then 1 else 0))
+
+public export
+data SystemCursor = DefaultCursor | TextCursor | WaitCursor | CrosshairCursor | ProgressCursor
+                  | NWSEResizeCursor | NESWResizeCursor | EWResizeCursor | NSResizeCursor
+                  | MoveCursor | NotAllowedCursor | PointerCursor
+
+systemCursorCode : SystemCursor -> Int32
+systemCursorCode DefaultCursor = 0
+systemCursorCode TextCursor = 1
+systemCursorCode WaitCursor = 2
+systemCursorCode CrosshairCursor = 3
+systemCursorCode ProgressCursor = 4
+systemCursorCode NWSEResizeCursor = 5
+systemCursorCode NESWResizeCursor = 6
+systemCursorCode EWResizeCursor = 7
+systemCursorCode NSResizeCursor = 8
+systemCursorCode MoveCursor = 9
+systemCursorCode NotAllowedCursor = 10
+systemCursorCode PointerCursor = 11
+
+||| Owned cursor. Create, select, and destroy on the main thread before quit.
+export
+data Cursor = MkCursor AnyPtr
+
+export
+createSystemCursor : SystemCursor -> IO (Either String Cursor)
+createSystemCursor shape = owned MkCursor (prim__createSystemCursor (systemCursorCode shape))
+
+export
+destroyCursor : Cursor -> IO ()
+destroyCursor (MkCursor ptr) = primIO (prim__destroyCursor ptr)
+
+||| Nothing selects SDL's default cursor, not SDL_SetCursor(NULL)'s redraw behavior.
+export
+setCursor : Maybe Cursor -> IO Bool
+setCursor Nothing = (/= 0) <$> primIO prim__defaultCursor
+setCursor (Just (MkCursor ptr)) = (/= 0) <$> primIO (prim__setCursor ptr)
+
+export
+showCursor : IO Bool
+showCursor = (/= 0) <$> primIO prim__showCursor
+
+export
+hideCursor : IO Bool
+hideCursor = (/= 0) <$> primIO prim__hideCursor
+
+export
+cursorVisible : IO Bool
+cursorVisible = (/= 0) <$> primIO prim__cursorVisible
+
+||| Main thread. SDL copies UTF-8 text. Embedded NUL ends the text.
+export
+setClipboardText : String -> IO Bool
+setClipboardText text = (/= 0) <$> primIO (prim__clipboardSet text)
+
+||| Copies and frees SDL's result. Empty text is valid. Clears old SDL errors first.
+export
+getClipboardText : IO (Either String String)
+getClipboardText = do
+  ptr <- primIO prim__clipboardGet
+  0 <- primIO (prim__isNull ptr) | _ => Left <$> getError
+  text <- primIO (prim__copyString ptr)
+  primIO (prim__freeSDL ptr)
+  pure (Right text)
+
+export
+hasClipboardText : IO Bool
+hasClipboardText = (/= 0) <$> primIO prim__clipboardHasText
+
+||| Owned file or dynamic-memory stream. Serialize all access, including close.
+export
+data IOStream = MkIOStream AnyPtr
+
+public export
+data FileIOMode = ReadFile | WriteFile | AppendFile | ReadWriteFile | RewriteFile | AppendReadFile
+
+fileIOMode : FileIOMode -> String
+fileIOMode ReadFile = "rb"
+fileIOMode WriteFile = "wb"
+fileIOMode AppendFile = "ab"
+fileIOMode ReadWriteFile = "r+b"
+fileIOMode RewriteFile = "w+b"
+fileIOMode AppendReadFile = "a+b"
+
+||| WriteFile and RewriteFile truncate existing files. Paths are UTF-8 C strings.
+export
+openFileIO : String -> FileIOMode -> IO (Either String IOStream)
+openFileIO path mode = owned MkIOStream (prim__ioFromFile path (fileIOMode mode))
+
+||| Empty growable memory, owned by SDL until close. No borrowed managed pointers.
+export
+newMemoryIO : IO (Either String IOStream)
+newMemoryIO = owned MkIOStream prim__ioDynamicMemory
+
+||| The handle is invalid after return, even when close reports failure. Never retry close.
+export
+closeIO : IOStream -> IO Bool
+closeIO (MkIOStream ptr) = (/= 0) <$> primIO (prim__ioClose ptr)
+
+export
+flushIO : IOStream -> IO Bool
+flushIO (MkIOStream ptr) = (/= 0) <$> primIO (prim__ioFlush ptr)
+
+ioPosition : PrimIO Int64 -> IO (Either String Bits64)
+ioPosition action = do
+  value <- primIO action
+  if value < 0 then Left <$> getError else pure (Right (cast value))
+
+export
+getIOSize : IOStream -> IO (Either String Bits64)
+getIOSize (MkIOStream ptr) = ioPosition (prim__ioSize ptr)
+
+export
+tellIO : IOStream -> IO (Either String Bits64)
+tellIO (MkIOStream ptr) = ioPosition (prim__ioTell ptr)
+
+public export
+data IOOrigin = FromStart | FromCurrent | FromEnd
+
+ioOrigin : IOOrigin -> Int32
+ioOrigin FromStart = 0
+ioOrigin FromCurrent = 1
+ioOrigin FromEnd = 2
+
+export
+seekIO : IOStream -> Int64 -> IOOrigin -> IO (Either String Bits64)
+seekIO (MkIOStream ptr) offset origin = ioPosition (prim__ioSeek ptr offset (ioOrigin origin))
+
+public export
+data IOStatus = IOReady | IOFailure | IOEndOfFile | IONotReady | IOReadOnly | IOWriteOnly | OtherIOStatus Int32
+
+ioStatus : Int32 -> IOStatus
+ioStatus 0 = IOReady
+ioStatus 1 = IOFailure
+ioStatus 2 = IOEndOfFile
+ioStatus 3 = IONotReady
+ioStatus 4 = IOReadOnly
+ioStatus 5 = IOWriteOnly
+ioStatus value = OtherIOStatus value
+
+||| Preserves partial progress. A Right result alone does not mean a complete transfer.
+public export
+record IOTransfer where
+  constructor MkIOTransfer
+  transferred : Bits64
+  status : IOStatus
+  error : Maybe String
+
+ioTransfer : AnyPtr -> Bits64 -> PrimIO Int64 -> IO (Either String IOTransfer)
+ioTransfer ptr requested action = do
+  count <- primIO action
+  if count < 0 then Left <$> getError else do
+    code <- primIO (prim__ioStatus ptr)
+    err <- if requested /= 0 && (code == 1 || code == 4 || code == 5)
+             then Just <$> getError else pure Nothing
+    pure (Right (MkIOTransfer (cast count) (ioStatus code) err))
+
+||| Checked destination byte range. Partial reads and EOF are returned with status.
+export
+readIO : IOStream -> Buffer -> Bits64 -> Bits64 -> IO (Either String IOTransfer)
+readIO (MkIOStream ptr) buffer offset count = do
+  capacity <- rawSize buffer
+  ioTransfer ptr count (prim__ioRead ptr buffer (cast capacity) offset count)
+
+||| Checked source byte range. Do not change the buffer during the call.
+export
+writeIO : IOStream -> Buffer -> Bits64 -> Bits64 -> IO (Either String IOTransfer)
+writeIO (MkIOStream ptr) buffer offset count = do
+  capacity <- rawSize buffer
+  ioTransfer ptr count (prim__ioWrite ptr buffer (cast capacity) offset count)
+
+||| Copy the complete buffer into owned growable memory and rewind. The source can then be reused.
+export
+openMemoryIO : Buffer -> IO (Either String IOStream)
+openMemoryIO buffer = do
+  Right stream <- newMemoryIO | Left err => pure (Left err)
+  capacity <- rawSize buffer
+  result <- writeIO stream buffer 0 (cast capacity)
+  case result of
+    Left err => do
+      _ <- closeIO stream
+      pure (Left err)
+    Right transfer => case transfer.transferred == cast capacity of
+      False => do
+        let err = maybe "Cannot copy the complete source buffer" id transfer.error
+        _ <- closeIO stream
+        pure (Left err)
+      True => do
+        Right _ <- seekIO stream 0 FromStart | Left err => do
+          _ <- closeIO stream
+          pure (Left err)
+        pure (Right stream)

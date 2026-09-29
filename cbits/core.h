@@ -8,69 +8,69 @@
 
 IDRIS_SDL3 int idris_sdl_is_null(const void* ptr);
 
-IDRIS_SDL3 int   idris_sdl_init(Uint32 flags);
-IDRIS_SDL3 char* idris_sdl_get_error(void);
-IDRIS_SDL3 int idris_sdl_set_window_size(SDL_Window* window, Sint32 width, Sint32 height);
-IDRIS_SDL3 int idris_sdl_sync_window(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_set_window_title(SDL_Window* window, const char* title);
+IDRIS_SDL3 int    idris_sdl_init(Uint32 flags);
+IDRIS_SDL3 char*  idris_sdl_get_error(void);
+IDRIS_SDL3 int    idris_sdl_set_window_size(SDL_Window* window, Sint32 width, Sint32 height);
+IDRIS_SDL3 int    idris_sdl_sync_window(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_set_window_title(SDL_Window* window, const char* title);
 /* Widen SDL float results for the Idris Double ABI. Zero means failure. */
 IDRIS_SDL3 double idris_sdl_get_window_pixel_density(SDL_Window* window);
 IDRIS_SDL3 double idris_sdl_get_window_display_scale(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_minimize_window(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_maximize_window(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_restore_window(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_set_window_mouse_grab(SDL_Window* window, Sint32 grabbed);
-IDRIS_SDL3 int idris_sdl_get_window_mouse_grab(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_set_window_opacity(SDL_Window* window, double opacity);
+IDRIS_SDL3 int    idris_sdl_minimize_window(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_maximize_window(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_restore_window(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_set_window_mouse_grab(SDL_Window* window, Sint32 grabbed);
+IDRIS_SDL3 int    idris_sdl_get_window_mouse_grab(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_set_window_opacity(SDL_Window* window, double opacity);
 /* SDL float widened to double. -1 means failure. */
 IDRIS_SDL3 double idris_sdl_get_window_opacity(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_flash_window(SDL_Window* window, Sint32 operation);
-IDRIS_SDL3 int idris_sdl_set_window_always_on_top(SDL_Window* window, Sint32 enabled);
-IDRIS_SDL3 int idris_sdl_raise_window(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_set_window_fullscreen(SDL_Window* window, Sint32 fullscreen);
-IDRIS_SDL3 int idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered);
-IDRIS_SDL3 int idris_sdl_set_window_resizable(SDL_Window* window, Sint32 resizable);
-IDRIS_SDL3 int idris_sdl_show_window(SDL_Window* window);
-IDRIS_SDL3 int idris_sdl_hide_window(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_flash_window(SDL_Window* window, Sint32 operation);
+IDRIS_SDL3 int    idris_sdl_set_window_always_on_top(SDL_Window* window, Sint32 enabled);
+IDRIS_SDL3 int    idris_sdl_raise_window(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_set_window_fullscreen(SDL_Window* window, Sint32 fullscreen);
+IDRIS_SDL3 int    idris_sdl_set_window_bordered(SDL_Window* window, Sint32 bordered);
+IDRIS_SDL3 int    idris_sdl_set_window_resizable(SDL_Window* window, Sint32 resizable);
+IDRIS_SDL3 int    idris_sdl_show_window(SDL_Window* window);
+IDRIS_SDL3 int    idris_sdl_hide_window(SDL_Window* window);
 
 IDRIS_SDL3 SDL_Texture* idris_sdl_create_target_texture(SDL_Renderer* renderer, int width, int height);
 IDRIS_SDL3 SDL_Texture* idris_sdl_create_streaming_texture(SDL_Renderer* renderer, int width, int height);
 
 /* Reusable output storage for one active lock. Pixels belong to SDL, not this allocation. */
 typedef struct IdrisSDLTextureLock {
-    Sint32 width, height, pitch;
-    Uint64 generation;
+    Sint32       width, height, pitch;
+    Uint64       generation;
     SDL_Texture* texture;
-    void* pixels;
+    void*        pixels;
 } IdrisSDLTextureLock;
+
 IDRIS_SDL3 IdrisSDLTextureLock* idris_sdl_texture_lock_new(void);
-IDRIS_SDL3 void idris_sdl_texture_lock_free(IdrisSDLTextureLock* lock);
-IDRIS_SDL3 int idris_sdl_lock_texture_rgba(IdrisSDLTextureLock* lock, SDL_Texture* texture, int region,
-                                         Sint32 x, Sint32 y, Sint32 w, Sint32 h);
-IDRIS_SDL3 int idris_sdl_unlock_texture_rgba(IdrisSDLTextureLock* lock, Uint64 generation);
-IDRIS_SDL3 int idris_sdl_locked_pixel_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Sint32 x, Sint32 y,
-                                         Uint8 r, Uint8 g, Uint8 b, Uint8 a);
-IDRIS_SDL3 int idris_sdl_locked_fill_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
-IDRIS_SDL3 int idris_sdl_locked_copy_rgba(IdrisSDLTextureLock* lock, Uint64 generation, const void* pixels,
-                                        Uint64 size, Sint32 pitch);
+IDRIS_SDL3 void                 idris_sdl_texture_lock_free(IdrisSDLTextureLock* lock);
+IDRIS_SDL3 int    idris_sdl_lock_texture_rgba(IdrisSDLTextureLock* lock, SDL_Texture* texture, int region, Sint32 x, Sint32 y, Sint32 w,
+                                              Sint32 h);
+IDRIS_SDL3 int    idris_sdl_unlock_texture_rgba(IdrisSDLTextureLock* lock, Uint64 generation);
+IDRIS_SDL3 int    idris_sdl_locked_pixel_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Sint32 x, Sint32 y, Uint8 r, Uint8 g, Uint8 b,
+                                              Uint8 a);
+IDRIS_SDL3 int    idris_sdl_locked_fill_rgba(IdrisSDLTextureLock* lock, Uint64 generation, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+IDRIS_SDL3 int    idris_sdl_locked_copy_rgba(IdrisSDLTextureLock* lock, Uint64 generation, const void* pixels, Uint64 size, Sint32 pitch);
 /* Validate before reading SDL_Texture's public dimensions through Chez. */
-IDRIS_SDL3 int idris_sdl_get_texture_size(SDL_Texture* texture);
+IDRIS_SDL3 int    idris_sdl_get_texture_size(SDL_Texture* texture);
 /* Size must describe the actual capacity of pixels. No pointer is retained. */
-IDRIS_SDL3 int          idris_sdl_update_texture_rgba(SDL_Texture* texture, const void* pixels, Uint64 size, Sint32 pitch);
-IDRIS_SDL3 int          idris_sdl_set_texture_color_mod(SDL_Texture* texture, Uint8 r, Uint8 g, Uint8 b);
-IDRIS_SDL3 int          idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Uint8 alpha);
+IDRIS_SDL3 int    idris_sdl_update_texture_rgba(SDL_Texture* texture, const void* pixels, Uint64 size, Sint32 pitch);
+IDRIS_SDL3 int    idris_sdl_set_texture_color_mod(SDL_Texture* texture, Uint8 r, Uint8 g, Uint8 b);
+IDRIS_SDL3 int    idris_sdl_set_texture_alpha_mod(SDL_Texture* texture, Uint8 alpha);
 /* Returns 0 through 255, or -1 on failure. */
-IDRIS_SDL3 int          idris_sdl_get_texture_alpha_mod(SDL_Texture* texture);
-IDRIS_SDL3 int          idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode);
+IDRIS_SDL3 int    idris_sdl_get_texture_alpha_mod(SDL_Texture* texture);
+IDRIS_SDL3 int    idris_sdl_set_texture_blend_mode(SDL_Texture* texture, Uint32 mode);
 /* Unsigned 32-bit mode code, or -1 on failure. */
-IDRIS_SDL3 Sint64       idris_sdl_get_texture_blend_mode(SDL_Texture* texture);
-IDRIS_SDL3 int          idris_sdl_set_texture_scale_mode(SDL_Texture* texture, int mode);
+IDRIS_SDL3 Sint64 idris_sdl_get_texture_blend_mode(SDL_Texture* texture);
+IDRIS_SDL3 int    idris_sdl_set_texture_scale_mode(SDL_Texture* texture, int mode);
 /* Signed 32-bit mode code, or -2147483649 on failure. */
-IDRIS_SDL3 Sint64       idris_sdl_get_texture_scale_mode(SDL_Texture* texture);
-IDRIS_SDL3 int          idris_sdl_set_render_target(SDL_Renderer* renderer, SDL_Texture* texture);
-IDRIS_SDL3 int          idris_sdl_reset_render_target(SDL_Renderer* renderer);
-IDRIS_SDL3 int          idris_sdl_render_texture(SDL_Renderer* renderer, SDL_Texture* texture);
-IDRIS_SDL3 int          idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h);
+IDRIS_SDL3 Sint64 idris_sdl_get_texture_scale_mode(SDL_Texture* texture);
+IDRIS_SDL3 int    idris_sdl_set_render_target(SDL_Renderer* renderer, SDL_Texture* texture);
+IDRIS_SDL3 int    idris_sdl_reset_render_target(SDL_Renderer* renderer);
+IDRIS_SDL3 int    idris_sdl_render_texture(SDL_Renderer* renderer, SDL_Texture* texture);
+IDRIS_SDL3 int    idris_sdl_render_texture_rect(SDL_Renderer* renderer, SDL_Texture* texture, double x, double y, double w, double h);
 
 /* Size is the actual capacity. Pixels start at the source region, not the texture origin. */
 IDRIS_SDL3 int idris_sdl_update_texture_region_rgba(SDL_Texture* texture, Sint32 x, Sint32 y, Sint32 w, Sint32 h, const void* pixels,
@@ -103,11 +103,11 @@ IDRIS_SDL3 Sint32 idris_sdl_get_render_vsync(SDL_Renderer* renderer);
 IDRIS_SDL3 int idris_sdl_set_render_scale(SDL_Renderer* renderer, double x, double y);
 IDRIS_SDL3 int idris_sdl_set_render_logical_presentation(SDL_Renderer* renderer, Sint32 w, Sint32 h, int mode);
 
-IDRIS_SDL3 int idris_sdl_set_render_viewport(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h);
-IDRIS_SDL3 int idris_sdl_reset_render_viewport(SDL_Renderer* renderer);
-IDRIS_SDL3 int idris_sdl_set_render_clip_rect(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h);
-IDRIS_SDL3 int idris_sdl_reset_render_clip_rect(SDL_Renderer* renderer);
-IDRIS_SDL3 int idris_sdl_set_draw_blend_mode(SDL_Renderer* renderer, Uint32 mode);
+IDRIS_SDL3 int    idris_sdl_set_render_viewport(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h);
+IDRIS_SDL3 int    idris_sdl_reset_render_viewport(SDL_Renderer* renderer);
+IDRIS_SDL3 int    idris_sdl_set_render_clip_rect(SDL_Renderer* renderer, Sint32 x, Sint32 y, Sint32 w, Sint32 h);
+IDRIS_SDL3 int    idris_sdl_reset_render_clip_rect(SDL_Renderer* renderer);
+IDRIS_SDL3 int    idris_sdl_set_draw_blend_mode(SDL_Renderer* renderer, Uint32 mode);
 /* Unsigned 32-bit blend code, or -1 on failure. */
 IDRIS_SDL3 Sint64 idris_sdl_get_draw_blend_mode(SDL_Renderer* renderer);
 
@@ -119,19 +119,21 @@ IDRIS_SDL3 int           idris_sdl_fill_rect(SDL_Renderer* renderer, double x, d
 
 /* Fixed-capacity, caller-owned SDL_FPoint array. All entries start at (0, 0). */
 typedef struct IdrisSDLPoints IdrisSDLPoints;
+
 IDRIS_SDL3 IdrisSDLPoints* idris_sdl_points_new(Uint32 capacity);
-IDRIS_SDL3 void idris_sdl_points_free(IdrisSDLPoints* points);
-IDRIS_SDL3 int idris_sdl_points_set(IdrisSDLPoints* points, Uint32 index, double x, double y);
-IDRIS_SDL3 int idris_sdl_draw_points(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count);
-IDRIS_SDL3 int idris_sdl_draw_lines(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count);
+IDRIS_SDL3 void            idris_sdl_points_free(IdrisSDLPoints* points);
+IDRIS_SDL3 int             idris_sdl_points_set(IdrisSDLPoints* points, Uint32 index, double x, double y);
+IDRIS_SDL3 int             idris_sdl_draw_points(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count);
+IDRIS_SDL3 int             idris_sdl_draw_lines(SDL_Renderer* renderer, const IdrisSDLPoints* points, Uint32 count);
 
 /* Fixed-capacity, caller-owned SDL_FRect array. All fields start at zero. */
 typedef struct IdrisSDLRects IdrisSDLRects;
+
 IDRIS_SDL3 IdrisSDLRects* idris_sdl_rects_new(Uint32 capacity);
-IDRIS_SDL3 void idris_sdl_rects_free(IdrisSDLRects* rects);
-IDRIS_SDL3 int idris_sdl_rects_set(IdrisSDLRects* rects, Uint32 index, double x, double y, double w, double h);
-IDRIS_SDL3 int idris_sdl_draw_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count);
-IDRIS_SDL3 int idris_sdl_fill_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count);
+IDRIS_SDL3 void           idris_sdl_rects_free(IdrisSDLRects* rects);
+IDRIS_SDL3 int            idris_sdl_rects_set(IdrisSDLRects* rects, Uint32 index, double x, double y, double w, double h);
+IDRIS_SDL3 int            idris_sdl_draw_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count);
+IDRIS_SDL3 int            idris_sdl_fill_rects(SDL_Renderer* renderer, const IdrisSDLRects* rects, Uint32 count);
 
 IDRIS_SDL3 int idris_sdl_draw_point(SDL_Renderer* renderer, double x, double y);
 IDRIS_SDL3 int idris_sdl_draw_line(SDL_Renderer* renderer, double x1, double y1, double x2, double y2);
@@ -212,14 +214,58 @@ typedef struct IdrisSDLWAV {
 } IdrisSDLWAV;
 
 IDRIS_SDL3 SDL_AudioStream* idris_sdl_audio_open(Uint32 format, Sint32 channels, Sint32 frequency);
-IDRIS_SDL3 int idris_sdl_audio_put(SDL_AudioStream* stream, const void* data, Uint64 capacity, Uint32 offset, Uint32 length);
-IDRIS_SDL3 int idris_sdl_audio_pause(SDL_AudioStream* stream);
-IDRIS_SDL3 int idris_sdl_audio_resume(SDL_AudioStream* stream);
-IDRIS_SDL3 int idris_sdl_audio_paused(SDL_AudioStream* stream);
-IDRIS_SDL3 int idris_sdl_audio_clear(SDL_AudioStream* stream);
-IDRIS_SDL3 int idris_sdl_audio_flush(SDL_AudioStream* stream);
-IDRIS_SDL3 int idris_sdl_audio_set_gain(SDL_AudioStream* stream, double gain);
-IDRIS_SDL3 double idris_sdl_audio_get_gain(SDL_AudioStream* stream);
-IDRIS_SDL3 IdrisSDLWAV* idris_sdl_wav_load(const char* path);
-IDRIS_SDL3 void idris_sdl_wav_free(IdrisSDLWAV* wav);
-IDRIS_SDL3 int idris_sdl_audio_put_wav(SDL_AudioStream* stream, const IdrisSDLWAV* wav, Uint32 offset, Uint32 length);
+IDRIS_SDL3 int              idris_sdl_audio_put(SDL_AudioStream* stream, const void* data, Uint64 capacity, Uint32 offset, Uint32 length);
+IDRIS_SDL3 int              idris_sdl_audio_pause(SDL_AudioStream* stream);
+IDRIS_SDL3 int              idris_sdl_audio_resume(SDL_AudioStream* stream);
+IDRIS_SDL3 int              idris_sdl_audio_paused(SDL_AudioStream* stream);
+IDRIS_SDL3 int              idris_sdl_audio_clear(SDL_AudioStream* stream);
+IDRIS_SDL3 int              idris_sdl_audio_flush(SDL_AudioStream* stream);
+IDRIS_SDL3 int              idris_sdl_audio_set_gain(SDL_AudioStream* stream, double gain);
+IDRIS_SDL3 double           idris_sdl_audio_get_gain(SDL_AudioStream* stream);
+IDRIS_SDL3 IdrisSDLWAV*     idris_sdl_wav_load(const char* path);
+IDRIS_SDL3 void             idris_sdl_wav_free(IdrisSDLWAV* wav);
+IDRIS_SDL3 int              idris_sdl_audio_put_wav(SDL_AudioStream* stream, const IdrisSDLWAV* wav, Uint32 offset, Uint32 length);
+
+/* Each snapshot owns its SDL-allocated ID array until gamepads_free. */
+typedef struct IdrisSDLGamepads {
+    Sint32          count;
+    SDL_JoystickID* ids;
+} IdrisSDLGamepads;
+
+IDRIS_SDL3 IdrisSDLGamepads* idris_sdl_gamepads_new(void);
+IDRIS_SDL3 Uint32            idris_sdl_gamepads_at(const IdrisSDLGamepads* list, Uint32 index);
+IDRIS_SDL3 void              idris_sdl_gamepads_free(IdrisSDLGamepads* list);
+IDRIS_SDL3 int               idris_sdl_gamepad_connected(SDL_Gamepad* gamepad);
+IDRIS_SDL3 int               idris_sdl_gamepad_button(SDL_Gamepad* gamepad, Sint32 button);
+IDRIS_SDL3 int               idris_sdl_gamepad_rumble(SDL_Gamepad* gamepad, Uint16 low, Uint16 high, Uint32 ms);
+
+IDRIS_SDL3 int idris_sdl_relative_mouse(SDL_Window* window, int enabled);
+IDRIS_SDL3 int idris_sdl_relative_mouse_enabled(SDL_Window* window);
+IDRIS_SDL3 int idris_sdl_capture_mouse(int enabled);
+
+IDRIS_SDL3 int idris_sdl_set_cursor(SDL_Cursor* cursor);
+IDRIS_SDL3 int idris_sdl_default_cursor(void);
+IDRIS_SDL3 int idris_sdl_show_cursor(void);
+IDRIS_SDL3 int idris_sdl_hide_cursor(void);
+IDRIS_SDL3 int idris_sdl_cursor_visible(void);
+
+IDRIS_SDL3 int   idris_sdl_clipboard_set(const char* text);
+IDRIS_SDL3 char* idris_sdl_clipboard_get(void);
+IDRIS_SDL3 int   idris_sdl_clipboard_has_text(void);
+
+IDRIS_SDL3 const char* idris_sdl_string(const char* text);
+
+IDRIS_SDL3 Uint32 idris_sdl_event_gamepad(const SDL_Event* event);
+IDRIS_SDL3 Uint8  idris_sdl_event_gamepad_control(const SDL_Event* event);
+IDRIS_SDL3 Sint16 idris_sdl_event_gamepad_value(const SDL_Event* event);
+
+IDRIS_SDL3 const char* idris_sdl_event_drop_data(const SDL_Event* event);
+IDRIS_SDL3 const char* idris_sdl_event_drop_source(const SDL_Event* event);
+IDRIS_SDL3 double      idris_sdl_event_drop_x(const SDL_Event* event);
+IDRIS_SDL3 double      idris_sdl_event_drop_y(const SDL_Event* event);
+
+IDRIS_SDL3 int    idris_sdl_io_close(SDL_IOStream* stream);
+IDRIS_SDL3 int    idris_sdl_io_flush(SDL_IOStream* stream);
+/* -1 means validation failure; otherwise query SDL_GetIOStatus for partial transfers. */
+IDRIS_SDL3 Sint64 idris_sdl_io_read(SDL_IOStream* stream, void* buffer, Uint64 capacity, Uint64 offset, Uint64 count);
+IDRIS_SDL3 Sint64 idris_sdl_io_write(SDL_IOStream* stream, const void* buffer, Uint64 capacity, Uint64 offset, Uint64 count);

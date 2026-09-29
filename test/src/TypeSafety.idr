@@ -6,6 +6,46 @@ import SDL3.Raw
 import Data.Buffer
 
 failing "Mismatch between"
+  windowAsGamepad : Window -> IO Bool
+  windowAsGamepad window = gamepadConnected window
+
+failing "Mismatch between"
+  windowIDAsGamepad : WindowID -> IO (Either String Gamepad)
+  windowIDAsGamepad identifier = openGamepad identifier
+
+failing "Mismatch between"
+  buttonAsAxis : Gamepad -> GamepadButton -> IO Int16
+  buttonAsAxis pad button = getGamepadAxis pad button
+
+failing "Mismatch between"
+  gamepadButtonAsMouse : GamepadButton -> MouseButtons -> Bool
+  gamepadButtonAsMouse button buttons = buttonHeld button buttons
+
+failing "Mismatch between"
+  textureAsCursor : Texture StaticAccess -> IO Bool
+  textureAsCursor texture = setCursor (Just texture)
+
+failing "Mismatch between"
+  playbackAsIO : PlaybackStream -> IO Bool
+  playbackAsIO stream = closeIO stream
+
+failing "Mismatch between"
+  signedIOCount : IOStream -> Buffer -> Int64 -> IO (Either String IOTransfer)
+  signedIOCount stream buffer count = readIO stream buffer 0 count
+
+failing "Name SDL3.MkGamepad is private"
+  forgeGamepad : AnyPtr -> Gamepad
+  forgeGamepad = MkGamepad
+
+failing "Name SDL3.MkCursor is private"
+  forgeCursor : AnyPtr -> Cursor
+  forgeCursor = MkCursor
+
+failing "Name SDL3.MkIOStream is private"
+  forgeIOStream : AnyPtr -> IOStream
+  forgeIOStream = MkIOStream
+
+failing "Mismatch between"
   wrongHandle : Window -> IO Bool
   wrongHandle window = clear window
 

@@ -2,8 +2,8 @@
 
 #include "core.h"
 
-#include <stddef.h>
 #include <float.h>
+#include <stddef.h>
 
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
 
@@ -112,8 +112,10 @@ int idris_sdl_get_window_mouse_grab(SDL_Window* window) {
 
 int idris_sdl_set_window_opacity(SDL_Window* window, double opacity) {
     if (opacity != opacity) return SDL_SetError("Window opacity must not be NaN");
+
     /* Apply SDL's range clamp before narrowing, including values beyond float range. */
     opacity = SDL_clamp(opacity, 0.0, 1.0);
+
     return SDL_SetWindowOpacity(window, (float)opacity);
 }
 
@@ -817,6 +819,12 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
     case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
     case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
         return event->window.windowID;
+    case SDL_EVENT_DROP_FILE:
+    case SDL_EVENT_DROP_TEXT:
+    case SDL_EVENT_DROP_BEGIN:
+    case SDL_EVENT_DROP_COMPLETE:
+    case SDL_EVENT_DROP_POSITION:
+        return event->drop.windowID;
     case SDL_EVENT_TEXT_INPUT:
         return event->text.windowID;
     case SDL_EVENT_TEXT_EDITING:
@@ -984,6 +992,28 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 25;
     case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
         return 26;
+    case SDL_EVENT_GAMEPAD_ADDED:
+        return 27;
+    case SDL_EVENT_GAMEPAD_REMOVED:
+        return 28;
+    case SDL_EVENT_GAMEPAD_REMAPPED:
+        return 29;
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+        return 30;
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+        return 31;
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+        return 32;
+    case SDL_EVENT_DROP_FILE:
+        return 33;
+    case SDL_EVENT_DROP_TEXT:
+        return 34;
+    case SDL_EVENT_DROP_BEGIN:
+        return 35;
+    case SDL_EVENT_DROP_COMPLETE:
+        return 36;
+    case SDL_EVENT_DROP_POSITION:
+        return 37;
     default:
         return 0;
     }
@@ -991,96 +1021,324 @@ int idris_sdl_event_kind(const SDL_Event* event) {
 
 /* Core audio playback. */
 _Static_assert(sizeof(int) == sizeof(Sint32), "Audio ABI requires 32-bit C int");
-_Static_assert(SDL_AUDIO_U8 == 0x0008 && SDL_AUDIO_S8 == 0x8008 &&
-               SDL_AUDIO_S16LE == 0x8010 && SDL_AUDIO_S16BE == 0x9010 &&
-               SDL_AUDIO_S32LE == 0x8020 && SDL_AUDIO_S32BE == 0x9020 &&
-               SDL_AUDIO_F32LE == 0x8120 && SDL_AUDIO_F32BE == 0x9120,
+
+_Static_assert(SDL_AUDIO_U8 == 0x0008 && SDL_AUDIO_S8 == 0x8008 && SDL_AUDIO_S16LE == 0x8010 && SDL_AUDIO_S16BE == 0x9010 &&
+                   SDL_AUDIO_S32LE == 0x8020 && SDL_AUDIO_S32BE == 0x9020 && SDL_AUDIO_F32LE == 0x8120 && SDL_AUDIO_F32BE == 0x9120,
                "Audio format codes must match Idris");
 
 static int valid_spec(const SDL_AudioSpec* spec) {
     switch (spec->format) {
-    case SDL_AUDIO_U8: case SDL_AUDIO_S8:
-    case SDL_AUDIO_S16LE: case SDL_AUDIO_S16BE:
-    case SDL_AUDIO_S32LE: case SDL_AUDIO_S32BE:
-    case SDL_AUDIO_F32LE: case SDL_AUDIO_F32BE:
+    case SDL_AUDIO_U8:
+    case SDL_AUDIO_S8:
+    case SDL_AUDIO_S16LE:
+    case SDL_AUDIO_S16BE:
+    case SDL_AUDIO_S32LE:
+    case SDL_AUDIO_S32BE:
+    case SDL_AUDIO_F32LE:
+    case SDL_AUDIO_F32BE:
         break;
     default:
         return SDL_SetError("Unsupported PCM audio format");
     }
+
     if (spec->channels < 1 || spec->channels > 8 || spec->freq <= 0)
         return SDL_SetError("Audio requires 1 to 8 channels and a positive sample rate");
+
     return 1;
 }
 
 SDL_AudioStream* idris_sdl_audio_open(Uint32 format, Sint32 channels, Sint32 frequency) {
     const SDL_AudioSpec spec = {(SDL_AudioFormat)format, channels, frequency};
+
     if (!valid_spec(&spec)) return NULL;
+
     /* SDL owns the device with this stream. No callback enters Idris from an audio thread. */
     return SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
 }
 
-static int put_range(SDL_AudioStream* stream, const SDL_AudioSpec* spec, const void* data,
-                     Uint64 capacity, Uint32 offset, Uint32 length) {
+static int put_range(SDL_AudioStream* stream, const SDL_AudioSpec* spec, const void* data, Uint64 capacity, Uint32 offset, Uint32 length) {
     if (!valid_spec(spec)) return 0;
+
     const Uint32 frame_bytes = (Uint32)SDL_AUDIO_FRAMESIZE(*spec);
-    if (length > SDL_MAX_SINT32 || (Uint64)offset + length > capacity ||
-        (Uint64)offset + length > SIZE_MAX || offset % frame_bytes || length % frame_bytes)
+
+    if (length > SDL_MAX_SINT32 || (Uint64)offset + length > capacity || (Uint64)offset + length > SIZE_MAX || offset % frame_bytes ||
+        length % frame_bytes) {
         return SDL_SetError("Audio range must fit the buffer and contain aligned whole sample frames");
+    }
+
     if (length == 0) return 1;
+
     if (!data) return SDL_SetError("Audio data must not be null");
+
     return SDL_PutAudioStreamData(stream, (const Uint8*)data + offset, (int)length);
 }
 
 int idris_sdl_audio_put(SDL_AudioStream* stream, const void* data, Uint64 capacity, Uint32 offset, Uint32 length) {
     SDL_AudioSpec spec;
+
     if (!SDL_GetAudioStreamFormat(stream, &spec, NULL)) return 0;
+
     return put_range(stream, &spec, data, capacity, offset, length);
 }
 
-int idris_sdl_audio_pause(SDL_AudioStream* stream) { return SDL_PauseAudioStreamDevice(stream); }
-int idris_sdl_audio_resume(SDL_AudioStream* stream) { return SDL_ResumeAudioStreamDevice(stream); }
-int idris_sdl_audio_paused(SDL_AudioStream* stream) { return SDL_AudioStreamDevicePaused(stream); }
-int idris_sdl_audio_clear(SDL_AudioStream* stream) { return SDL_ClearAudioStream(stream); }
-int idris_sdl_audio_flush(SDL_AudioStream* stream) { return SDL_FlushAudioStream(stream); }
+int idris_sdl_audio_pause(SDL_AudioStream* stream) {
+    return SDL_PauseAudioStreamDevice(stream);
+}
+int idris_sdl_audio_resume(SDL_AudioStream* stream) {
+    return SDL_ResumeAudioStreamDevice(stream);
+}
+int idris_sdl_audio_paused(SDL_AudioStream* stream) {
+    return SDL_AudioStreamDevicePaused(stream);
+}
+int idris_sdl_audio_clear(SDL_AudioStream* stream) {
+    return SDL_ClearAudioStream(stream);
+}
+int idris_sdl_audio_flush(SDL_AudioStream* stream) {
+    return SDL_FlushAudioStream(stream);
+}
 
 int idris_sdl_audio_set_gain(SDL_AudioStream* stream, double gain) {
-    if (!(gain >= 0.0 && gain <= FLT_MAX))
-        return SDL_SetError("Audio gain must be finite, nonnegative, and fit a float");
+    if (!(gain >= 0.0 && gain <= FLT_MAX)) return SDL_SetError("Audio gain must be finite, nonnegative, and fit a float");
+
     return SDL_SetAudioStreamGain(stream, (float)gain);
 }
 
-double idris_sdl_audio_get_gain(SDL_AudioStream* stream) { return (double)SDL_GetAudioStreamGain(stream); }
+double idris_sdl_audio_get_gain(SDL_AudioStream* stream) {
+    return (double)SDL_GetAudioStreamGain(stream);
+}
 
 IdrisSDLWAV* idris_sdl_wav_load(const char* path) {
     IdrisSDLWAV* wav = SDL_calloc(1, sizeof(*wav));
-    if (!wav) { SDL_SetError("Cannot allocate WAV metadata"); return NULL; }
-    SDL_AudioSpec spec;
-    if (!SDL_LoadWAV(path, &spec, &wav->data, &wav->length)) {
-        SDL_free(wav);
+    if (!wav) {
+        SDL_SetError("Cannot allocate WAV metadata");
+
         return NULL;
     }
+
+    SDL_AudioSpec spec;
+
+    if (!SDL_LoadWAV(path, &spec, &wav->data, &wav->length)) {
+        SDL_free(wav);
+
+        return NULL;
+    }
+
     if (!valid_spec(&spec)) {
         SDL_free(wav->data);
         SDL_free(wav);
+
         return NULL;
     }
-    wav->format = (Uint32)spec.format;
-    wav->channels = spec.channels;
+
+    wav->format    = (Uint32)spec.format;
+    wav->channels  = spec.channels;
     wav->frequency = spec.freq;
+
     return wav;
 }
 
 void idris_sdl_wav_free(IdrisSDLWAV* wav) {
     if (!wav) return;
+
     SDL_free(wav->data);
     SDL_free(wav);
 }
 
 int idris_sdl_audio_put_wav(SDL_AudioStream* stream, const IdrisSDLWAV* wav, Uint32 offset, Uint32 length) {
     if (!wav) return SDL_SetError("WAV data must not be null");
+
     SDL_AudioSpec spec;
+
     if (!SDL_GetAudioStreamFormat(stream, &spec, NULL)) return 0;
+
     if ((Uint32)spec.format != wav->format || spec.channels != wav->channels || spec.freq != wav->frequency)
         return SDL_SetError("WAV format must match the playback stream input");
+
     return put_range(stream, &spec, wav->data, wav->length, offset, length);
+}
+
+_Static_assert(SDL_GAMEPAD_AXIS_LEFTX == 0 && SDL_GAMEPAD_AXIS_RIGHT_TRIGGER == 5, "Gamepad axis codes must match Idris");
+
+_Static_assert(SDL_GAMEPAD_BUTTON_SOUTH == 0 && SDL_GAMEPAD_BUTTON_DPAD_RIGHT == 14 && SDL_GAMEPAD_BUTTON_TOUCHPAD == 20,
+               "Gamepad button codes must match Idris");
+
+_Static_assert(SDL_SYSTEM_CURSOR_DEFAULT == 0 && SDL_SYSTEM_CURSOR_POINTER == 11, "Cursor codes must match Idris");
+
+_Static_assert(SDL_IO_SEEK_SET == 0 && SDL_IO_SEEK_CUR == 1 && SDL_IO_SEEK_END == 2 && SDL_IO_STATUS_READY == 0 &&
+                   SDL_IO_STATUS_WRITEONLY == 5,
+               "IO codes must match Idris");
+
+IdrisSDLGamepads* idris_sdl_gamepads_new(void) {
+    IdrisSDLGamepads* list = SDL_calloc(1, sizeof(*list));
+    if (!list) {
+        SDL_SetError("Cannot allocate gamepad list");
+        return NULL;
+    }
+
+    int count = 0;
+
+    list->ids = SDL_GetGamepads(&count);
+    if (!list->ids) {
+        SDL_free(list);
+        return NULL;
+    }
+
+    list->count = count;
+
+    return list;
+}
+
+Uint32 idris_sdl_gamepads_at(const IdrisSDLGamepads* list, Uint32 index) {
+    if (!list || index >= (Uint32)list->count) {
+        SDL_SetError("Gamepad index is outside the list");
+
+        return 0;
+    }
+
+    return list->ids[index];
+}
+
+void idris_sdl_gamepads_free(IdrisSDLGamepads* list) {
+    if (list) {
+        SDL_free(list->ids);
+        SDL_free(list);
+    }
+}
+
+int idris_sdl_gamepad_connected(SDL_Gamepad* gamepad) {
+    return SDL_GamepadConnected(gamepad);
+}
+
+int idris_sdl_gamepad_button(SDL_Gamepad* gamepad, Sint32 button) {
+    return SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)button);
+}
+
+int idris_sdl_gamepad_rumble(SDL_Gamepad* gamepad, Uint16 low, Uint16 high, Uint32 ms) {
+    return SDL_RumbleGamepad(gamepad, low, high, ms);
+}
+
+int idris_sdl_relative_mouse(SDL_Window* window, int enabled) {
+    return SDL_SetWindowRelativeMouseMode(window, enabled != 0);
+}
+
+int idris_sdl_relative_mouse_enabled(SDL_Window* window) {
+    return SDL_GetWindowRelativeMouseMode(window);
+}
+
+int idris_sdl_capture_mouse(int enabled) {
+    return SDL_CaptureMouse(enabled != 0);
+}
+
+int idris_sdl_set_cursor(SDL_Cursor* cursor) {
+    return SDL_SetCursor(cursor);
+}
+
+int idris_sdl_default_cursor(void) {
+    SDL_Cursor* cursor = SDL_GetDefaultCursor();
+
+    return cursor ? SDL_SetCursor(cursor) : 0;
+}
+
+int idris_sdl_show_cursor(void) {
+    return SDL_ShowCursor();
+}
+
+int idris_sdl_hide_cursor(void) {
+    return SDL_HideCursor();
+}
+
+int idris_sdl_cursor_visible(void) {
+    return SDL_CursorVisible();
+}
+
+int idris_sdl_clipboard_set(const char* text) {
+    return SDL_SetClipboardText(text);
+}
+
+char* idris_sdl_clipboard_get(void) {
+    /* Empty text is valid. Normalize SDL's empty-string error result to null. */
+    SDL_ClearError();
+
+    char* text = SDL_GetClipboardText();
+
+    if (SDL_GetError()[0]) {
+        SDL_free(text);
+
+        return NULL;
+    }
+
+    return text;
+}
+
+int idris_sdl_clipboard_has_text(void) {
+    return SDL_HasClipboardText();
+}
+
+const char* idris_sdl_string(const char* text) {
+    return text ? text : "";
+}
+
+Uint32 idris_sdl_event_gamepad(const SDL_Event* event) {
+    switch (event->type) {
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+        return event->gaxis.which;
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+        return event->gbutton.which;
+    default:
+        return event->gdevice.which;
+    }
+}
+
+Uint8 idris_sdl_event_gamepad_control(const SDL_Event* event) {
+    return event->type == SDL_EVENT_GAMEPAD_AXIS_MOTION ? event->gaxis.axis : event->gbutton.button;
+}
+
+Sint16 idris_sdl_event_gamepad_value(const SDL_Event* event) {
+    return event->gaxis.value;
+}
+
+const char* idris_sdl_event_drop_data(const SDL_Event* event) {
+    return idris_sdl_string(event->drop.data);
+}
+
+const char* idris_sdl_event_drop_source(const SDL_Event* event) {
+    return idris_sdl_string(event->drop.source);
+}
+
+double idris_sdl_event_drop_x(const SDL_Event* event) {
+    return event->drop.x;
+}
+
+double idris_sdl_event_drop_y(const SDL_Event* event) {
+    return event->drop.y;
+}
+
+int idris_sdl_io_close(SDL_IOStream* stream) {
+    return SDL_CloseIO(stream);
+}
+
+int idris_sdl_io_flush(SDL_IOStream* stream) {
+    return SDL_FlushIO(stream);
+}
+
+static int valid_io_range(SDL_IOStream* stream, const void* buffer, Uint64 capacity, Uint64 offset, Uint64 count) {
+    if (!stream || offset > capacity || count > capacity - offset || offset > SIZE_MAX || count > SIZE_MAX - (size_t)offset ||
+        count > SDL_MAX_SINT64 || (count && !buffer)) {
+        return SDL_SetError("IO range must fit a live stream and buffer");
+    }
+
+    return 1;
+}
+
+Sint64 idris_sdl_io_read(SDL_IOStream* stream, void* buffer, Uint64 capacity, Uint64 offset, Uint64 count) {
+    if (!valid_io_range(stream, buffer, capacity, offset, count)) return -1;
+
+    return (Sint64)SDL_ReadIO(stream, count ? (Uint8*)buffer + (size_t)offset : buffer, (size_t)count);
+}
+
+Sint64 idris_sdl_io_write(SDL_IOStream* stream, const void* buffer, Uint64 capacity, Uint64 offset, Uint64 count) {
+    if (!valid_io_range(stream, buffer, capacity, offset, count)) return -1;
+
+    return (Sint64)SDL_WriteIO(stream, count ? (const Uint8*)buffer + (size_t)offset : buffer, (size_t)count);
 }

@@ -17,6 +17,9 @@ import CoordinateTests
 import StreamingTests
 import TextureLockTests
 import AudioTests
+import GamepadTests
+import InputExtrasTests
+import IOTests
 import TimerTests
 import VSyncTests
 import WaitTests
@@ -152,9 +155,12 @@ smoke = do
 
 main : IO ()
 main = do
-  ok <- SDL3.init (video <+> audio)
+  ok <- SDL3.init (video <+> audio <+> gamepad)
   result <- the (IO (Either String ())) (if not ok then Left <$> SDL3.getError else do
     Right () <- audioTests | Left err => pure (Left err)
+    Right () <- gamepadTests | Left err => pure (Left err)
+    Right () <- inputExtrasTests | Left err => pure (Left err)
+    Right () <- ioTests | Left err => pure (Left err)
     smoke)
   quit
   case result of

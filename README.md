@@ -1,8 +1,8 @@
 # SDL3 for Idris 2
 
-Thin SDL3 bindings for windows, 2D rendering, textures, keyboard and mouse input, text input,
-timers, and audio playback. BMP images and WAV audio are supported.  SDL3_mixer, SDL3_image,
-SDL3_ttf, gamepad controls, and the GPU API are not bound.
+Thin SDL3 bindings for windows, 2D rendering, textures, keyboard, mouse, gamepads, text input,
+clipboard text, file drops, timers, audio playback, and file/memory I/O. BMP images and WAV audio
+are supported. SDL3_mixer, SDL3_image, SDL3_ttf, and the GPU API are not bound.
 
 Chez is the only supported backend. The current build targets Linux and produces a shared
 library. Other platforms are not tested.
@@ -68,7 +68,9 @@ The subsystem guides describe the APIs, ownership, thread rules, and limits:
 - [Video](docs/video.md): Windows, dimensions, display scaling, and window controls.
 - [Rendering](docs/rendering.md): Drawing, coordinate conversion, clipping, and blending.
 - [Textures](docs/textures.md): BMP loading, render targets, uploads, and pixel locking.
-- [Input and events](docs/input.md): Event loops, keyboard, mouse, and text entry.
+- [Input and events](docs/input.md): Keyboard, mouse, cursors, text entry, clipboard, and drops.
+- [Gamepads](docs/gamepads.md): Discovery, controls, connection events, and rumble.
+- [I/O streams](docs/io.md): File and memory access, partial transfers, and cleanup.
 - [Audio](docs/audio.md): PCM queues, WAV files, and playback controls.
 - [Timing](docs/timing.md): Clocks, frame pacing, and display synchronization.
 - [Resource ownership](docs/resources.md): Initialization, errors, cleanup, and scopes.

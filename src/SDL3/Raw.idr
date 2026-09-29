@@ -730,3 +730,187 @@ prim__freeWAV : NativeWAV -> PrimIO ()
 %foreign "C:idris_sdl_audio_put_wav, libidris2_sdl3, core.h"
 export
 prim__queueWAV : AnyPtr -> NativeWAV -> Bits32 -> Bits32 -> PrimIO Int
+
+public export
+NativeGamepads : Type
+NativeGamepads = Struct "IdrisSDLGamepads" [("count", Int32), ("ids", AnyPtr)]
+
+%foreign "C:idris_sdl_gamepads_new, libidris2_sdl3, core.h"
+export
+prim__gamepadsNew : PrimIO NativeGamepads
+
+%foreign "C:idris_sdl_is_null, libidris2_sdl3, core.h"
+export
+prim__gamepadsIsNull : NativeGamepads -> PrimIO Int
+
+%foreign "C:idris_sdl_gamepads_at, libidris2_sdl3, core.h"
+export
+prim__gamepadsAt : NativeGamepads -> Bits32 -> PrimIO Bits32
+
+%foreign "C:idris_sdl_gamepads_free, libidris2_sdl3, core.h"
+export
+prim__gamepadsFree : NativeGamepads -> PrimIO ()
+
+%foreign "C:SDL_OpenGamepad, libSDL3"
+export
+prim__openGamepad : Bits32 -> PrimIO AnyPtr
+
+%foreign "C:SDL_CloseGamepad, libSDL3"
+export
+prim__closeGamepad : AnyPtr -> PrimIO ()
+
+%foreign "C:SDL_GetGamepadName, libSDL3"
+export
+prim__gamepadName : AnyPtr -> PrimIO AnyPtr
+
+%foreign "C:SDL_GetGamepadID, libSDL3"
+export
+prim__gamepadID : AnyPtr -> PrimIO Bits32
+
+%foreign "C:idris_sdl_gamepad_connected, libidris2_sdl3, core.h"
+export
+prim__gamepadConnected : AnyPtr -> PrimIO Int
+
+%foreign "C:SDL_GetGamepadAxis, libSDL3"
+export
+prim__gamepadAxis : AnyPtr -> Int32 -> PrimIO Int16
+
+%foreign "C:idris_sdl_gamepad_button, libidris2_sdl3, core.h"
+export
+prim__gamepadButton : AnyPtr -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_gamepad_rumble, libidris2_sdl3, core.h"
+export
+prim__gamepadRumble : AnyPtr -> Bits16 -> Bits16 -> Bits32 -> PrimIO Int
+
+%foreign "C:SDL_UpdateGamepads, libSDL3"
+export
+prim__updateGamepads : PrimIO ()
+
+%foreign "C:idris_sdl_relative_mouse, libidris2_sdl3, core.h"
+export
+prim__relativeMouse : AnyPtr -> Int -> PrimIO Int
+
+%foreign "C:idris_sdl_relative_mouse_enabled, libidris2_sdl3, core.h"
+export
+prim__relativeMouseEnabled : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_capture_mouse, libidris2_sdl3, core.h"
+export
+prim__captureMouse : Int -> PrimIO Int
+
+%foreign "C:SDL_CreateSystemCursor, libSDL3"
+export
+prim__createSystemCursor : Int32 -> PrimIO AnyPtr
+
+%foreign "C:SDL_DestroyCursor, libSDL3"
+export
+prim__destroyCursor : AnyPtr -> PrimIO ()
+
+%foreign "C:idris_sdl_set_cursor, libidris2_sdl3, core.h"
+export
+prim__setCursor : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_default_cursor, libidris2_sdl3, core.h"
+export
+prim__defaultCursor : PrimIO Int
+
+%foreign "C:idris_sdl_show_cursor, libidris2_sdl3, core.h"
+export
+prim__showCursor : PrimIO Int
+
+%foreign "C:idris_sdl_hide_cursor, libidris2_sdl3, core.h"
+export
+prim__hideCursor : PrimIO Int
+
+%foreign "C:idris_sdl_cursor_visible, libidris2_sdl3, core.h"
+export
+prim__cursorVisible : PrimIO Int
+
+%foreign "C:idris_sdl_clipboard_set, libidris2_sdl3, core.h"
+export
+prim__clipboardSet : String -> PrimIO Int
+
+%foreign "C:idris_sdl_clipboard_get, libidris2_sdl3, core.h"
+export
+prim__clipboardGet : PrimIO AnyPtr
+
+%foreign "C:idris_sdl_clipboard_has_text, libidris2_sdl3, core.h"
+export
+prim__clipboardHasText : PrimIO Int
+
+%foreign "C:idris_sdl_string, libidris2_sdl3, core.h"
+export
+prim__copyString : AnyPtr -> PrimIO String
+
+%foreign "C:SDL_free, libSDL3"
+export
+prim__freeSDL : AnyPtr -> PrimIO ()
+
+%foreign "C:idris_sdl_event_gamepad, libidris2_sdl3, core.h"
+export
+prim__eventGamepad : AnyPtr -> PrimIO Bits32
+
+%foreign "C:idris_sdl_event_gamepad_control, libidris2_sdl3, core.h"
+export
+prim__eventGamepadControl : AnyPtr -> PrimIO Bits8
+
+%foreign "C:idris_sdl_event_gamepad_value, libidris2_sdl3, core.h"
+export
+prim__eventGamepadValue : AnyPtr -> PrimIO Int16
+
+%foreign "C:idris_sdl_event_drop_data, libidris2_sdl3, core.h"
+export
+prim__eventDropData : AnyPtr -> PrimIO String
+
+%foreign "C:idris_sdl_event_drop_source, libidris2_sdl3, core.h"
+export
+prim__eventDropSource : AnyPtr -> PrimIO String
+
+%foreign "C:idris_sdl_event_drop_x, libidris2_sdl3, core.h"
+export
+prim__eventDropX : AnyPtr -> PrimIO Double
+
+%foreign "C:idris_sdl_event_drop_y, libidris2_sdl3, core.h"
+export
+prim__eventDropY : AnyPtr -> PrimIO Double
+
+%foreign "C:SDL_IOFromFile, libSDL3"
+export
+prim__ioFromFile : String -> String -> PrimIO AnyPtr
+
+%foreign "C:SDL_IOFromDynamicMem, libSDL3"
+export
+prim__ioDynamicMemory : PrimIO AnyPtr
+
+%foreign "C:idris_sdl_io_close, libidris2_sdl3, core.h"
+export
+prim__ioClose : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_io_flush, libidris2_sdl3, core.h"
+export
+prim__ioFlush : AnyPtr -> PrimIO Int
+
+%foreign "C:SDL_GetIOSize, libSDL3"
+export
+prim__ioSize : AnyPtr -> PrimIO Int64
+
+%foreign "C:SDL_SeekIO, libSDL3"
+export
+prim__ioSeek : AnyPtr -> Int64 -> Int32 -> PrimIO Int64
+
+%foreign "C:SDL_TellIO, libSDL3"
+export
+prim__ioTell : AnyPtr -> PrimIO Int64
+
+%foreign "C:SDL_GetIOStatus, libSDL3"
+export
+prim__ioStatus : AnyPtr -> PrimIO Int32
+
+%foreign "C:idris_sdl_io_read, libidris2_sdl3, core.h"
+export
+prim__ioRead : AnyPtr -> Buffer -> Bits64 -> Bits64 -> Bits64 -> PrimIO Int64
+
+%foreign "C:idris_sdl_io_write, libidris2_sdl3, core.h"
+export
+prim__ioWrite : AnyPtr -> Buffer -> Bits64 -> Bits64 -> Bits64 -> PrimIO Int64

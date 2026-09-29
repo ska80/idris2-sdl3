@@ -2,6 +2,8 @@ module SDL3.Scoped
 
 import SDL3
 
+import Data.Buffer
+
 %default total
 
 -- Cleanup runs after an ordinary callback return, including Left.
@@ -13,6 +15,38 @@ withResource acquire release action = do
   result <- action resource
   release resource
   pure result
+
+||| Own one open reference, including after removal. Do not close or retain the supplied handle.
+export
+withGamepad : GamepadID -> (Gamepad -> IO (Either String a)) -> IO (Either String a)
+withGamepad identifier = withResource (openGamepad identifier) closeGamepad
+
+||| Own a system cursor on the main thread. Select another cursor before returning.
+||| Does not restore the previous cursor. Do not destroy or retain the supplied handle.
+export
+withSystemCursor : SystemCursor -> (Cursor -> IO (Either String a)) -> IO (Either String a)
+withSystemCursor shape = withResource (createSystemCursor shape) destroyCursor
+
+withIOResource : IO (Either String IOStream) -> (IOStream -> IO (Either String a)) -> IO (Either String a)
+withIOResource acquire action = do
+  Right stream <- acquire | Left err => pure (Left err)
+  result <- action stream
+  closed <- closeIO stream
+  case result of
+    Left err => pure (Left err)
+    Right value => if closed then pure (Right value) else Left <$> getError
+
+||| Close on ordinary return, even after callback failure. Callback errors precede close errors.
+||| Do not close or retain the stream. Close failure still invalidates it. No exception guarantee.
+export
+withFileIO : String -> FileIOMode -> (IOStream -> IO (Either String a)) -> IO (Either String a)
+withFileIO path mode = withIOResource (openFileIO path mode)
+
+||| Copy source bytes into owned memory and close on ordinary return. Source need not remain alive.
+||| Do not close or retain the stream. Callback errors precede close errors. No exception guarantee.
+export
+withMemoryIO : Buffer -> (IOStream -> IO (Either String a)) -> IO (Either String a)
+withMemoryIO buffer = withIOResource (openMemoryIO buffer)
 
 ||| Open paused playback, then destroy its stream and owned device on ordinary callback return.
 ||| Initialize SDL audio first. Do not destroy or retain the stream. Runtime exceptions do not guarantee cleanup.

@@ -51,14 +51,18 @@ texture copied from a surface can outlive that surface.
 
 Resource helpers return `IO (Either String a)` and take a callback with the same result
 form. Acquisition failure returns `Left` without calling the callback.  Ordinary `Right` and `Left`
-callback returns both trigger cleanup and preserve its result. Runtime exceptions, process exit, and
-nonreturning callbacks do not guarantee cleanup.
+callback returns both trigger cleanup. Helpers preserve the result unless cleanup reports failure,
+as with I/O stream closing. Callback errors take precedence over close errors. Runtime exceptions,
+process exit, and nonreturning callbacks do not guarantee cleanup.
 
 The helpers cover these resources:
 
 - `withWindow` and `withRenderer` own windows and renderers.
 - `withStreamingTexture`, `withTargetTexture`, and `withTextureFromSurface` own textures.
 - `withBMP` and `withWAV` own loaded image and audio data.
+- `withGamepad` owns one open gamepad reference, including after disconnection.
+- `withSystemCursor` owns a cursor, without selecting it or restoring previous selection.
+- `withFileIO` and `withMemoryIO` own streams that become invalid even after close failure.
 - `withPlaybackStream` owns a playback stream and its logical device.
 - `withEventBuffer` and `withCoordinateBuffer` own reusable event and conversion storage.
 - `withPointBuffer`, `withRectBuffer`, and `withTextureLockBuffer` own reusable drawing storage.

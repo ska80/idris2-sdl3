@@ -128,8 +128,70 @@ alive.
 
 `getWindowMouseGrab` reports SDL's active state, not setter success.  Focus changes and grabs on
 other windows can change that state.  A hidden window can accept a request without an active
-grab. The binding does not enable mouse capture, relative mouse mode, or keyboard grab. A reported
-grab does not prove physical confinement on every backend.
+grab. Mouse grab alone does not enable capture, relative mode, or keyboard grab.  A reported grab
+does not prove physical confinement on every backend.
+
+## Relative mouse mode and capture
+
+`setWindowRelativeMouseMode window enabled` requests continuous relative movement.  While the window
+has focus, SDL hides and confines the cursor and reports movement even at window edges. Read `dx`
+and `dy` from `MouseMotionEvent` rather than converting them as positions.  Changing this mode
+flushes pending mouse motion for that window.
+
+`getWindowRelativeMouseMode` reports whether the mode is enabled, not whether the window has focus.
+`captureMouse True` instead requests mouse events outside the current window without hiding or
+confining the cursor. Capture is temporary and backend-dependent. SDL releases it on focus loss and
+can also capture automatically during a mouse drag.
+
+Use these controls on the main thread. Provide an exit action, disable relative mode when no longer
+needed, and release explicit capture with `captureMouse False`. Read `getError` immediately after a
+failed request. Successful dummy-driver calls do not establish physical mouse behavior.
+
+## Cursors
+
+`createSystemCursor shape` creates an owned cursor. `SystemCursor` includes arrow, text, wait,
+crosshair, pointer, movement, and resize shapes. `setCursor (Just cursor)` selects one.  `setCursor
+Nothing` selects SDL's default cursor, rather than requesting a redraw with a null pointer.  Cursor
+selection is shared SDL state, not a property of one window.
+
+`showCursor` and `hideCursor` return success booleans. `cursorVisible` returns state.  Relative
+mouse mode can hide the cursor regardless of the normal visibility setting.  Use all cursor
+operations on the main thread. Backends without cursor support can reject creation.
+
+Select another cursor before calling `destroyCursor`, then release it exactly once before `quit`.
+`withSystemCursor shape action` owns a cursor without selecting it or restoring previous selection.
+Select another cursor before its callback returns. Do not destroy or retain the supplied handle.
+Custom image cursors and cursor animation are not bound.
+
+## Clipboard text
+
+`setClipboardText text` copies UTF-8 text to the clipboard. Embedded NUL ends the text.
+`getClipboardText` returns a copied string through `Either String` and releases SDL's temporary
+copy.  Empty text is valid. The getter clears an earlier SDL error to distinguish empty text from
+failure, so read earlier errors before calling it.
+
+`hasClipboardText` reports whether nonempty text is available, not operation success.  Use all
+clipboard calls on the main thread. Other applications can change the clipboard at any time.  Only
+text is supported. Primary selection, arbitrary formats, and clipboard callbacks are not bound.
+
+## File and text drops
+
+Payload polling and both wait APIs decode file-drop events:
+
+- `DropFileEvent timestamp data`: A file-open request. `data.text` contains the filename.
+- `DropTextEvent timestamp data`: Dropped text in `data.text`.
+- `DropPositionEvent timestamp data`: Position during dragging, with empty `data.text`.
+- `DropBeginEvent timestamp windowID`: A group of drops begins.
+- `DropCompleteEvent timestamp windowID`: The group ends.
+
+`DropData` contains `windowID`, window-relative `x` and `y`, copied `source`, and copied `text`.
+Empty source means no source name was supplied. Begin and complete events expose only a window ID,
+not coordinates. Type-only polling uses the same names without the `Event` suffix.
+
+The decoder copies SDL's strings before the next poll or wait. Do not free SDL's event pointers.
+The returned data survives buffer reuse and cleanup. Match the window ID against a live window and
+treat dropped paths and text as untrusted input. The binding does not open files or validate paths
+automatically. Gamepad notifications are described in the [gamepad guide](gamepads.md).
 
 ## Ownership, examples, and tests
 
@@ -138,6 +200,6 @@ once. Keep windows alive through their input-control calls.  See [resource owner
 for scoped cleanup limits.
 
 [Hello](../examples/Hello.idr) handles close, Escape, and mouse-button events.  `make test` covers
-copied events, text, identifiers, waits, and buffer reuse.  Synthetic events test decoding rather
-than real input devices or window-manager policy.  Physical input, input methods, screen keyboards,
-and cursor confinement need manual testing.
+copied events, clipboard text, drops, identifiers, waits, and buffer reuse. Synthetic events test
+decoding rather than real input devices or window-manager policy.  Physical input, input methods,
+screen keyboards, and cursor confinement need manual testing.

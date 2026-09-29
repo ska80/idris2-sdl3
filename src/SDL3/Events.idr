@@ -183,6 +183,83 @@ record PixelSizeData where
   width : Int32
   height : Int32
 
+||| Connection identifier, not an owned gamepad or a device index.
+public export
+data GamepadID = MkGamepadID Bits32
+
+public export
+Eq GamepadID where
+  MkGamepadID x == MkGamepadID y = x == y
+
+||| Physical control codes. Unknown event codes remain representable.
+public export
+data GamepadAxis = MkGamepadAxis Bits8
+
+public export
+Eq GamepadAxis where
+  MkGamepadAxis x == MkGamepadAxis y = x == y
+
+public export
+data GamepadButton = MkGamepadButton Bits8
+
+public export
+Eq GamepadButton where
+  MkGamepadButton x == MkGamepadButton y = x == y
+
+public export
+leftStickX, leftStickY, rightStickX, rightStickY, leftTrigger, rightTrigger : GamepadAxis
+leftStickX = MkGamepadAxis 0
+leftStickY = MkGamepadAxis 1
+rightStickX = MkGamepadAxis 2
+rightStickY = MkGamepadAxis 3
+leftTrigger = MkGamepadAxis 4
+rightTrigger = MkGamepadAxis 5
+
+public export
+gamepadSouth, gamepadEast, gamepadWest, gamepadNorth, gamepadBack, gamepadGuide,
+gamepadStart, gamepadLeftStick, gamepadRightStick, gamepadLeftShoulder,
+gamepadRightShoulder, gamepadDpadUp, gamepadDpadDown, gamepadDpadLeft,
+gamepadDpadRight, gamepadTouchpad : GamepadButton
+gamepadSouth = MkGamepadButton 0
+gamepadEast = MkGamepadButton 1
+gamepadWest = MkGamepadButton 2
+gamepadNorth = MkGamepadButton 3
+gamepadBack = MkGamepadButton 4
+gamepadGuide = MkGamepadButton 5
+gamepadStart = MkGamepadButton 6
+gamepadLeftStick = MkGamepadButton 7
+gamepadRightStick = MkGamepadButton 8
+gamepadLeftShoulder = MkGamepadButton 9
+gamepadRightShoulder = MkGamepadButton 10
+gamepadDpadUp = MkGamepadButton 11
+gamepadDpadDown = MkGamepadButton 12
+gamepadDpadLeft = MkGamepadButton 13
+gamepadDpadRight = MkGamepadButton 14
+gamepadTouchpad = MkGamepadButton 20
+
+public export
+record GamepadAxisData where
+  constructor MkGamepadAxisData
+  gamepadID : GamepadID
+  axis : GamepadAxis
+  value : Int16
+
+public export
+record GamepadButtonData where
+  constructor MkGamepadButtonData
+  gamepadID : GamepadID
+  button : GamepadButton
+  action : KeyAction
+
+||| Copied drop payload. Empty source means SDL supplied no source name.
+public export
+record DropData where
+  constructor MkDropData
+  windowID : WindowID
+  x, y : Double
+  source : String
+  text : String
+
 ||| Event data copied from the reusable buffer. Timestamps use nanoseconds.
 ||| Other types retain their numeric type and timestamp, but not their payload.
 public export
@@ -216,4 +293,14 @@ data Event = QuitEvent Bits64
            | MouseWheelEvent Bits64 MouseWheelData
            | TextInputEvent Bits64 TextInputData
            | TextEditingEvent Bits64 TextEditingData
+           | GamepadAddedEvent Bits64 GamepadID
+           | GamepadRemovedEvent Bits64 GamepadID
+           | GamepadRemappedEvent Bits64 GamepadID
+           | GamepadAxisEvent Bits64 GamepadAxisData
+           | GamepadButtonEvent Bits64 GamepadButtonData
+           | DropFileEvent Bits64 DropData
+           | DropTextEvent Bits64 DropData
+           | DropBeginEvent Bits64 WindowID
+           | DropCompleteEvent Bits64 WindowID
+           | DropPositionEvent Bits64 DropData
            | UnknownEvent Bits64 Bits32
