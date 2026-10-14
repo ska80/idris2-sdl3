@@ -1,0 +1,17 @@
+package sdl3-image
+
+version = 0.0.0
+brief = "Typed SDL3_image loading for core surfaces and textures"
+license = "MIT"
+readme = "docs/image.md"
+
+langversion >= 0.8.0
+
+depends = sdl3
+
+sourcedir = "src"
+modules = SDL3.Image
+        , SDL3.Image.Raw
+        , SDL3.Image.Scoped
+
+prebuild = "make -C cbits image"

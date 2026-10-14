@@ -39,7 +39,8 @@ texture before destroying it as a render target.  Destroy playback streams befor
 stream also closes its owned logical audio device.
 
 Free surfaces, WAV data, event buffers, coordinate buffers, point buffers, rectangle buffers, and
-texture-lock buffers exactly once. Use the matching destroy or free function. Do not use a handle
+texture-lock buffers exactly once. Also release geometry, keyboard snapshot, mouse query, and
+render-state storage exactly once.  Use the matching destroy or free function. Do not use a handle
 after destruction. The types prevent handle confusion, not access to freed memory, duplicate
 cleanup, or renderer mismatches.
 
@@ -66,6 +67,9 @@ The helpers cover these resources:
 - `withPlaybackStream` owns a playback stream and its logical device.
 - `withEventBuffer` and `withCoordinateBuffer` own reusable event and conversion storage.
 - `withPointBuffer`, `withRectBuffer`, and `withTextureLockBuffer` own reusable drawing storage.
+- `withGeometryBuffer` owns reusable vertices and indices.
+- `withKeyboardSnapshot`, `withMouseStateBuffer`, and `withRenderStateBuffer` own reusable query
+  storage.
 
 Do not destroy a supplied resource or retain it after the callback returns.  Do not store functions
 that use it later. Nest dependent resources inside their owners' scopes. Keep buffers around the
@@ -79,9 +83,11 @@ selection and pixel-locking rules.
 ## Temporary state
 
 `withRenderTarget` is exported by `SDL3`. The other state helpers are exported by `SDL3.Scoped`:
-`withDrawBlendMode`, `withTextureAlphaMod`, `withTextureBlendMode`, and
-`withTextureScaleMode`. These helpers borrow existing resources and restore only their named
-state. They do not own or destroy the resource.
+`withDrawBlendMode`, `withTextureAlphaMod`, `withTextureBlendMode`, and `withTextureScaleMode`,
+`withRenderViewport`, `withRenderClipRect`, `withRenderScale`, `withDrawColor`, and
+`withTextureColorMod`. These helpers borrow existing resources and restore only their named state.
+They do not own or destroy the resource. Keep the same target selected throughout viewport, clip,
+and scale scopes.
 
 A failed initial query skips the action. A failed setting also skips the action but still attempts
 restoration. Setting and action errors take precedence over restoration errors. If only restoration
@@ -91,6 +97,17 @@ Nested scopes save their own entry state. Ordinary callback returns trigger a re
 but exceptions and nonreturning actions do not. Keep all borrowed resources alive throughout the
 action and restoration. `withTextureLockRGBA` instead releases a pixel lock and submits writes, even
 after a callback error. It does not undo writes.
+
+## Extension resources
+
+The optional [Image package](image.md) returns the existing core surface and texture types.  Its
+stream loaders borrow their source during the call without closing it. The decoded resource can
+outlive the source stream.  Core destroy functions release the returned resources.
+
+The optional [TTF package](ttf.md) owns fonts, text engines, and reusable text objects.  Destroy
+text before its font and engine. Destroy engines before their renderers, and close fonts before
+balancing TTF initialization.  Call SDL `quit` last. Extension scopes have the same ordinary-return
+limit as core scopes.
 
 ## Thread rules and raw bindings
 
@@ -102,6 +119,10 @@ guide](audio.md). Timing functions can run on any thread.
 not enforce pointer validity, buffer capacity, or resource lifetimes.  Use it only when you can
 enforce the corresponding SDL and adapter requirements.  Mixing raw calls with typed handles can
 break ownership and format assumptions.
+
+`SDL3.Internal.Handles` is an unsafe bridge for binding modules, not an application API.  Explicitly
+importing it permits pointer access and handle forging. It has the same safety obligations as raw
+bindings.  The normal core import keeps resource constructors private.
 
 ## Examples and tests
 

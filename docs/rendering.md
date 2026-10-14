@@ -50,6 +50,48 @@ dimensions. Available modes are:
 it. Each target retains its own scale and logical presentation.  Configure only the intended targets
 to avoid scaling an off-screen image twice.  These controls do not transform input events.
 
+## Queries and temporary state
+
+`newRenderStateBuffer` allocates reusable storage for render queries. Release it with
+`freeRenderStateBuffer`, or use `withRenderStateBuffer` outside the loop.  All queries use the main
+thread and return copied values through `Either String`.  Reusing the buffer does not change earlier
+results.
+
+`getRenderViewport renderer buffer` distinguishes an automatic full-target viewport (`Nothing`) from
+an explicit rectangle (`Just rect`).  `getRenderClipRect` distinguishes disabled clipping from an
+enabled empty rectangle.  `getRenderScale` returns dimensionless x and y scales for the current
+target.
+
+`getDrawColor renderer buffer` returns `MkColor r g b a`. `getTextureColorMod texture` returns
+`MkRGB r g b` without extra query storage.  Both use byte channels. HDR means colors with a wider
+brightness range.  These queries do not preserve external float or HDR color precision.
+
+The corresponding scopes are `withRenderViewport`, `withRenderClipRect`, `withRenderScale`,
+`withDrawColor`, and `withTextureColorMod`.  The first four take reusable query storage. Texture
+color restoration leaves alpha unchanged.  Each scope restores only its named state after ordinary
+returns, under the [temporary-state rules](resources.md#temporary-state).
+
+Keep the same target selected throughout viewport, clip, and scale scopes.  If the action changes
+targets, restore that selection in an inner `withRenderTarget` scope.  Restoring an automatic
+viewport keeps its automatic resizing behavior instead of replacing it with an explicit rectangle.
+
+## Output dimensions
+
+`getRenderOutputSize renderer buffer` calls SDL's physical-output query and returns `Size
+PixelUnits`.  `getCurrentRenderOutputSize` calls the current-output query and returns `Size
+RenderOutputUnits`.  The separate unit prevents treating a logical output size as a physical window
+size.  Neither query subtracts the viewport or applies drawing scale.
+
+SDL documents the first result as independent of targets and logical presentation.  It documents the
+second as accounting for both. These bindings return SDL's results without a workaround.  With the
+tested SDL 3.4.16 software renderer, an active texture target changed the first result to the
+texture dimensions.  The second query also differed from the documented logical adjustment in that
+setup.  For a window's physical pixel size, use `getWindowSizeInPixels` with the window instead.
+
+Handle renderer reset notifications through the [event API](input.md#renderer-reset-events).  A
+target reset requires redrawing its contents. A device reset requires recreating textures.  The
+binding leaves resource recovery to the application and the relevant extension.
+
 ## Coordinate conversion
 
 Mouse event positions use window coordinates, even when drawing uses a logical resolution.
@@ -88,6 +130,11 @@ Batches use the current rendering state. SDL consumes the array during the call.
 after the call, not during drawing. Allocate outside the frame loop, then call `freePointBuffer` or
 `freeRectBuffer` exactly once. Scoped alternatives are `withPointBuffer` and `withRectBuffer`. These
 buffers own CPU memory, not a renderer.
+
+`copyPoints` and `copyRects` copy packed doubles from a reusable `Data.Buffer` after range and
+conversion validation.  `GeometryBuffer` provides checked vertex and index storage for triangle
+submission.  See [geometry and bulk updates](geometry.md) for formats, ownership, and separate CPU
+preparation and submission measurements.
 
 ## Blending
 

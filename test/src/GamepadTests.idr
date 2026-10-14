@@ -2,16 +2,20 @@ module GamepadTests
 
 import SDL3
 import SDL3.Scoped
+
 import Data.IORef
 
 %default covering
 
 %foreign "C:idris_test_attach_gamepad, libidris2_sdl3_test, subset_fixtures.h"
 prim__attach : PrimIO Bits32
+
 %foreign "C:idris_test_detach_gamepad, libidris2_sdl3_test, subset_fixtures.h"
 prim__detach : Bits32 -> PrimIO Int
+
 %foreign "C:idris_test_gamepad_input, libidris2_sdl3_test, subset_fixtures.h"
 prim__input : Int16 -> Int -> PrimIO Int
+
 %foreign "C:idris_test_gamepad_rumble, libidris2_sdl3_test, subset_fixtures.h"
 prim__rumble : PrimIO Bits32
 
@@ -23,6 +27,13 @@ exercise identifier@(MkGamepadID raw) pad = do
   True <- pure (actual == identifier) | False => pure (Left "Gamepad identifier changed")
   Right name <- getGamepadName pad | Left err => pure (Left err)
   True <- gamepadConnected pad | False => pure (Left "New gamepad was disconnected")
+  True <- hasGamepadAxis pad leftStickX | False => pure (Left "Mapped axis was missing")
+  True <- hasGamepadButton pad gamepadSouth | False => pure (Left "Mapped button was missing")
+  True <- hasGamepadRumble pad | False => pure (Left "Virtual rumble capability was missing")
+  False <- hasGamepadAxis pad (MkGamepadAxis 255) | True => pure (Left "Unknown axis reported available")
+  False <- hasGamepadButton pad (MkGamepadButton 255) | True => pure (Left "Unknown button reported available")
+  LabelA <- getGamepadButtonLabel pad gamepadSouth | _ => pure (Left "Standard south button label was wrong")
+  UnknownButtonLabel <- getGamepadButtonLabel pad (MkGamepadButton 255) | _ => pure (Left "Unknown button gained a label")
   Right () <- withGamepad identifier (\second => do
     True <- gamepadConnected second | False => pure (Left "Second reference was disconnected")
     pure (Right ())) | Left err => pure (Left err)

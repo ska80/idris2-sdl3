@@ -1,0 +1,11 @@
+package sdl3-ttf-test
+
+version = 0.0.0
+
+depends = sdl3, sdl3-ttf
+
+sourcedir = "ttf-src"
+
+main = TTFMain
+
+executable = sdl3-ttf-test

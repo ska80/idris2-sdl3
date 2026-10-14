@@ -76,6 +76,32 @@ Use key events for controls and shortcuts, not character entry.  The binding doe
 held-key map. Decide how your application handles repeats and focus loss. Keyboard device
 identifiers and platform-specific key codes are not exposed.
 
+## State snapshots
+
+`newKeyboardSnapshot` allocates a reusable copy of SDL keyboard state. Release it with
+`freeKeyboardSnapshot` or use `withKeyboardSnapshot`.  After polling, `refreshKeyboardSnapshot`
+copies current state without consuming events or allocating a new native array.  If the application
+does not poll or wait, call `pumpEvents` first. Use these operations on the main thread.
+
+`keyDown snapshot scancode` reads the last copied state. Unknown scancodes return `False`.  The
+snapshot is not a live view and does not apply an application action map.  Keep keyboard events for
+brief presses and releases between snapshots. Text entry still requires text input events.
+
+`newMouseStateBuffer` allocates reusable query storage. Release it with `freeMouseStateBuffer` or
+use `withMouseStateBuffer`.  `getMouseState buffer` returns copied button bits and a `Point
+WindowSpace` for the window with mouse focus.  It does not query an arbitrary window. Pump events
+before querying, and convert positions explicitly for rendering.
+
+`getRelativeMouseState buffer` returns copied button bits and relative `dx` and `dy` values.  Each
+call resets accumulated motion since the previous relative-state query. It does not consume motion
+events.  Do not count the same motion from both sources. Mouse queries return `Either String` and
+use the main thread.
+
+Keep all query storage alive during access, and do not share it concurrently between threads.
+Copied mouse results survive buffer reuse and cleanup. Keyboard reads require the live snapshot.
+The scoped forms clean up only after ordinary callback returns, under the [resource
+rules](resources.md).
+
 ## Text entry
 
 Text input is disabled by default. Call `startTextInput window` when a text field gains focus and
@@ -118,6 +144,17 @@ steps, not rounded fractions. `mouseX` and `mouseY` are pointer positions, not s
 `WheelNormal`, positive X means rightward and positive Y means away from the user.  For
 `WheelFlipped`, negate scrolling values to use normal direction.  `OtherWheelDirection` preserves
 unknown direction codes.
+
+## Renderer reset events
+
+`RenderTargetsResetEvent timestamp windowID` reports that render-target contents need to be redrawn.
+`RenderDeviceResetEvent timestamp windowID` reports that textures need to be recreated.  Type-only
+polling uses `RenderTargetsReset` and `RenderDeviceReset`. Both poll and wait paths copy timestamps
+and identifiers.
+
+Update exhaustive event matches for these constructors. The binding does not recreate resources or
+reload assets automatically.  Match the window identifier and apply the relevant renderer and
+extension recovery rules.  Other unsupported renderer events remain `OtherEvent` or `UnknownEvent`.
 
 ## Mouse grab
 

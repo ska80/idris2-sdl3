@@ -1,6 +1,7 @@
 # Project guidance
 
 Build with `pack --no-prompt --cg=chez build sdl3.ipkg`.  Run `make test` before you submit changes.
+Before each commit, remove completed items from `TODO.md`. Keep only remaining work in that file.
 
 Chez is the only supported backend. Prioritize its correctness, performance, and examples.  Do not
 add compatibility code or build targets for other backends.

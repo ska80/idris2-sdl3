@@ -1,6 +1,7 @@
 module Main
 
 import SDL3
+
 import System
 import TypeSafety
 import EventTests
@@ -18,6 +19,7 @@ import StreamingTests
 import TextureLockTests
 import AudioTests
 import GamepadTests
+import ExtendedTests
 import InputExtrasTests
 import IOTests
 import TimerTests
@@ -161,6 +163,7 @@ main = do
     Right () <- gamepadTests | Left err => pure (Left err)
     Right () <- inputExtrasTests | Left err => pure (Left err)
     Right () <- ioTests | Left err => pure (Left err)
+    Right () <- extendedTests | Left err => pure (Left err)
     smoke)
   quit
   case result of

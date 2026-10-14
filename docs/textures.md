@@ -33,8 +33,9 @@ loadImage renderer path = withBMP path (createTextureFromSurface renderer)
 ```
 
 The caller owns the returned texture. BMP loading can run on a worker thread, but texture conversion
-requires the main thread. Do not access the surface concurrently with conversion or
-destruction. Other image formats are not bound.
+requires the main thread. Do not access the surface concurrently with conversion or destruction. The
+optional [Image package](image.md) adds other installed formats and stream loading into these same
+core types.
 
 ## Drawing textures
 

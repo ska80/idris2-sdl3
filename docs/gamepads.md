@@ -1,8 +1,8 @@
 # Gamepads
 
 Import `SDL3` and initialize `gamepad`, usually with `video <+> gamepad`.  Import `SDL3.Scoped` for
-`withGamepad`. These bindings use SDL's gamepad mappings, not raw joystick axes or platform-specific
-button labels.
+`withGamepad`. These bindings use SDL's gamepad mappings, not raw joystick axes.  Button labels
+describe SDL's current mapping rather than application actions.
 
 ## Discovery and ownership
 
@@ -46,6 +46,21 @@ normal event pumping.
 intensities use `Bits16`, from zero through 65535. Duration uses `Bits32` milliseconds.  Zero
 intensities stop the current rumble. A new request replaces the previous effect.  Unsupported
 hardware returns `False`. Read `getError` immediately after failure.
+
+## Capabilities and labels
+
+`hasGamepadAxis pad axis` and `hasGamepadButton pad button` report mapped control availability, not
+current input state.  `hasGamepadRumble pad` reads SDL's rumble capability. A capability report does
+not guarantee that a later operation succeeds.  Use live handles. `False` can also mean an error,
+and these functions do not test physical hardware response.
+
+`getGamepadButtonLabel pad button` returns a copied `GamepadButtonLabel` for prompts.  Known labels
+are A, B, X, Y, Cross, Circle, Square, and Triangle.  `UnknownButtonLabel` includes controls without
+a face-button label. `OtherButtonLabel code` preserves future numeric values.
+
+Query again after a mapping change if the application displays labels or available controls.  The
+binding does not map controls to actions, choose dead zones, or supply button artwork.  Keep events
+for transitions that state queries can miss.
 
 ## Events
 

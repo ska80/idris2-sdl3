@@ -1,0 +1,18 @@
+package sdl3-ttf
+
+version = 0.0.0
+
+brief = "Typed SDL3_ttf fonts and reusable renderer text"
+license = "MIT"
+readme = "docs/ttf.md"
+
+langversion >= 0.8.0
+
+depends = sdl3
+
+sourcedir = "src"
+modules = SDL3.TTF
+        , SDL3.TTF.Raw
+        , SDL3.TTF.Scoped
+
+prebuild = "make -C cbits ttf"

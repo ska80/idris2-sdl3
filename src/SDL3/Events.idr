@@ -303,4 +303,7 @@ data Event = QuitEvent Bits64
            | DropBeginEvent Bits64 WindowID
            | DropCompleteEvent Bits64 WindowID
            | DropPositionEvent Bits64 DropData
+           -- Target reset requires redrawing contents. Device reset requires recreating textures.
+           | RenderTargetsResetEvent Bits64 WindowID
+           | RenderDeviceResetEvent Bits64 WindowID
            | UnknownEvent Bits64 Bits32

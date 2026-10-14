@@ -269,3 +269,49 @@ IDRIS_SDL3 int    idris_sdl_io_flush(SDL_IOStream* stream);
 /* -1 means validation failure; otherwise query SDL_GetIOStatus for partial transfers. */
 IDRIS_SDL3 Sint64 idris_sdl_io_read(SDL_IOStream* stream, void* buffer, Uint64 capacity, Uint64 offset, Uint64 count);
 IDRIS_SDL3 Sint64 idris_sdl_io_write(SDL_IOStream* stream, const void* buffer, Uint64 capacity, Uint64 offset, Uint64 count);
+
+/* Reusable geometry. All allocations use SDL_free for release. */
+typedef struct IdrisSDLGeometry IdrisSDLGeometry;
+
+IDRIS_SDL3 IdrisSDLGeometry* idris_sdl_geometry_new(Uint32 vertices, Uint32 indices);
+IDRIS_SDL3 int idris_sdl_geometry_vertex(IdrisSDLGeometry* geometry, Uint32 index, double x, double y, Uint8 r, Uint8 g, Uint8 b, Uint8 a,
+                                         double u, double v);
+IDRIS_SDL3 int idris_sdl_geometry_index(IdrisSDLGeometry* geometry, Uint32 index, Uint32 vertex);
+IDRIS_SDL3 int idris_sdl_geometry_draw(SDL_Renderer* renderer, const IdrisSDLGeometry* geometry, Uint32 vertices, Uint32 indices);
+IDRIS_SDL3 int idris_sdl_geometry_texture(SDL_Renderer* renderer, SDL_Texture* texture, const IdrisSDLGeometry* geometry, Uint32 vertices,
+                                          Uint32 indices);
+/* Packed native-endian doubles, matching Data.Buffer.setDouble on Chez. */
+IDRIS_SDL3 int idris_sdl_points_copy(IdrisSDLPoints* points, Uint32 destination, const void* source, Uint64 capacity, Uint64 offset,
+                                     Uint32 count);
+IDRIS_SDL3 int idris_sdl_rects_copy(IdrisSDLRects* rects, Uint32 destination, const void* source, Uint64 capacity, Uint64 offset,
+                                    Uint32 count);
+
+typedef struct IdrisSDLKeyboard IdrisSDLKeyboard;
+
+IDRIS_SDL3 IdrisSDLKeyboard* idris_sdl_keyboard_new(void);
+IDRIS_SDL3 int               idris_sdl_keyboard_refresh(IdrisSDLKeyboard* keyboard);
+IDRIS_SDL3 int               idris_sdl_keyboard_key(const IdrisSDLKeyboard* keyboard, Uint32 scancode);
+
+typedef struct IdrisSDLMouseState {
+    double x, y;
+    Uint32 buttons;
+} IdrisSDLMouseState;
+
+IDRIS_SDL3 IdrisSDLMouseState* idris_sdl_mouse_state_new(void);
+IDRIS_SDL3 int                 idris_sdl_mouse_state(IdrisSDLMouseState* state, int relative);
+IDRIS_SDL3 int                 idris_sdl_gamepad_has_axis(SDL_Gamepad* gamepad, Sint32 axis);
+IDRIS_SDL3 int                 idris_sdl_gamepad_has_button(SDL_Gamepad* gamepad, Sint32 button);
+IDRIS_SDL3 int                 idris_sdl_gamepad_has_rumble(SDL_Gamepad* gamepad);
+
+typedef struct IdrisSDLRenderState {
+    Sint32 x, y, width, height;
+    double scale_x, scale_y;
+    Uint32 color;
+    Sint32 enabled;
+} IdrisSDLRenderState;
+
+IDRIS_SDL3 IdrisSDLRenderState* idris_sdl_render_state_new(void);
+/* Kinds: viewport 0, clip 1, scale 2, draw color 3, physical output 4, current output 5. */
+IDRIS_SDL3 int                  idris_sdl_render_state(SDL_Renderer* renderer, IdrisSDLRenderState* state, Sint32 kind);
+/* RGB in low 24 bits, -1 on failure. */
+IDRIS_SDL3 Sint64               idris_sdl_texture_color(SDL_Texture* texture);

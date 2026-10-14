@@ -241,3 +241,67 @@ withRectBuffer capacity = withResource (newRectBuffer capacity) freeRectBuffer
 export
 withBMP : String -> (Surface -> IO (Either String a)) -> IO (Either String a)
 withBMP path = withResource (loadBMP path) destroySurface
+
+||| Own reusable triangle storage. Do not free or retain it. Ordinary-return cleanup only.
+export
+withGeometryBuffer : Bits32 -> Bits32 -> (GeometryBuffer -> IO (Either String a)) -> IO (Either String a)
+withGeometryBuffer vertices indices = withResource (newGeometryBuffer vertices indices) freeGeometryBuffer
+
+||| Main-thread snapshot ownership. Do not free or retain it. Ordinary-return cleanup only.
+export
+withKeyboardSnapshot : (KeyboardSnapshot -> IO (Either String a)) -> IO (Either String a)
+withKeyboardSnapshot = withResource newKeyboardSnapshot freeKeyboardSnapshot
+
+||| Main-thread query storage. Do not free or retain it. Ordinary-return cleanup only.
+export
+withMouseStateBuffer : (MouseStateBuffer -> IO (Either String a)) -> IO (Either String a)
+withMouseStateBuffer = withResource newMouseStateBuffer freeMouseStateBuffer
+
+||| Allocate once around render queries and state scopes. Do not free or retain it.
+||| All operations require the main thread. Ordinary-return cleanup only.
+export
+withRenderStateBuffer : (RenderStateBuffer -> IO (Either String a)) -> IO (Either String a)
+withRenderStateBuffer = withResource newRenderStateBuffer freeRenderStateBuffer
+
+withState : IO (Either String state) -> (state -> IO Bool) -> state -> IO (Either String a) -> IO (Either String a)
+withState {a} query set temporary action = do
+  Right previous <- query | Left err => pure (Left err)
+  changed <- set temporary
+  result <- the (IO (Either String a)) (if changed then action else Left <$> getError)
+  restored <- set previous
+  case result of
+    Left err => pure (Left err)
+    Right value => if restored then pure (Right value) else Left <$> getError
+
+||| Restore the explicit rectangle or automatic full-target viewport on ordinary return.
+||| Keep the same render target selected throughout this scope. Restore target changes in an inner scope.
+||| Query failure skips the action. Setting/action errors precede restoration errors. No exception guarantee.
+export
+withRenderViewport : Renderer -> RenderStateBuffer -> Maybe Rect -> IO (Either String a) -> IO (Either String a)
+withRenderViewport renderer buffer = withState (getRenderViewport renderer buffer) (setRenderViewport renderer)
+
+||| Restore disabled clipping distinctly from an enabled empty clip rectangle.
+||| Keep the same target selected. Shares the failure and cleanup rules of withRenderViewport.
+export
+withRenderClipRect : Renderer -> RenderStateBuffer -> Maybe Rect -> IO (Either String a) -> IO (Either String a)
+withRenderClipRect renderer buffer = withState (getRenderClipRect renderer buffer) (setRenderClipRect renderer)
+
+||| Restore x/y scale only. Keep the same target selected. Ordinary-return restoration only.
+export
+withRenderScale : Renderer -> RenderStateBuffer -> Double -> Double -> IO (Either String a) -> IO (Either String a)
+withRenderScale renderer buffer x y = withState (getRenderScale renderer buffer)
+  (\(sx, sy) => setRenderScale renderer sx sy) (x, y)
+
+||| Restore byte draw color only, not blend mode or external float/HDR precision.
+||| Keep renderer and buffer alive. Ordinary-return restoration only.
+export
+withDrawColor : Renderer -> RenderStateBuffer -> Color -> IO (Either String a) -> IO (Either String a)
+withDrawColor renderer buffer = withState (getDrawColor renderer buffer)
+  (\(MkColor r g b a) => setDrawColor renderer r g b a)
+
+||| Restore byte RGB modulation only, not alpha or external float/HDR precision.
+||| Keep texture and renderer alive on the main thread. Ordinary-return restoration only.
+export
+withTextureColorMod : Texture access -> RGBColor -> IO (Either String a) -> IO (Either String a)
+withTextureColorMod texture = withState (getTextureColorMod texture)
+  (\(MkRGB r g b) => setTextureColorMod texture r g b)

@@ -3,6 +3,7 @@ module SDL3
 import public SDL3.Events
 import public SDL3.Flags
 import SDL3.Raw
+import SDL3.Internal.Handles
 
 import Data.Buffer
 import Data.Bits
@@ -27,6 +28,11 @@ flashOperationCode FlashUntilFocused = 2
 export
 data Renderer = MkRenderer AnyPtr
 
+export
+NativeHandle Renderer AnyPtr where
+  unsafeWrapHandle = MkRenderer
+  unsafeHandlePointer (MkRenderer ptr) = ptr
+
 ||| Synchronize presentation with display refreshes, or disable synchronization.
 ||| VSyncInterval requires a value from 1 through 2147483647.
 public export
@@ -49,6 +55,11 @@ vsyncValue (VSyncInterval n) = if n == 0 then -2 else cast n
 ||| Owned CPU image data. Destroy exactly once after use.
 export
 data Surface = MkSurface AnyPtr
+
+export
+NativeHandle Surface AnyPtr where
+  unsafeWrapHandle = MkSurface
+  unsafeHandlePointer (MkSurface ptr) = ptr
 
 public export
 data TextureAccess = StaticAccess | StreamingAccess | TargetAccess
@@ -195,6 +206,11 @@ export
 data Texture : TextureAccess -> Type where
   MkTexture : NativeTexture -> Texture access
 
+export
+NativeHandle (Texture access) NativeTexture where
+  unsafeWrapHandle = MkTexture
+  unsafeHandlePointer (MkTexture ptr) = ptr
+
 ||| SDL integer rectangle, used for viewports and clipping.
 public export
 record Rect where
@@ -225,7 +241,7 @@ record Point (space : CoordinateSpace) where
 
 ||| Distinguish window-coordinate dimensions from physical pixel dimensions.
 public export
-data SizeUnit = WindowUnits | PixelUnits
+data SizeUnit = WindowUnits | PixelUnits | RenderOutputUnits
 
 ||| Copied dimensions. Units do not track window or renderer identity.
 public export
@@ -299,6 +315,7 @@ data EventType = QuitRequested
                | MouseWheel
                | TextInput
                | TextEditing
+               | RenderTargetsReset | RenderDeviceReset
                | OtherEvent Bits32
 
 ||| Copy the current thread's SDL error. Read only after a failed call.
@@ -1199,6 +1216,8 @@ pollEvent (MkEventBuffer ptr) = do
       35 => pure DropBegin
       36 => pure DropComplete
       37 => pure DropPosition
+      38 => pure RenderTargetsReset
+      39 => pure RenderDeviceReset
       _ => OtherEvent <$> primIO (prim__eventType ptr)
     pure (Just event)
 
@@ -1376,6 +1395,8 @@ eventData ptr = do
     35 => DropBeginEvent timestamp . MkWindowID <$> primIO (prim__eventWindow ptr)
     36 => DropCompleteEvent timestamp . MkWindowID <$> primIO (prim__eventWindow ptr)
     37 => DropPositionEvent timestamp <$> dropData ptr
+    38 => RenderTargetsResetEvent timestamp . MkWindowID <$> primIO (prim__eventWindow ptr)
+    39 => RenderDeviceResetEvent timestamp . MkWindowID <$> primIO (prim__eventWindow ptr)
     _ => UnknownEvent timestamp <$> primIO (prim__eventType ptr)
 
 ||| Consume one event on the main thread. Nothing means the queue is empty.
@@ -1790,6 +1811,11 @@ hasClipboardText = (/= 0) <$> primIO prim__clipboardHasText
 export
 data IOStream = MkIOStream AnyPtr
 
+export
+NativeHandle IOStream AnyPtr where
+  unsafeWrapHandle = MkIOStream
+  unsafeHandlePointer (MkIOStream ptr) = ptr
+
 public export
 data FileIOMode = ReadFile | WriteFile | AppendFile | ReadWriteFile | RewriteFile | AppendReadFile
 
@@ -1909,3 +1935,268 @@ openMemoryIO buffer = do
           _ <- closeIO stream
           pure (Left err)
         pure (Right stream)
+
+||| Byte RGBA color. Float/HDR color state is outside this byte API.
+public export
+record Color where
+  constructor MkColor
+  colorRed, colorGreen, colorBlue, colorAlpha : Bits8
+
+public export
+Eq Color where
+  MkColor r g b a == MkColor r' g' b' a' = r == r' && g == g' && b == b' && a == a'
+
+public export
+record RGBColor where
+  constructor MkRGB
+  rgbRed, rgbGreen, rgbBlue : Bits8
+
+public export
+Eq RGBColor where
+  MkRGB r g b == MkRGB r' g' b' = r == r' && g == g' && b == b'
+
+||| A triangle vertex. Texture coordinates u and v normally range from zero to one.
+public export
+record Vertex where
+  constructor MkVertex
+  position : Point RenderSpace
+  color : Color
+  u, v : Double
+
+||| One owned allocation containing fixed-capacity vertex and index arrays.
+export
+data GeometryBuffer = MkGeometryBuffer AnyPtr
+
+||| Capacities must fit signed 32-bit counts. Vertex capacity must be positive.
+||| Initial vertices and indices are zero. Allocate outside the frame loop and reuse.
+export
+newGeometryBuffer : Bits32 -> Bits32 -> IO (Either String GeometryBuffer)
+newGeometryBuffer vertices indices = owned MkGeometryBuffer (prim__geometryNew vertices indices)
+
+export
+freeGeometryBuffer : GeometryBuffer -> IO ()
+freeGeometryBuffer (MkGeometryBuffer ptr) = primIO (prim__freeSDL ptr)
+
+||| Bounds-checked replacement. Coordinates must fit finite SDL floats. No native allocation.
+export
+setVertex : GeometryBuffer -> Bits32 -> Vertex -> IO Bool
+setVertex (MkGeometryBuffer ptr) index (MkVertex (MkPoint x y) (MkColor r g b a) u v) =
+  (/= 0) <$> primIO (prim__geometryVertex ptr index x y r g b a u v)
+
+||| Both the index slot and the referenced vertex must fit their capacities.
+export
+setGeometryIndex : GeometryBuffer -> Bits32 -> Bits32 -> IO Bool
+setGeometryIndex (MkGeometryBuffer ptr) index vertex = (/= 0) <$> primIO (prim__geometryIndex ptr index vertex)
+
+||| Submit whole triangles on the main thread. Zero indices uses consecutive vertices.
+||| Counts select prefixes. Shorter vertex prefixes require an additional scan of submitted indices.
+||| Uses per-vertex color, not the renderer draw color. SDL can allocate internally.
+export
+drawGeometry : Renderer -> GeometryBuffer -> Bits32 -> Bits32 -> IO Bool
+drawGeometry (MkRenderer renderer) (MkGeometryBuffer ptr) vertices indices =
+  (/= 0) <$> primIO (prim__geometryDraw renderer ptr vertices indices)
+
+||| Textured triangles. Use the creating renderer and never sample the current render target.
+||| SDL ignores texture color and alpha modulation here. The vertices supply both.
+||| Buffers can be reused after return. Do not mutate them during submission.
+export
+renderGeometry : Renderer -> Texture access -> GeometryBuffer -> Bits32 -> Bits32 -> IO Bool
+renderGeometry (MkRenderer renderer) (MkTexture texture) (MkGeometryBuffer ptr) vertices indices =
+  (/= 0) <$> primIO (prim__geometryTexture renderer texture ptr vertices indices)
+
+||| Copy count packed (x,y) doubles into a point-buffer range. Source offset is in bytes.
+||| Matches Data.Buffer.setDouble on Chez: native-endian 64-bit values, 16 bytes per point.
+||| Validates the whole range and finite-float conversion before writing. Does not retain the source.
+export
+copyPoints : PointBuffer -> Bits32 -> Buffer -> Bits64 -> Bits32 -> IO Bool
+copyPoints (MkPointBuffer ptr) destination source offset count = do
+  capacity <- rawSize source
+  (/= 0) <$> primIO (prim__pointsCopy ptr destination source (cast capacity) offset count)
+
+||| Copy count packed (x,y,width,height) doubles, 32 bytes per rectangle.
+||| Uses the same ownership, validation, and native-endian representation as copyPoints.
+export
+copyRects : RectBuffer -> Bits32 -> Buffer -> Bits64 -> Bits32 -> IO Bool
+copyRects (MkRectBuffer ptr) destination source offset count = do
+  capacity <- rawSize source
+  (/= 0) <$> primIO (prim__rectsCopy ptr destination source (cast capacity) offset count)
+
+||| Owned reusable copy of SDL keyboard state, not a live view into SDL memory.
+export
+data KeyboardSnapshot = MkKeyboardSnapshot AnyPtr
+
+||| Main thread. Refresh SDL state without consuming events. Polling and waiting also pump events.
+export
+pumpEvents : IO ()
+pumpEvents = primIO prim__pumpEvents
+
+||| Allocate and copy current SDL state. Pump events first when current hardware state is needed.
+export
+newKeyboardSnapshot : IO (Either String KeyboardSnapshot)
+newKeyboardSnapshot = owned MkKeyboardSnapshot prim__keyboardNew
+
+export
+freeKeyboardSnapshot : KeyboardSnapshot -> IO ()
+freeKeyboardSnapshot (MkKeyboardSnapshot ptr) = primIO (prim__freeSDL ptr)
+
+||| Copy current state on the main thread. Does not pump or consume events itself.
+export
+refreshKeyboardSnapshot : KeyboardSnapshot -> IO Bool
+refreshKeyboardSnapshot (MkKeyboardSnapshot ptr) = (/= 0) <$> primIO (prim__keyboardRefresh ptr)
+
+||| Read the last copied state. Unknown scancodes return False. Requires a live snapshot.
+||| Presses and releases between snapshots can be missed. Keep events for those transitions.
+export
+keyDown : KeyboardSnapshot -> Scancode -> IO Bool
+keyDown (MkKeyboardSnapshot ptr) (MkScancode scan) = (/= 0) <$> primIO (prim__keyboardKey ptr scan)
+
+export
+data MouseStateBuffer = MkMouseStateBuffer NativeMouseState
+
+public export
+record MouseState where
+  constructor MkMouseState
+  buttons : MouseButtons
+  position : Point WindowSpace
+
+public export
+record RelativeMouseState where
+  constructor MkRelativeMouseState
+  buttons : MouseButtons
+  dx, dy : Double
+
+export
+newMouseStateBuffer : IO (Either String MouseStateBuffer)
+newMouseStateBuffer = do
+  ptr <- primIO prim__mouseStateNew
+  0 <- primIO (prim__mouseStateIsNull ptr) | _ => Left <$> getError
+  pure (Right (MkMouseStateBuffer ptr))
+
+export
+freeMouseStateBuffer : MouseStateBuffer -> IO ()
+freeMouseStateBuffer (MkMouseStateBuffer ptr) = primIO (prim__mouseStateFree ptr)
+
+||| Main thread. Position is relative to the window with mouse focus, not an arbitrary window.
+||| Read after event pumping. Returns a copied value that survives storage reuse.
+export
+getMouseState : MouseStateBuffer -> IO (Either String MouseState)
+getMouseState (MkMouseStateBuffer ptr) = do
+  1 <- primIO (prim__mouseState ptr 0) | _ => Left <$> getError
+  pure (Right (MkMouseState (MkMouseButtons (getField ptr "buttons")) (MkPoint (getField ptr "x") (getField ptr "y"))))
+
+||| Read and reset accumulated relative motion since the previous relative-state query.
+||| Main thread. This does not consume motion events. Do not count the same motion through both APIs.
+export
+getRelativeMouseState : MouseStateBuffer -> IO (Either String RelativeMouseState)
+getRelativeMouseState (MkMouseStateBuffer ptr) = do
+  1 <- primIO (prim__mouseState ptr 1) | _ => Left <$> getError
+  pure (Right (MkRelativeMouseState (MkMouseButtons (getField ptr "buttons")) (getField ptr "x") (getField ptr "y")))
+
+export
+hasGamepadAxis : Gamepad -> GamepadAxis -> IO Bool
+hasGamepadAxis (MkGamepad ptr) (MkGamepadAxis axis) = (/= 0) <$> primIO (prim__gamepadHasAxis ptr (cast axis))
+
+export
+hasGamepadButton : Gamepad -> GamepadButton -> IO Bool
+hasGamepadButton (MkGamepad ptr) (MkGamepadButton button) = (/= 0) <$> primIO (prim__gamepadHasButton ptr (cast button))
+
+||| Reports SDL rumble capability. False can also mean an error. Use a live gamepad.
+export
+hasGamepadRumble : Gamepad -> IO Bool
+hasGamepadRumble (MkGamepad ptr) = (/= 0) <$> primIO (prim__gamepadHasRumble ptr)
+
+public export
+data GamepadButtonLabel = UnknownButtonLabel | LabelA | LabelB | LabelX | LabelY
+                       | LabelCross | LabelCircle | LabelSquare | LabelTriangle | OtherButtonLabel Int32
+
+||| Face-button labels for prompts. Other controls can return UnknownButtonLabel.
+||| Requires a live gamepad. A label is not a success indicator or an action mapping.
+export
+getGamepadButtonLabel : Gamepad -> GamepadButton -> IO GamepadButtonLabel
+getGamepadButtonLabel (MkGamepad ptr) (MkGamepadButton button) = do
+  code <- primIO (prim__gamepadButtonLabel ptr (cast button))
+  pure $ case code of
+    0 => UnknownButtonLabel
+    1 => LabelA
+    2 => LabelB
+    3 => LabelX
+    4 => LabelY
+    5 => LabelCross
+    6 => LabelCircle
+    7 => LabelSquare
+    8 => LabelTriangle
+    other => OtherButtonLabel other
+
+||| Reusable storage for render queries. Main thread only. Returned records own their values.
+export
+data RenderStateBuffer = MkRenderStateBuffer NativeRenderState
+
+export
+newRenderStateBuffer : IO (Either String RenderStateBuffer)
+newRenderStateBuffer = do
+  ptr <- primIO prim__renderStateNew
+  0 <- primIO (prim__renderStateIsNull ptr) | _ => Left <$> getError
+  pure (Right (MkRenderStateBuffer ptr))
+
+export
+freeRenderStateBuffer : RenderStateBuffer -> IO ()
+freeRenderStateBuffer (MkRenderStateBuffer ptr) = primIO (prim__renderStateFree ptr)
+
+queriedRenderRect : Renderer -> RenderStateBuffer -> Int32 -> IO (Either String (Maybe Rect))
+queriedRenderRect (MkRenderer renderer) (MkRenderStateBuffer ptr) kind = do
+  1 <- primIO (prim__renderState renderer ptr kind) | _ => Left <$> getError
+  let enabled : Int32 = getField ptr "enabled"
+  pure $ Right $ if enabled == 0 then Nothing else
+    Just (MkRect (getField ptr "x") (getField ptr "y") (getField ptr "width") (getField ptr "height"))
+
+||| Nothing means the automatic full-target viewport, not an explicit rectangle of the same size.
+export
+getRenderViewport : Renderer -> RenderStateBuffer -> IO (Either String (Maybe Rect))
+getRenderViewport renderer buffer = queriedRenderRect renderer buffer 0
+
+||| Nothing means clipping is disabled. An enabled empty rectangle remains Just.
+export
+getRenderClipRect : Renderer -> RenderStateBuffer -> IO (Either String (Maybe Rect))
+getRenderClipRect renderer buffer = queriedRenderRect renderer buffer 1
+
+||| Copy dimensionless x and y scales for the current render target.
+export
+getRenderScale : Renderer -> RenderStateBuffer -> IO (Either String (Double, Double))
+getRenderScale (MkRenderer renderer) (MkRenderStateBuffer ptr) = do
+  1 <- primIO (prim__renderState renderer ptr 2) | _ => Left <$> getError
+  pure (Right (getField ptr "scale_x", getField ptr "scale_y"))
+
+||| Byte color only. External float/HDR color precision is not preserved.
+export
+getDrawColor : Renderer -> RenderStateBuffer -> IO (Either String Color)
+getDrawColor (MkRenderer renderer) (MkRenderStateBuffer ptr) = do
+  1 <- primIO (prim__renderState renderer ptr 3) | _ => Left <$> getError
+  let color : Bits32 = getField ptr "color"
+  pure (Right (MkColor (cast (shiftR color 24)) (cast (shiftR color 16)) (cast (shiftR color 8)) (cast color)))
+
+export
+getTextureColorMod : Texture access -> IO (Either String RGBColor)
+getTextureColorMod (MkTexture texture) = do
+  color <- primIO (prim__textureColor texture)
+  if color < 0 then Left <$> getError else do
+    let bits : Bits32 = cast color
+    pure (Right (MkRGB (cast (shiftR bits 16)) (cast (shiftR bits 8)) (cast bits)))
+
+queriedRenderSize : Renderer -> RenderStateBuffer -> Int32 -> IO (Either String (Size unit))
+queriedRenderSize (MkRenderer renderer) (MkRenderStateBuffer ptr) kind = do
+  1 <- primIO (prim__renderState renderer ptr kind) | _ => Left <$> getError
+  pure (Right (MkSize (getField ptr "width") (getField ptr "height")))
+
+||| SDL's physical-output query. Its documented result ignores texture targets and logical presentation.
+||| Some software-renderer versions report target dimensions instead. See docs/rendering.md.
+export
+getRenderOutputSize : Renderer -> RenderStateBuffer -> IO (Either String (Size PixelUnits))
+getRenderOutputSize renderer buffer = queriedRenderSize renderer buffer 4
+
+||| SDL's current-output query, documented to account for the target and logical presentation.
+||| Some backends do not apply the documented adjustment. See docs/rendering.md.
+||| Does not subtract viewport or apply draw scale.
+||| RenderOutputUnits distinguishes these dimensions from physical output pixels.
+export
+getCurrentRenderOutputSize : Renderer -> RenderStateBuffer -> IO (Either String (Size RenderOutputUnits))
+getCurrentRenderOutputSize renderer buffer = queriedRenderSize renderer buffer 5

@@ -3,6 +3,8 @@
 /build/
 **/build/
 
+/test/native-build/
+
 /cbits/*.so
 
 /.agent-shell/

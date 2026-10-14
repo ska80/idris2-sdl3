@@ -2,8 +2,8 @@
 
 Thin SDL3 bindings for windows, 2D rendering, textures, keyboard, mouse, gamepads, text input,
 clipboard text, file drops, timers, audio playback, and file/memory I/O. BMP images and WAV audio
-are supported. The optional `sdl3-mixer` package adds audio tracks, looping, and fades.
-SDL3_image, SDL3_ttf, and the GPU API are not bound.
+are supported. Optional packages add image decoding (`sdl3-image`), reusable text (`sdl3-ttf`), and
+audio tracks, looping, and fades (`sdl3-mixer`). The SDL GPU API is not bound.
 
 Chez is the only supported backend. The current build targets Linux and produces a shared
 library. Other platforms are not tested.
@@ -67,8 +67,11 @@ ownership](docs/resources.md) before using manual cleanup or raw bindings.
 The subsystem guides describe the APIs, ownership, thread rules, and limits:
 
 - [Video](docs/video.md): Windows, dimensions, display scaling, and window controls.
-- [Rendering](docs/rendering.md): Drawing, coordinate conversion, clipping, and blending.
+- [Rendering](docs/rendering.md): Drawing, coordinates, state queries, clipping, and blending.
+- [Geometry](docs/geometry.md): Reusable triangle buffers, bulk updates, and CPU measurements.
 - [Textures](docs/textures.md): BMP loading, render targets, uploads, and pixel locking.
+- [Image](docs/image.md): Optional image decoding from files and borrowed streams.
+- [TTF](docs/ttf.md): Optional fonts, reusable text, measurement, wrapping, and drawing.
 - [Input and events](docs/input.md): Keyboard, mouse, cursors, text entry, clipboard, and drops.
 - [Gamepads](docs/gamepads.md): Discovery, controls, connection events, and rumble.
 - [I/O streams](docs/io.md): File and memory access, partial transfers, and cleanup.

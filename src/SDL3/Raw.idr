@@ -914,3 +914,109 @@ prim__ioRead : AnyPtr -> Buffer -> Bits64 -> Bits64 -> Bits64 -> PrimIO Int64
 %foreign "C:idris_sdl_io_write, libidris2_sdl3, core.h"
 export
 prim__ioWrite : AnyPtr -> Buffer -> Bits64 -> Bits64 -> Bits64 -> PrimIO Int64
+
+%foreign "C:idris_sdl_geometry_new, libidris2_sdl3, core.h"
+export
+prim__geometryNew : Bits32 -> Bits32 -> PrimIO AnyPtr
+
+%foreign "C:idris_sdl_geometry_vertex, libidris2_sdl3, core.h"
+export
+prim__geometryVertex : AnyPtr -> Bits32 -> Double -> Double -> Bits8 -> Bits8 -> Bits8 -> Bits8 -> Double -> Double -> PrimIO Int
+
+%foreign "C:idris_sdl_geometry_index, libidris2_sdl3, core.h"
+export
+prim__geometryIndex : AnyPtr -> Bits32 -> Bits32 -> PrimIO Int
+
+%foreign "C:idris_sdl_geometry_draw, libidris2_sdl3, core.h"
+export
+prim__geometryDraw : AnyPtr -> AnyPtr -> Bits32 -> Bits32 -> PrimIO Int
+
+%foreign "C:idris_sdl_geometry_texture, libidris2_sdl3, core.h"
+export
+prim__geometryTexture : AnyPtr -> NativeTexture -> AnyPtr -> Bits32 -> Bits32 -> PrimIO Int
+
+%foreign "C:idris_sdl_points_copy, libidris2_sdl3, core.h"
+export
+prim__pointsCopy : AnyPtr -> Bits32 -> Buffer -> Bits64 -> Bits64 -> Bits32 -> PrimIO Int
+
+%foreign "C:idris_sdl_rects_copy, libidris2_sdl3, core.h"
+export
+prim__rectsCopy : AnyPtr -> Bits32 -> Buffer -> Bits64 -> Bits64 -> Bits32 -> PrimIO Int
+
+%foreign "C:SDL_PumpEvents, libSDL3"
+export
+prim__pumpEvents : PrimIO ()
+
+%foreign "C:idris_sdl_keyboard_new, libidris2_sdl3, core.h"
+export
+prim__keyboardNew : PrimIO AnyPtr
+
+%foreign "C:idris_sdl_keyboard_refresh, libidris2_sdl3, core.h"
+export
+prim__keyboardRefresh : AnyPtr -> PrimIO Int
+
+%foreign "C:idris_sdl_keyboard_key, libidris2_sdl3, core.h"
+export
+prim__keyboardKey : AnyPtr -> Bits32 -> PrimIO Int
+
+public export
+NativeMouseState : Type
+NativeMouseState = Struct "IdrisSDLMouseState" [("x", Double), ("y", Double), ("buttons", Bits32)]
+
+%foreign "C:idris_sdl_mouse_state_new, libidris2_sdl3, core.h"
+export
+prim__mouseStateNew : PrimIO NativeMouseState
+
+%foreign "C:idris_sdl_is_null, libidris2_sdl3, core.h"
+export
+prim__mouseStateIsNull : NativeMouseState -> PrimIO Int
+
+%foreign "C:SDL_free, libSDL3"
+export
+prim__mouseStateFree : NativeMouseState -> PrimIO ()
+
+%foreign "C:idris_sdl_mouse_state, libidris2_sdl3, core.h"
+export
+prim__mouseState : NativeMouseState -> Int -> PrimIO Int
+
+%foreign "C:idris_sdl_gamepad_has_axis, libidris2_sdl3, core.h"
+export
+prim__gamepadHasAxis : AnyPtr -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_gamepad_has_button, libidris2_sdl3, core.h"
+export
+prim__gamepadHasButton : AnyPtr -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_gamepad_has_rumble, libidris2_sdl3, core.h"
+export
+prim__gamepadHasRumble : AnyPtr -> PrimIO Int
+
+%foreign "C:SDL_GetGamepadButtonLabel, libSDL3"
+export
+prim__gamepadButtonLabel : AnyPtr -> Int32 -> PrimIO Int32
+
+public export
+NativeRenderState : Type
+NativeRenderState = Struct "IdrisSDLRenderState"
+  [("x", Int32), ("y", Int32), ("width", Int32), ("height", Int32),
+   ("scale_x", Double), ("scale_y", Double), ("color", Bits32), ("enabled", Int32)]
+
+%foreign "C:idris_sdl_render_state_new, libidris2_sdl3, core.h"
+export
+prim__renderStateNew : PrimIO NativeRenderState
+
+%foreign "C:idris_sdl_is_null, libidris2_sdl3, core.h"
+export
+prim__renderStateIsNull : NativeRenderState -> PrimIO Int
+
+%foreign "C:SDL_free, libSDL3"
+export
+prim__renderStateFree : NativeRenderState -> PrimIO ()
+
+%foreign "C:idris_sdl_render_state, libidris2_sdl3, core.h"
+export
+prim__renderState : AnyPtr -> NativeRenderState -> Int32 -> PrimIO Int
+
+%foreign "C:idris_sdl_texture_color, libidris2_sdl3, core.h"
+export
+prim__textureColor : NativeTexture -> PrimIO Int64

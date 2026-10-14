@@ -103,7 +103,8 @@ no automatic voice allocation in this layer.
 WAV loading is not incremental disk streaming. Large music files occupy native memory, and queueing
 adds SDL-owned copies. The binding does not decode MP3, Ogg, or other compressed music containers.
 It does not automatically loop music, seek, fade, or manage tracks. Applications can feed PCM
-chunks. The optional [SDL3_mixer package](mixer.md) adds reusable tracks, looping, fades, and installed audio decoders.
+chunks. The optional [SDL3_mixer package](mixer.md) adds reusable tracks, looping, fades, and
+installed audio decoders.
 
 ```idris
 import SDL3

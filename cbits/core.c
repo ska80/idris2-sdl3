@@ -825,6 +825,9 @@ Uint32 idris_sdl_event_window(const SDL_Event* event) {
     case SDL_EVENT_DROP_COMPLETE:
     case SDL_EVENT_DROP_POSITION:
         return event->drop.windowID;
+    case SDL_EVENT_RENDER_TARGETS_RESET:
+    case SDL_EVENT_RENDER_DEVICE_RESET:
+        return event->render.windowID;
     case SDL_EVENT_TEXT_INPUT:
         return event->text.windowID;
     case SDL_EVENT_TEXT_EDITING:
@@ -1014,6 +1017,10 @@ int idris_sdl_event_kind(const SDL_Event* event) {
         return 36;
     case SDL_EVENT_DROP_POSITION:
         return 37;
+    case SDL_EVENT_RENDER_TARGETS_RESET:
+        return 38;
+    case SDL_EVENT_RENDER_DEVICE_RESET:
+        return 39;
     default:
         return 0;
     }
@@ -1341,4 +1348,289 @@ Sint64 idris_sdl_io_write(SDL_IOStream* stream, const void* buffer, Uint64 capac
     if (!valid_io_range(stream, buffer, capacity, offset, count)) return -1;
 
     return (Sint64)SDL_WriteIO(stream, count ? (const Uint8*)buffer + (size_t)offset : buffer, (size_t)count);
+}
+
+struct IdrisSDLGeometry {
+    Uint32     vertex_capacity, index_capacity;
+    SDL_Vertex vertices[];
+};
+
+_Static_assert(sizeof(double) == 8, "Batch input requires 64-bit doubles");
+
+_Static_assert(_Alignof(SDL_Vertex) >= _Alignof(int) && sizeof(SDL_Vertex) % _Alignof(int) == 0, "Geometry indices must remain aligned");
+
+static int* geometry_indices(const IdrisSDLGeometry* geometry) {
+    return (int*)(geometry->vertices + geometry->vertex_capacity);
+}
+
+IdrisSDLGeometry* idris_sdl_geometry_new(Uint32 vertices, Uint32 indices) {
+    if (!vertices || vertices > SDL_MAX_SINT32 || indices > SDL_MAX_SINT32) {
+        SDL_SetError("Geometry capacities must fit signed 32-bit counts, with at least one vertex");
+
+        return NULL;
+    }
+
+    const Uint64 bytes = sizeof(IdrisSDLGeometry) + (Uint64)vertices * sizeof(SDL_Vertex) + (Uint64)indices * sizeof(int);
+
+    if (bytes > SIZE_MAX) {
+        SDL_SetError("Geometry exceeds native allocation limits");
+
+        return NULL;
+    }
+
+    IdrisSDLGeometry* geometry = SDL_calloc(1, (size_t)bytes);
+
+    if (!geometry) {
+        SDL_SetError("Cannot allocate geometry storage");
+
+        return NULL;
+    }
+
+    geometry->vertex_capacity = vertices;
+    geometry->index_capacity  = indices;
+
+    return geometry;
+}
+
+static int finite_float(double value) {
+    return value >= -FLT_MAX && value <= FLT_MAX;
+}
+
+int idris_sdl_geometry_vertex(IdrisSDLGeometry* geometry, Uint32 index, double x, double y, Uint8 r, Uint8 g, Uint8 b, Uint8 a, double u,
+                              double v) {
+    if (!geometry || index >= geometry->vertex_capacity) return SDL_SetError("Geometry vertex index is out of range");
+
+    if (!finite_float(x) || !finite_float(y) || !finite_float(u) || !finite_float(v))
+        return SDL_SetError("Vertex coordinates must fit finite SDL floats");
+
+    geometry->vertices[index] = (SDL_Vertex){
+        {(float)x, (float)y},
+        {r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f},
+        {(float)u, (float)v}
+    };
+
+    return 1;
+}
+
+int idris_sdl_geometry_index(IdrisSDLGeometry* geometry, Uint32 index, Uint32 vertex) {
+    if (!geometry || index >= geometry->index_capacity || vertex >= geometry->vertex_capacity)
+        return SDL_SetError("Geometry index or referenced vertex is out of range");
+
+    geometry_indices(geometry)[index] = (int)vertex;
+
+    return 1;
+}
+
+int idris_sdl_geometry_texture(SDL_Renderer* renderer, SDL_Texture* texture, const IdrisSDLGeometry* geometry, Uint32 vertices,
+                               Uint32 indices) {
+    if (!geometry || vertices > geometry->vertex_capacity || indices > geometry->index_capacity || (indices ? indices % 3 : vertices % 3))
+        return SDL_SetError("Geometry counts must fit storage and describe whole triangles");
+
+    const int* data = geometry_indices(geometry);
+
+    /* Setters validate full-capacity indices. A shorter vertex prefix needs this additional check. */
+    if (vertices != geometry->vertex_capacity)
+        for (Uint32 i = 0; i < indices; ++i) {
+            if ((Uint32)data[i] >= vertices) return SDL_SetError("Geometry index is outside the submitted vertex prefix");
+        }
+
+    return SDL_RenderGeometry(renderer, texture, geometry->vertices, (int)vertices, indices ? data : NULL, (int)indices);
+}
+
+int idris_sdl_geometry_draw(SDL_Renderer* renderer, const IdrisSDLGeometry* geometry, Uint32 vertices, Uint32 indices) {
+    return idris_sdl_geometry_texture(renderer, NULL, geometry, vertices, indices);
+}
+
+static double batch_double(const void* source, Uint64 offset) {
+    double value;
+    SDL_memcpy(&value, (const Uint8*)source + (size_t)offset, sizeof(value));
+
+    return value;
+}
+
+static int valid_batch_source(const void* source, Uint64 capacity, Uint64 offset, Uint32 count, Uint32 fields) {
+    const Uint64 bytes = (Uint64)count * fields * sizeof(double);
+
+    if ((count && !source) || offset > capacity || bytes > capacity - offset || offset > SIZE_MAX || bytes > SIZE_MAX - (size_t)offset)
+        return SDL_SetError("Batch source range is outside the buffer");
+
+    for (Uint64 i = 0; i < (Uint64)count * fields; ++i) {
+        if (!finite_float(batch_double(source, offset + i * sizeof(double))))
+            return SDL_SetError("Batch coordinates must fit finite SDL floats");
+    }
+
+    return 1;
+}
+
+int idris_sdl_points_copy(IdrisSDLPoints* points, Uint32 destination, const void* source, Uint64 capacity, Uint64 offset, Uint32 count) {
+    if (!points || destination > points->capacity || count > points->capacity - destination)
+        return SDL_SetError("Point destination range is outside the buffer");
+
+    if (!valid_batch_source(source, capacity, offset, count, 2)) return 0;
+
+    for (Uint32 i = 0; i < count; ++i) {
+        const Uint64 pos                = offset + (Uint64)i * 16;
+        points->values[destination + i] = (SDL_FPoint){(float)batch_double(source, pos), (float)batch_double(source, pos + 8)};
+    }
+
+    return 1;
+}
+
+int idris_sdl_rects_copy(IdrisSDLRects* rects, Uint32 destination, const void* source, Uint64 capacity, Uint64 offset, Uint32 count) {
+    if (!rects || destination > rects->capacity || count > rects->capacity - destination)
+        return SDL_SetError("Rectangle destination range is outside the buffer");
+
+    if (!valid_batch_source(source, capacity, offset, count, 4)) return 0;
+
+    for (Uint32 i = 0; i < count; ++i) {
+        const Uint64 pos               = offset + (Uint64)i * 32;
+        rects->values[destination + i] = (SDL_FRect){(float)batch_double(source, pos), (float)batch_double(source, pos + 8),
+                                                     (float)batch_double(source, pos + 16), (float)batch_double(source, pos + 24)};
+    }
+
+    return 1;
+}
+
+struct IdrisSDLKeyboard {
+    Uint32 count;
+    Uint8  keys[SDL_SCANCODE_COUNT];
+};
+
+IdrisSDLKeyboard* idris_sdl_keyboard_new(void) {
+    IdrisSDLKeyboard* keyboard = SDL_calloc(1, sizeof(*keyboard));
+
+    if (!keyboard) {
+        SDL_SetError("Cannot allocate keyboard snapshot");
+
+        return NULL;
+    }
+
+    if (!idris_sdl_keyboard_refresh(keyboard)) {
+        SDL_free(keyboard);
+
+        return NULL;
+    }
+
+    return keyboard;
+}
+
+int idris_sdl_keyboard_refresh(IdrisSDLKeyboard* keyboard) {
+    int         count;
+    const bool* keys = SDL_GetKeyboardState(&count);
+
+    if (!keyboard || !keys || count < 0 || count > SDL_SCANCODE_COUNT) return SDL_SetError("Invalid keyboard snapshot storage");
+
+    keyboard->count = (Uint32)count;
+
+    for (int i = 0; i < count; ++i)
+        keyboard->keys[i] = keys[i] ? 1 : 0;
+
+    return 1;
+}
+
+int idris_sdl_keyboard_key(const IdrisSDLKeyboard* keyboard, Uint32 scancode) {
+    return keyboard && scancode < keyboard->count && keyboard->keys[scancode] != 0;
+}
+
+IdrisSDLMouseState* idris_sdl_mouse_state_new(void) {
+    IdrisSDLMouseState* state = SDL_calloc(1, sizeof(*state));
+
+    if (!state) SDL_SetError("Cannot allocate mouse state storage");
+
+    return state;
+}
+
+int idris_sdl_mouse_state(IdrisSDLMouseState* state, int relative) {
+    if (!state) return SDL_SetError("Mouse state storage is null");
+
+    float x, y;
+    state->buttons = relative ? SDL_GetRelativeMouseState(&x, &y) : SDL_GetMouseState(&x, &y);
+    state->x       = x;
+    state->y       = y;
+
+    return 1;
+}
+
+int idris_sdl_gamepad_has_axis(SDL_Gamepad* gamepad, Sint32 axis) {
+    return SDL_GamepadHasAxis(gamepad, (SDL_GamepadAxis)axis);
+}
+
+int idris_sdl_gamepad_has_button(SDL_Gamepad* gamepad, Sint32 button) {
+    return SDL_GamepadHasButton(gamepad, (SDL_GamepadButton)button);
+}
+
+int idris_sdl_gamepad_has_rumble(SDL_Gamepad* gamepad) {
+    SDL_PropertiesID properties = SDL_GetGamepadProperties(gamepad);
+
+    return properties && SDL_GetBooleanProperty(properties, SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false);
+}
+
+_Static_assert(offsetof(IdrisSDLMouseState, buttons) == 16 && sizeof(IdrisSDLMouseState) == 24, "Update NativeMouseState layout");
+
+_Static_assert(offsetof(IdrisSDLRenderState, scale_x) == 16 && offsetof(IdrisSDLRenderState, color) == 32 &&
+                   sizeof(IdrisSDLRenderState) == 40,
+               "Update NativeRenderState layout");
+
+_Static_assert(sizeof(SDL_GamepadButtonLabel) == sizeof(Sint32), "Gamepad label ABI requires 32-bit enums");
+
+_Static_assert(SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN == 0 && SDL_GAMEPAD_BUTTON_LABEL_A == 1 && SDL_GAMEPAD_BUTTON_LABEL_B == 2 &&
+                   SDL_GAMEPAD_BUTTON_LABEL_X == 3 && SDL_GAMEPAD_BUTTON_LABEL_Y == 4 && SDL_GAMEPAD_BUTTON_LABEL_CROSS == 5 &&
+                   SDL_GAMEPAD_BUTTON_LABEL_CIRCLE == 6 && SDL_GAMEPAD_BUTTON_LABEL_SQUARE == 7 && SDL_GAMEPAD_BUTTON_LABEL_TRIANGLE == 8,
+               "Update gamepad button labels");
+
+IdrisSDLRenderState* idris_sdl_render_state_new(void) {
+    IdrisSDLRenderState* state = SDL_calloc(1, sizeof(*state));
+
+    if (!state) SDL_SetError("Cannot allocate render state storage");
+
+    return state;
+}
+
+int idris_sdl_render_state(SDL_Renderer* renderer, IdrisSDLRenderState* state, Sint32 kind) {
+    if (!state) return SDL_SetError("Render state storage is null");
+
+    SDL_Rect rect;
+    float    x, y;
+    Uint8    r, g, b, a;
+
+    switch (kind) {
+    case 0:
+    case 1:
+        if (!(kind ? SDL_GetRenderClipRect(renderer, &rect) : SDL_GetRenderViewport(renderer, &rect))) return 0;
+
+        state->x       = rect.x;
+        state->y       = rect.y;
+        state->width   = rect.w;
+        state->height  = rect.h;
+        state->enabled = kind ? SDL_RenderClipEnabled(renderer) : SDL_RenderViewportSet(renderer);
+
+        return 1;
+    case 2:
+        if (!SDL_GetRenderScale(renderer, &x, &y)) return 0;
+
+        state->scale_x = x;
+        state->scale_y = y;
+
+        return 1;
+    case 3:
+        if (!SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a)) return 0;
+
+        state->color = ((Uint32)r << 24) | ((Uint32)g << 16) | ((Uint32)b << 8) | a;
+
+        return 1;
+    case 4:
+        return SDL_GetRenderOutputSize(renderer, &state->width, &state->height);
+    case 5:
+        return SDL_GetCurrentRenderOutputSize(renderer, &state->width, &state->height);
+    default:
+        return SDL_SetError("Unknown render state query");
+    }
+}
+
+Sint64 idris_sdl_texture_color(SDL_Texture* texture) {
+    Uint8 r, g, b;
+
+    if (!SDL_GetTextureColorMod(texture, &r, &g, &b)) return -1;
+
+    return ((Uint32)r << 16) | ((Uint32)g << 8) | b;
 }

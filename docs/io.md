@@ -110,7 +110,10 @@ platform-specific file behavior need separate tests.
 
 ## Extension loaders
 
-These are SDL core I/O streams, not decoder objects.  No image, mixer, or font loader consumes them
-through the typed API yet.  Future extension bindings must define whether each loader borrows or
-consumes the stream, and how long it needs access. Do not pass a scoped stream to a consumer that
-keeps it past the scope or closes it independently.
+These are SDL core I/O streams, not decoder objects. The optional [Image package](image.md) borrows
+them during decoding.  Its loaders never close or retain the stream, including on failure. Decoding
+can change its position.
+
+The typed mixer and font loaders currently take paths, not streams. Future stream loaders need
+separate ownership and retention rules.  Do not pass a scoped stream to a consumer that retains it
+past the scope or closes it independently.

@@ -1,0 +1,11 @@
+package sdl3-image-test
+
+version = 0.0.0
+
+depends = sdl3, sdl3-image
+
+sourcedir = "image-src"
+
+main = ImageMain
+
+executable = sdl3-image-test

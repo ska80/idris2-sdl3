@@ -1,0 +1,10 @@
+package sdl3-media
+
+version = 0.0.0
+
+depends = sdl3, sdl3-image, sdl3-ttf
+
+sourcedir = "."
+main = Media
+
+executable = sdl3-media

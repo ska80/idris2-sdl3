@@ -28,10 +28,10 @@ corresponding fields and the typed API returns copied Idris records.  Texture-si
 through SDL, then read the public integer texture dimensions.  Never inspect these pointers after
 their owner is destroyed.
 
-Event, coordinate, point, rectangle, and texture-lock buffers are explicit resources.  Allocate them
-outside update loops and reuse them. A texture-lock buffer owns metadata, while SDL owns the locked
-pixels. Generation checks reject stale views only while the metadata remains alive. Generations do
-not wrap, so an exhausted buffer rejects new locks.
+Event, coordinate, point, rectangle, geometry, input snapshot, render-state, and texture-lock
+buffers are explicit resources.  Allocate them outside update loops and reuse them. A texture-lock
+buffer owns metadata, while SDL owns the locked pixels. Generation checks reject stale views only
+while the metadata remains alive. Generations do not wrap, so an exhausted buffer rejects new locks.
 
 Audio queue calls copy source samples into SDL-owned storage.  Texture uploads pass the source
 buffer to SDL for consumption during the call.  Neither operation keeps a managed source pointer for
@@ -49,12 +49,26 @@ foreign call, while a fill or bulk copy handles a region.  Bulk copies still mov
 unlocking can cause an SDL upload.  Measure the workload on the target system before choosing an
 update strategy.
 
+The [batch timing example](geometry.md#cpu-timing-example) measures CPU preparation and submission
+separately.  Its packed point and rectangle updates reduced preparation time in the measured
+software-renderer workload.  Those results do not establish GPU call counts, frame-time
+improvements, or allocation-free execution.
+
 ## Tests
 
 Run `make test` from the repository root. It builds the package, native tests, and Idris tests.
 Dummy video and audio drivers avoid display and sound-device requirements.  Rendering tests use the
 software renderer. `make example` builds the core examples separately. Optional mixer tests and
-examples use `make test-mixer` and `make example-mixer`.
+examples use `make test-mixer` and `make example-mixer`. Image and TTF tests use `make test-image`
+and `make test-ttf`.  `make example-media` builds their combined example. TTF tests require DejaVu
+Sans or a font path in `SDL3_TEST_FONT`.
+
+Native executables and fixture libraries live in `test/native-build`, outside pack's `test/build`
+directory.  Pack can replace its entire build directory after a compiler change. The separate native
+directory survives this replacement.  Clean builds and a rebuild after removing
+`test/build/.idrisCommit` exercise this boundary.  The root Makefile serializes package builds,
+including with `make -j`.  Do not start separate pack processes against a shared build directory at
+the same time.
 
 Native tests cover adapter validation, byte layout, enum mappings, and resource cleanup.  Idris
 tests cover typed operations, copied values, scopes, state restoration, and pixel results.
@@ -67,6 +81,6 @@ failures on hardware. Runtime exceptions and nonreturning callbacks are outside 
 scope guarantees. Use manual tests and measurements for those cases.
 
 The installed SDL3_mixer 3.2.4 build reports 104 leaked bytes during FluidSynth loading under
-LeakSanitizer. A direct `MIX_Init`/`MIX_Quit`/`SDL_Quit` program reproduces this without binding code.
-The mixer native tests pass AddressSanitizer and UndefinedBehaviorSanitizer with only
+LeakSanitizer. A direct `MIX_Init`/`MIX_Quit`/`SDL_Quit` program reproduces this without binding
+code.  The mixer native tests pass AddressSanitizer and UndefinedBehaviorSanitizer with only
 `FLUIDSYNTH_init` leaks suppressed. This is not a leak-free result for the full dependency stack.
