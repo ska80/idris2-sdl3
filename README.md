@@ -9,6 +9,12 @@ Thin typed bindings. Chez only. Tested on Linux x86-64.
 | `sdl3-ttf` | Optional fonts and reusable text |
 | `sdl3-mixer` | Optional audio assets, tracks, loops, and fades |
 
+[![Bouncing balls with varied colors, sizes, and transparency, plus FPS and ball-count
+labels](examples/balls/assets/screenshot.png)](examples/balls/README.md)
+
+The [Balls example](examples/balls/README.md) uses SDL3 rendering, SDL3_ttf text, and SDL3_mixer
+audio.  Run it with `make -C examples/balls run`.
+
 ## Build and run
 
 Install the [build requirements](docs/build.md#requirements). From the repository root:
