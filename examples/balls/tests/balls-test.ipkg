@@ -1,0 +1,11 @@
+package balls-test
+
+version = 0.0.0
+
+depends = sdl3
+
+sourcedir = ".."
+
+main = Tests
+
+executable = balls-test

@@ -49,4 +49,5 @@ For contributors and agents: [AGENTS.md](AGENTS.md), [implementation map](docs/i
 policy are outside this library.
 
 Project code uses the [MIT License](LICENSE). [Vendored headers](vendor/README.md) retain their
-original license notices.
+original license notices. The [Balls example font](examples/balls/assets/README.md) uses the SIL
+Open Font License 1.1.

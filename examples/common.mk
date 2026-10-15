@@ -1,8 +1,10 @@
-PACK ?= pack
-CG ?= chez
-ARGS ?=
+PACK        ?= pack
+CG          ?= chez
+ARGS        ?=
+CLEAN_IPKGS ?= $(IPKG)
 
 ROOT := $(abspath ../..)
+
 PACK_CHEZ = $(PACK) --no-prompt --cg=chez
 
 # Dependency packages still share build directories in the repository root.
@@ -25,4 +27,6 @@ run: all
 	./build/exec/$(EXECUTABLE) $(ARGS)
 
 clean:
-	$(PACK) --no-prompt clean $(IPKG)
+	for package in $(CLEAN_IPKGS); do \
+		$(PACK) --no-prompt clean "$$package" || exit $$?; \
+	done

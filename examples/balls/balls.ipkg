@@ -1,0 +1,13 @@
+package balls
+
+version = 0.0.0
+
+depends = sdl3
+        , sdl3-ttf
+        , sdl3-mixer
+
+sourcedir = "."
+
+main = Main
+
+executable = balls

@@ -78,9 +78,10 @@ Full validation:
 
 ```sh
 make test test-mixer test-image test-ttf
-for example in basic locking audio mixer media batches; do
+for example in basic locking audio mixer media batches balls; do
   make -C "examples/$example" || exit 1
 done
+make -C examples/balls test
 git diff --check
 ```
 
@@ -106,7 +107,8 @@ make run
 
 - `make` builds the example and its required library packages.
 - `make run` builds if needed and sets the native library path. Pass program arguments with `ARGS`.
-- `make clean` removes only that example's build output. Each example has its own `build/` directory.
+- `make clean` removes only that example's build output, including its local tests. Each example has
+  its own `build/` directory.
 
 | Directory | Extra packages | Run from that directory |
 | --- | --- | --- |
@@ -116,6 +118,7 @@ make run
 | [mixer](../examples/mixer) | Mixer | `make run ARGS="music-file sound-file"` |
 | [media](../examples/media) | Image, TTF | `make run ARGS="picture.png font.ttf"` |
 | [batches](../examples/batches) | None | `make run` |
+| [balls](../examples/balls) | Mixer, TTF | `make run` |
 
 Asset paths are relative to the example directory. Shared rules live in `examples/common.mk`.
 
@@ -127,11 +130,13 @@ Asset paths are relative to the example directory. Shared rules live in `example
   and exits. It needs both Image and TTF.
 - Audio/Mixer: Enter submits a command. Controls and exit commands: [Audio](audio.md#example),
   [Mixer](mixer.md#limits-and-example).
+- [Balls](../examples/balls/README.md): `n` adds ten balls, `c` clears them, and `q` quits. Includes
+  a font, bounce sound, and looping music. `make test` runs local simulation and smoke tests.
 
-Basic repaints its target texture after a target reset. Basic, Locking, and Media exit with an error
-after a renderer device reset. Media also stops on target resets rather than assuming its text
-engine can still draw. Restart the example after these errors. These examples do not implement
-device recovery.
+Basic repaints its target texture after a target reset. Basic, Locking, Media, and Balls exit with
+an error after a renderer device reset. Media and Balls also stop on target resets rather than
+assuming their text engines can still draw. Restart the example after these errors. These examples
+do not implement device recovery.
 
 Headless rendering smoke test, from the repository root:
 
