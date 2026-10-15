@@ -6,10 +6,13 @@ Before each commit, remove completed items from `TODO.md`. Keep only remaining w
 Chez is the only supported backend. Prioritize its correctness, performance, and examples.  Do not
 add compatibility code or build targets for other backends.
 
-Use `/usr/local/include/SDL3` as the API reference. Do not use SDL2 signatures.  Keep the bindings
-thin. Use fixed-width values and distinct opaque handle types.  Keep C adapters limited to ABI
-conversion, macros, and struct or union access.  Do not allocate native memory per frame or
-event. Reuse caller-owned buffers.
+Use the SDL3 and extension headers in `vendor/` as the API reference. Versions and update rules are
+in `vendor/README.md`. Preserve these upstream copies without edits or formatting changes. Builds
+still use installed headers and libraries through pkg-config. Do not use SDL2 signatures.
+
+Keep the bindings thin. Use fixed-width values and distinct opaque handle types. Keep C adapters
+limited to ABI conversion, macros, and struct or union access. Do not allocate native memory per
+frame or event. Reuse caller-owned buffers.
 
 Document ownership, cleanup order, thread rules, and safety limits. Keep documentation as concise
 reference material. Link shared contracts instead of repeating them. Add tests for new bindings.  Do

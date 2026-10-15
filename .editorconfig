@@ -42,3 +42,7 @@ indent_style = tab
 
 [expected]
 trim_trailing_whitespace = false
+
+[vendor/SDL3*/**]
+insert_final_newline = unset
+trim_trailing_whitespace = false

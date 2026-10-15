@@ -14,7 +14,8 @@
 | `sdl3-mixer` | `sdl3-mixer` | 3.2.0 | `libidris2_sdl3_mixer.so` |
 
 Tested setup: pack `nightly-261014`, Idris `0.8.0-b6cbc25d5`, Chez 10.4.1, SDL 3.4.16, Image 3.4.6,
-TTF 3.2.2, Mixer 3.2.4. The repository does not pin the pack collection.
+TTF 3.2.2, Mixer 3.2.4. The repository does not pin the pack collection.  [Vendored header copies
+and versions](../vendor/README.md) are references, not build dependencies.
 
 ## Application setup
 

@@ -1,0 +1,2 @@
+# Preserve upstream headers, including existing whitespace, and exclude them from language statistics.
+/vendor/SDL3*/** linguist-vendored -whitespace

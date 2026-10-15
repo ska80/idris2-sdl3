@@ -18,6 +18,7 @@ Contributor reference. Public contracts: [resources](resources.md). Commands and
 | `src/SDL3/Internal/Handles.idr` | Unsafe pointer conversion for extension/core interoperability |
 | `cbits/{core,image,ttf,mixer}.{c,h}` | Native adapters, separate shared libraries |
 | `cbits/internal.h` | Shared finite-float and overflow-safe buffer-range tests |
+| `vendor/` | [SDL3 and extension header references, versions, and checksums](../vendor/README.md) |
 | `test/*_native.c`, `test/*_fixtures.*` | Native tests and test-only accessors |
 | `test/src`, `test/{image,ttf,mixer}-src` | Idris behavior and compile-time rejection tests |
 
@@ -25,7 +26,9 @@ Contributor reference. Public contracts: [resources](resources.md). Commands and
 
 - Prefer direct SDL calls when Chez supports their calling convention and value representation.
 - Adapters handle booleans, float/double conversion, macros, structs/unions, and range validation.
-- Use installed SDL3 headers, never SDL2 signatures. Assert enum values and layouts against headers.
+- Use the [vendored SDL3 headers](../vendor/README.md) as API references, never SDL2 signatures.
+- Native builds use installed headers through pkg-config. Keep enum/layout assertions against those
+  build headers.
 - Preserve private handle constructors. Normal imports must not expose internal pointer conversion.
 - Keep type-only event polling separate from payload decoding. Payload decoding uses multiple
   foreign calls and constructs copied Idris values.
