@@ -112,15 +112,7 @@ run = withWindow "Batch CPU timing" 128 128 hidden $ \window => withRenderer win
 
 main : IO ()
 main = do
-  True <- init video | False => do
-    err <- getError
-    quit
-    putStrLn err
-    exitFailure
-  result <- run
+  ok <- init video
+  result <- if ok then run else Left <$> getError
   quit
-  case result of
-    Right () => pure ()
-    Left err => do
-      putStrLn err
-      exitFailure
+  either die pure result

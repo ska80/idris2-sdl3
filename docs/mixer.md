@@ -91,8 +91,9 @@ explicitly.
 No streaming I/O input, groups, tags, spatial effects, callbacks, or advanced decoder configuration
 in this subset.  Dependency sanitizer qualification: [testing limits](internals.md#tests).
 
-[Ownership/playback example](../examples/mixer/Main.idr). [Build/run
-arguments](build.md#examples).
+[Ownership/playback example](../examples/mixer/Main.idr). It releases each caller-owned asset
+reference after assigning it to a track. The tracks retain their inputs and stop on scoped cleanup.
+[Build/run arguments](build.md#examples).
 
 | Command + Enter | Action |
 | --- | --- |

@@ -119,11 +119,19 @@ make run
 
 Asset paths are relative to the example directory. Shared rules live in `examples/common.mk`.
 
-- Basic: close, Escape, or click the blue rectangle to exit.
-- Locking/Media: Close or Escape. `--smoke` stops after three frames. Media needs both Image and
-  TTF.
+- Basic: close, Escape, or click the blue rectangle to exit. It waits for events when idle.
+  `--smoke` draws one frame and exits.
+- Locking: close or Escape. It requests VSync and falls back to timer pacing if the request fails.
+  Motion follows elapsed time, not frame count. `--smoke` draws three frames and exits.
+- Media: close or Escape. It waits for events or the next text update. `--smoke` draws three frames
+  and exits. It needs both Image and TTF.
 - Audio/Mixer: Enter submits a command. Controls and exit commands: [Audio](audio.md#example),
   [Mixer](mixer.md#limits-and-example).
+
+Basic repaints its target texture after a target reset. Basic, Locking, and Media exit with an error
+after a renderer device reset. Media also stops on target resets rather than assuming its text
+engine can still draw. Restart the example after these errors. These examples do not implement
+device recovery.
 
 Headless rendering smoke test, from the repository root:
 

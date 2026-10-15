@@ -23,6 +23,8 @@ rules](resources.md). Allocate one reusable `EventBuffer` per loop.
 - `OtherEvent code` / `UnknownEvent timestamp code` preserve unsupported types, not unsupported
   payload fields.
 - Storage: `newEventBuffer` / `freeEventBuffer`, or `withEventBuffer` around the loop.
+- [Basic](../examples/basic/Main.idr) uses blocking waits for a static scene.
+  [Media](../examples/media/Main.idr) uses timed waits for clock updates.
 
 ## Window notifications
 
