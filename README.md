@@ -47,3 +47,6 @@ but do not enforce lifetimes or renderer identity.
 For contributors and agents: [AGENTS.md](AGENTS.md), [implementation map](docs/internals.md),
 [remaining work](TODO.md).  The SDL GPU API, game engines, widgets, scene graphs, and application
 policy are outside this library.
+
+Project code uses the [MIT License](LICENSE). [Vendored headers](vendor/README.md) retain their
+original license notices.

@@ -12,7 +12,9 @@ ifneq ($(CG),chez)
 $(error Only the Chez backend is supported)
 endif
 
-export LD_LIBRARY_PATH := $(ROOT)/cbits:/usr/local/lib:$(LD_LIBRARY_PATH)
+SDL_PACKAGES := $(if $(filter-out clean,$(or $(MAKECMDGOALS),all)),sdl3 $(addprefix sdl3-,$(EXTENSIONS)))
+
+include ../../cbits/runtime.mk
 
 .PHONY: all run clean
 all:

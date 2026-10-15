@@ -18,6 +18,7 @@ Contributor reference. Public contracts: [resources](resources.md). Commands and
 | `src/SDL3/Internal/Handles.idr` | Unsafe pointer conversion for extension/core interoperability |
 | `cbits/{core,image,ttf,mixer}.{c,h}` | Native adapters, separate shared libraries |
 | `cbits/internal.h` | Shared finite-float and overflow-safe buffer-range tests |
+| `cbits/runtime.mk` | Shared pkg-config discovery for runtime library paths |
 | `vendor/` | [SDL3 and extension header references, versions, and checksums](../vendor/README.md) |
 | `test/*_native.c`, `test/*_fixtures.*` | Native tests and test-only accessors |
 | `test/src`, `test/{image,ttf,mixer}-src` | Idris behavior and compile-time rejection tests |

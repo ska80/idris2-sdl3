@@ -38,13 +38,20 @@ Add those package names to the application's `.ipkg` `depends` field. Extensions
 - Runtime: deploy the selected native adapters and SDL libraries. Pack's Idris installation does not
   install these shared libraries.
 
-For direct executable runs from the repository root, set the library path once:
+Make targets get each required SDL library directory from `pkg-config --variable=libdir`.  They
+preserve the existing `LD_LIBRARY_PATH`. Core-only targets do not query optional packages.  Set
+`PKG_CONFIG_PATH` for nonstandard installations, or override `PKG_CONFIG` to select another
+pkg-config command.  After changing SDK installations, clean and rebuild.
+
+For direct core-only executable runs from the repository root:
 
 ```sh
-export LD_LIBRARY_PATH="$PWD/cbits:/usr/local/lib:${LD_LIBRARY_PATH:-}"
+sdl_libdir=$(pkg-config --variable=libdir sdl3) || exit 1
+export LD_LIBRARY_PATH="$PWD/cbits${sdl_libdir:+:$sdl_libdir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 ```
 
-Use the actual installed SDL library directory if it differs. Make targets set this path themselves.
+For direct extension runs, also add each selected extension's `libdir`. These directories can differ
+from SDL3's.
 
 ## Targets and tests
 

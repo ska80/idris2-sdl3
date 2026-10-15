@@ -17,7 +17,14 @@ ifneq ($(CG),chez)
 $(error Only the Chez backend is supported)
 endif
 
-export LD_LIBRARY_PATH := $(ROOT)/cbits:/usr/local/lib:$(LD_LIBRARY_PATH)
+# Discover only the SDL packages needed by the requested targets.
+BUILD_GOALS := $(filter-out clean,$(or $(MAKECMDGOALS),all))
+RUNTIME_EXTENSIONS := $(if $(filter all,$(BUILD_GOALS)),$(EXTENSIONS),\
+                          $(filter $(EXTENSIONS),$(patsubst test-%,%,$(BUILD_GOALS))))
+SDL_PACKAGES := $(if $(BUILD_GOALS),sdl3 $(addprefix sdl3-,$(RUNTIME_EXTENSIONS)))
+
+include cbits/runtime.mk
+
 TEST_ENV = SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software SDL_AUDIO_DRIVER=dummy
 
 .PHONY: all core clean $(EXTENSIONS) $(TEST_TARGETS)
