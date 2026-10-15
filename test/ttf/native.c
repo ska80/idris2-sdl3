@@ -1,5 +1,5 @@
 #include "ttf.h"
-#include "ttf_fixtures.h"
+#include "fixtures.h"
 
 #include <assert.h>
 #include <math.h>

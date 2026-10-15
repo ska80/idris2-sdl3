@@ -8,21 +8,21 @@ test = "test/test.ipkg"
 type = "local"
 path = "."
 ipkg = "sdl3-mixer.ipkg"
-test = "test/mixer.ipkg"
+test = "test/mixer/mixer-test.ipkg"
 
 [custom.all.sdl3-image]
 type = "local"
 path = "."
 ipkg = "sdl3-image.ipkg"
-test = "test/image.ipkg"
+test = "test/image/image-test.ipkg"
 
 [custom.all.sdl3-ttf]
 type = "local"
 path = "."
 ipkg = "sdl3-ttf.ipkg"
-test = "test/ttf.ipkg"
+test = "test/ttf/ttf-test.ipkg"
 
-[custom.all.sdl3-test]
+[custom.all.test]
 type = "local"
 path = "test"
 ipkg = "test.ipkg"

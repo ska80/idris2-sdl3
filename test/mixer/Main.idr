@@ -1,4 +1,4 @@
-module MixerMain
+module Main
 
 import SDL3
 import SDL3.Mixer
@@ -7,11 +7,11 @@ import Data.Buffer
 import Data.IORef
 import System
 import System.File
-import MixerTypeSafety
+import TypeSafety
 
 %default covering
 
-%foreign "C:idris_test_make_wav, libidris2_sdl3_test, audio_fixtures.h"
+%foreign "C:idris_test_make_wav, libidris2_sdl3_mixer_test, audio_fixtures.h"
 prim__makeWAV : PrimIO String
 
 require : IO Bool -> IO (Either String ())

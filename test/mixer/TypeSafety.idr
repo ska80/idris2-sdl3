@@ -1,4 +1,4 @@
-module MixerTypeSafety
+module TypeSafety
 
 import SDL3
 import SDL3.Mixer

@@ -1,5 +1,5 @@
 #include "image.h"
-#include "image_fixtures.h"
+#include "fixtures.h"
 
 #include <assert.h>
 #include <stdio.h>

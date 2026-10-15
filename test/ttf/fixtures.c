@@ -1,4 +1,4 @@
-#include "ttf_fixtures.h"
+#include "fixtures.h"
 
 #include <SDL3/SDL.h>
 #include <stdlib.h>

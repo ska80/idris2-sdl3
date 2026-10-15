@@ -1,4 +1,4 @@
-module TTFMain
+module Main
 
 import SDL3
 import SDL3.Scoped
@@ -12,7 +12,7 @@ import System
 
 %default covering
 
-%foreign "C:idris_test_font_path, libidris2_sdl3_ttf_test, ttf_fixtures.h"
+%foreign "C:idris_test_font_path, libidris2_sdl3_ttf_test, fixtures.h"
 prim__fontPath : PrimIO String
 
 failing "Mismatch between"

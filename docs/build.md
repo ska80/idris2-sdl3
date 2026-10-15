@@ -64,6 +64,16 @@ from SDL3's.
 | `make test-image`, `make test-ttf`, `make test-mixer` | Optional package tests |
 | `make clean` | Remove library/test artifacts without prompts. Clean examples in their own directories |
 
+Extension tests live in `test/image`, `test/ttf`, and `test/mixer`. Each directory contains
+`Main.idr`, native tests, a Makefile, and a package file that matches its package name.  Package and
+executable names are `image-test`, `ttf-test`, and `mixer-test`.  The core test package and
+executable use `test`.  Each suite owns its `build/` and `native-build/` directories. Mixer reuses
+the WAV fixture source in `test/`, but builds its own fixture library.
+
+From an extension's test directory, `make` builds its tests and required packages. `make run` builds
+and runs its native and Idris tests. `make native` runs only its native tests.  `make clean` removes
+only that suite's outputs. Shared rules live in `test/common.mk`.
+
 Full validation:
 
 ```sh
@@ -75,7 +85,8 @@ git diff --check
 ```
 
 - Tests use dummy video/audio and software rendering. They need no display or audio device.
-- TTF tests need `SDL3_TEST_FONT` or DejaVu Sans in a standard Linux font directory.
+- TTF tests need `SDL3_TEST_FONT` or DejaVu Sans in a standard Linux font directory. Use an absolute
+  path for `SDL3_TEST_FONT`.
 - If `pack run` hides compiler errors, use `pack --no-prompt --cg=chez build test/test.ipkg` (or the
   failing test package).
 - Package builds share directories. Make serializes them. Do not run separate pack processes

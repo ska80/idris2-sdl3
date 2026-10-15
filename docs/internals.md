@@ -20,8 +20,9 @@ Contributor reference. Public contracts: [resources](resources.md). Commands and
 | `cbits/internal.h` | Shared finite-float and overflow-safe buffer-range tests |
 | `cbits/runtime.mk` | Shared pkg-config discovery for runtime library paths |
 | `vendor/` | [SDL3 and extension header references, versions, and checksums](../vendor/README.md) |
-| `test/*_native.c`, `test/*_fixtures.*` | Native tests and test-only accessors |
-| `test/src`, `test/{image,ttf,mixer}-src` | Idris behavior and compile-time rejection tests |
+| `test/*.c`, `test/*.h`, `test/src` | Core native, Idris, and compile-time rejection tests. Shared WAV fixtures |
+| `test/{image,ttf,mixer}/` | Each extension's native tests, fixtures, `Main.idr`, package, and Makefile |
+| `test/common.mk` | Shared extension test build/run rules |
 
 ## Native boundary
 
@@ -41,8 +42,8 @@ Contributor reference. Public contracts: [resources](resources.md). Commands and
 ## Storage and performance
 
 - Pack owns `build/` directories and can replace them after compiler changes.
-- Native fixtures/executables live in `test/native-build`, not `test/build`. Make dependencies track
-  shared headers.
+- Each test suite keeps native fixtures/executables in its own `native-build/`, outside its `build/`
+  directory. Make dependencies track shared headers.
 - Windows and text objects own reusable query storage. Other buffers are explicit resources around
   application loops.
 - Texture-size queries validate through SDL before reading its public dimensions.
@@ -59,8 +60,8 @@ Contributor reference. Public contracts: [resources](resources.md). Commands and
 - Idris tests: typed calls, copied values, cached-query freshness, scopes, state restoration, and
   error precedence.
 - Compile-time tests: wrong handles/units/access modes and private-constructor access.
-- Build-directory regression: remove `test/build/.idrisCommit`, rerun tests, and retain native
-  fixtures outside that directory.
+- Build-directory regression: remove a suite's `build/.idrisCommit`, rerun it, and retain native
+  fixtures outside that directory. Each extension has a separate pack build directory.
 - Dummy/synthetic tests do not establish physical input, window policy, density, audio latency,
   display synchronization, or accelerated rendering.
 - AddressSanitizer/UndefinedBehaviorSanitizer test native memory/arithmetic behavior, not Idris

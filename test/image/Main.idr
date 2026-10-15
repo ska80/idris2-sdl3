@@ -1,4 +1,4 @@
-module ImageMain
+module Main
 
 import SDL3
 import SDL3.Scoped
@@ -13,7 +13,7 @@ import System.File
 
 %default covering
 
-%foreign "C:idris_test_make_image, libidris2_sdl3_image_test, image_fixtures.h"
+%foreign "C:idris_test_make_image, libidris2_sdl3_image_test, fixtures.h"
 prim__fixture : Int32 -> PrimIO String
 
 failing "Mismatch between"

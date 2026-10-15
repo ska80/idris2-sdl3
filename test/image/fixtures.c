@@ -1,6 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 
-#include "image_fixtures.h"
+#include "fixtures.h"
 
 #include <SDL3_image/SDL_image.h>
 

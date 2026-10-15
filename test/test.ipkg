@@ -1,4 +1,4 @@
-package sdl3-test
+package test
 
 version = 0.0.0
 
@@ -8,4 +8,4 @@ sourcedir = "src"
 
 main = Main
 
-executable = sdl3-test
+executable = test
