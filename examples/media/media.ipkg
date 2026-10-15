@@ -1,10 +1,10 @@
-package sdl3-media
+package media
 
 version = 0.0.0
 
 depends = sdl3, sdl3-image, sdl3-ttf
 
 sourcedir = "."
-main = Media
+main = Main
 
-executable = sdl3-media
+executable = media

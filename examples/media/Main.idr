@@ -1,4 +1,4 @@
-module Media
+module Main
 
 import SDL3
 import SDL3.Scoped
@@ -89,5 +89,5 @@ main = do
           putStrLn err
           exitFailure
     _ => do
-      putStrLn "Usage: sdl3-media IMAGE FONT [--smoke]"
+      putStrLn "Usage: media IMAGE FONT [--smoke]"
       exitFailure

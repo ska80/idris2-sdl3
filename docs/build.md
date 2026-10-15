@@ -37,7 +37,7 @@ Add those package names to the application's `.ipkg` `depends` field. Extensions
 - Runtime: deploy the selected native adapters and SDL libraries. Pack's Idris installation does not
   install these shared libraries.
 
-For commands below, run from the repository root and set the library path once:
+For direct executable runs from the repository root, set the library path once:
 
 ```sh
 export LD_LIBRARY_PATH="$PWD/cbits:/usr/local/lib:${LD_LIBRARY_PATH:-}"
@@ -49,16 +49,20 @@ Use the actual installed SDL library directory if it differs. Make targets set t
 
 | Command | Action |
 | --- | --- |
-| `make` | Build core Idris modules and the core adapter |
+| `make`, `make all` | Build core, Mixer, Image, and TTF packages and native adapters |
+| `make core` | Build only core Idris modules and the core adapter |
 | `make image`, `make ttf`, `make mixer` | Build the selected optional package |
 | `make test` | Core native, Idris, and compile-time rejection tests |
 | `make test-image`, `make test-ttf`, `make test-mixer` | Optional package tests |
-| `make clean` | Remove generated Idris and native artifacts without prompts |
+| `make clean` | Remove library/test artifacts without prompts. Clean examples in their own directories |
 
 Full validation:
 
 ```sh
-make test test-mixer test-image test-ttf example example-mixer example-media example-batches
+make test test-mixer test-image test-ttf
+for example in hello locking audio mixer media batches; do
+  make -C "examples/$example" || exit 1
+done
 git diff --check
 ```
 
@@ -72,16 +76,29 @@ git diff --check
 
 ## Examples
 
-Set the runtime path above before running executables directly.
+Each directory contains `Main.idr`, a Makefile, and a `.ipkg` file whose base name matches its
+package name.  From the repository root:
 
-| Source | Build | Run / arguments |
+```sh
+cd examples/hello
+make
+make run
+```
+
+- `make` builds the example and its required library packages.
+- `make run` builds if needed and sets the native library path. Pass program arguments with `ARGS`.
+- `make clean` removes only that example's build output. Each example has its own `build/` directory.
+
+| Directory | Extra packages | Run from that directory |
 | --- | --- | --- |
-| [Hello](../examples/Hello.idr) | `make example` | `make run-hello` |
-| [Locking](../examples/Locking.idr) | `make example` | `make run-locking` or direct run with `--smoke` |
-| [Audio](../examples/Audio.idr) | `make example` | `examples/build/exec/sdl3-audio music.wav sound.wav` |
-| [MixerExample](../examples/MixerExample.idr) | `make example-mixer` | `examples/build/exec/sdl3-mixer-example music-file sound-file` |
-| [Media](../examples/Media.idr) | `make example-media` | `examples/build/exec/sdl3-media picture.png font.ttf [--smoke]` |
-| [BatchTiming](../examples/BatchTiming.idr) | `make example-batches` | `examples/build/exec/sdl3-batch-timing` |
+| [hello](../examples/hello) | None | `make run` |
+| [locking](../examples/locking) | None | `make run` |
+| [audio](../examples/audio) | None | `make run ARGS="music.wav sound.wav"` |
+| [mixer](../examples/mixer) | Mixer | `make run ARGS="music-file sound-file"` |
+| [media](../examples/media) | Image, TTF | `make run ARGS="picture.png font.ttf"` |
+| [batches](../examples/batches) | None | `make run` |
+
+Asset paths are relative to the example directory. Shared rules live in `examples/common.mk`.
 
 - Hello: close, Escape, or click the blue rectangle to exit.
 - Locking/Media: Close or Escape. `--smoke` stops after three frames. Media needs both Image and
@@ -89,8 +106,8 @@ Set the runtime path above before running executables directly.
 - Audio/Mixer: Enter submits a command. Controls and exit commands: [Audio](audio.md#example),
   [Mixer](mixer.md#limits-and-example).
 
-Headless rendering smoke test:
+Headless rendering smoke test, from the repository root:
 
 ```sh
-SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software examples/build/exec/sdl3-locking --smoke
+SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software make -C examples/locking run ARGS="--smoke"
 ```

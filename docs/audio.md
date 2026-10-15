@@ -77,7 +77,7 @@ positive frame rate.
 
 ## Example
 
-[Audio](../examples/Audio.idr), [build/run arguments](build.md#examples). No window required.
+[Audio](../examples/audio/Main.idr), [build/run arguments](build.md#examples). No window required.
 
 | Command + Enter | Action |
 | --- | --- |

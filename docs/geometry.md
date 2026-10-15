@@ -60,14 +60,14 @@ Source is `Data.Buffer`. Byte offset is `Bits64`. Destination index/count are `B
 - Zero entries permits end-of-buffer positions. The adapter neither retains the source nor allocates
   a temporary native array.
 - Direct source writes need their own bounds discipline. Do not modify either buffer during a copy.
-- Example of packed preparation and submission: [BatchTiming](../examples/BatchTiming.idr).
+- Example of packed preparation and submission: [BatchTiming](../examples/batches/Main.idr).
 
 ## CPU timing example
 
-After [building and setting the runtime path](build.md#examples):
+From the repository root ([example build rules](build.md#examples)):
 
 ```sh
-SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software examples/build/exec/sdl3-batch-timing
+SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software make -C examples/batches run
 ```
 
 Historical measurements, before the helper refactor:

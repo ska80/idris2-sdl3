@@ -1,0 +1,11 @@
+package hello
+
+version = 0.0.0
+
+depends = sdl3
+
+sourcedir = "."
+
+main = Main
+
+executable = hello

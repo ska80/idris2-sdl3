@@ -1,4 +1,4 @@
-module MixerExample
+module Main
 
 import SDL3
 import SDL3.Mixer
@@ -57,7 +57,7 @@ run musicPath soundPath = withMixerLibrary $ withMixer $ \mixer =>
 main : IO ()
 main = do
   [_, musicPath, soundPath] <- getArgs | _ => do
-    putStrLn "Usage: sdl3-mixer-example music-file sound-file"
+    putStrLn "Usage: mixer-example music-file sound-file"
     exitFailure
   result <- run musicPath soundPath
   SDL3.quit

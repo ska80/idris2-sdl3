@@ -16,7 +16,9 @@ Install the [build requirements](docs/build.md#requirements). From the repositor
 ```sh
 pack --no-prompt --cg=chez build sdl3.ipkg
 make test
-make run-hello
+cd examples/hello
+make
+make run
 ```
 
 [Application setup, optional packages, tests, and examples](docs/build.md).

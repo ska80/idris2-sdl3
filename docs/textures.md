@@ -103,6 +103,6 @@ selects the whole texture, `Just rect` a positive contained region.
   live storage and do not protect freed memory.
 - Finish locks before rendering. Cleanup order: lock storage, texture, renderer, window.
 
-Example: [Locking](../examples/Locking.idr). [Build/run and three-frame smoke
+Example: [Locking](../examples/locking/Main.idr). [Build/run and three-frame smoke
 test](build.md#examples).  Fill/copy use fewer foreign calls than per-pixel writes. No zero-copy or
 speed guarantee.

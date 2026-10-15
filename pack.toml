@@ -26,8 +26,3 @@ test = "test/ttf.ipkg"
 type = "local"
 path = "test"
 ipkg = "test.ipkg"
-
-[custom.all.sdl3-hello]
-type = "local"
-path = "examples"
-ipkg = "hello.ipkg"

@@ -117,4 +117,4 @@ events](input.md#renderer-reset-events).
 - The software renderer rejects custom modes. `withDrawBlendMode` restores only renderer-wide draw
   blending.
 
-Example: [Hello](../examples/Hello.idr). Commands: [build/run](build.md#examples).
+Example: [Hello](../examples/hello/Main.idr). Commands: [build/run](build.md#examples).

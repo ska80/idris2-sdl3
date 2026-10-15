@@ -91,7 +91,7 @@ explicitly.
 No streaming I/O input, groups, tags, spatial effects, callbacks, or advanced decoder configuration
 in this subset.  Dependency sanitizer qualification: [testing limits](internals.md#tests).
 
-[Ownership/playback example](../examples/MixerExample.idr). [Build/run
+[Ownership/playback example](../examples/mixer/Main.idr). [Build/run
 arguments](build.md#examples).
 
 | Command + Enter | Action |

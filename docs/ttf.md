@@ -52,5 +52,5 @@ For repeated drawing, keep `withText` around the application loop.
   in this subset.
 - Layout and event handling belong to the application. Future font-stream APIs need retention rules
   distinct from Image's call-only borrowing.
-- [Media](../examples/Media.idr) reuses an image/font/engine/text and updates text once per
+- [Media](../examples/media/Main.idr) reuses an image/font/engine/text and updates text once per
   second. [Build/run and test-font setup](build.md).

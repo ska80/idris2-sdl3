@@ -1,4 +1,4 @@
-module Audio
+module Main
 
 import SDL3
 import SDL3.Scoped
@@ -62,5 +62,5 @@ main = do
           putStrLn err
           exitFailure
     _ => do
-      putStrLn "Usage: sdl3-audio music.wav sound.wav"
+      putStrLn "Usage: audio music.wav sound.wav"
       exitFailure

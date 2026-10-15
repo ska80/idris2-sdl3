@@ -49,5 +49,5 @@ paintImage renderer path = withFileIO path ReadFile $ \stream =>
 
 - No animation, image saving, or format-specific controls in this subset.
 - Treat arbitrary images as untrusted. Encoded file size does not bound decoded memory use.
-- [Media](../examples/Media.idr) combines image loading and reusable
+- [Media](../examples/media/Main.idr) combines image loading and reusable
   text. [Build/run](build.md#examples).

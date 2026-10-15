@@ -1,4 +1,4 @@
-module Hello
+module Main
 
 import SDL3
 import SDL3.Scoped

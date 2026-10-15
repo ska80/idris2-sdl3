@@ -1,4 +1,4 @@
-module Locking
+module Main
 
 import SDL3
 import SDL3.Scoped
