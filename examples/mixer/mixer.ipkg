@@ -1,7 +1,12 @@
 package mixer
 
 version = 0.0.0
-depends = sdl3, sdl3-mixer
+
+depends = sdl3
+        , sdl3-mixer
+
 sourcedir = "."
+
 main = Main
-executable = mixer-example
+
+executable = mixer

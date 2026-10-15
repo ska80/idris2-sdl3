@@ -152,5 +152,5 @@ validates paths.
 - Type-only forms: `RenderTargetsReset`, `RenderDeviceReset`. Update exhaustive matches. Recovery is
   not automatic.
 
-Gamepad payloads: [gamepads](gamepads.md#events). Example: [Hello](../examples/hello/Main.idr). [Run
+Gamepad payloads: [gamepads](gamepads.md#events). Example: [Basic](../examples/basic/Main.idr). [Run
 commands](build.md#examples).

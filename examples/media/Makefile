@@ -1,4 +1,4 @@
-IPKG := media.ipkg
+IPKG       := media.ipkg
 EXECUTABLE := media
 EXTENSIONS := image ttf
 

@@ -1,4 +1,4 @@
-package hello
+package basic
 
 version = 0.0.0
 
@@ -8,4 +8,4 @@ sourcedir = "."
 
 main = Main
 
-executable = hello
+executable = basic

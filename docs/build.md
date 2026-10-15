@@ -78,7 +78,7 @@ Full validation:
 
 ```sh
 make test test-mixer test-image test-ttf
-for example in hello locking audio mixer media batches; do
+for example in basic locking audio mixer media batches; do
   make -C "examples/$example" || exit 1
 done
 git diff --check
@@ -99,7 +99,7 @@ Each directory contains `Main.idr`, a Makefile, and a `.ipkg` file whose base na
 package name.  From the repository root:
 
 ```sh
-cd examples/hello
+cd examples/basic
 make
 make run
 ```
@@ -110,7 +110,7 @@ make run
 
 | Directory | Extra packages | Run from that directory |
 | --- | --- | --- |
-| [hello](../examples/hello) | None | `make run` |
+| [basic](../examples/basic) | None | `make run` |
 | [locking](../examples/locking) | None | `make run` |
 | [audio](../examples/audio) | None | `make run ARGS="music.wav sound.wav"` |
 | [mixer](../examples/mixer) | Mixer | `make run ARGS="music-file sound-file"` |
@@ -119,7 +119,7 @@ make run
 
 Asset paths are relative to the example directory. Shared rules live in `examples/common.mk`.
 
-- Hello: close, Escape, or click the blue rectangle to exit.
+- Basic: close, Escape, or click the blue rectangle to exit.
 - Locking/Media: Close or Escape. `--smoke` stops after three frames. Media needs both Image and
   TTF.
 - Audio/Mixer: Enter submits a command. Controls and exit commands: [Audio](audio.md#example),

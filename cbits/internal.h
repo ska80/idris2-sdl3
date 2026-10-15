@@ -1,3 +1,5 @@
+/* -*- external-format: utf-8; -*- */
+
 #pragma once
 
 #include <SDL3/SDL_stdinc.h>

@@ -5,6 +5,7 @@ import SDL3
 import SDL3.Mixer.Raw
 import SDL3.Internal.Audio
 import SDL3.Internal.Result
+
 import Data.Buffer
 
 %default total

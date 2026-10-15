@@ -35,6 +35,6 @@ mode. `getRenderVSync` returns `Either String VSyncMode`.
 - State belongs to the renderer, not a texture target. Include time spent in `present` when
   measuring a full frame.
 
-Examples: [Hello](../examples/hello/Main.idr) and [Locking](../examples/locking/Main.idr) implement
+Examples: [Basic](../examples/basic/Main.idr) and [Locking](../examples/locking/Main.idr) implement
 timer-based pacing.  Measurements: [batch CPU timing](geometry.md#cpu-timing-example). Build/run:
 [examples](build.md#examples).

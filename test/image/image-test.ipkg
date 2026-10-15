@@ -2,7 +2,8 @@ package image-test
 
 version = 0.0.0
 
-depends = sdl3, sdl3-image
+depends = sdl3
+        , sdl3-image
 
 sourcedir = "."
 

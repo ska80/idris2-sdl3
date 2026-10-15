@@ -1,15 +1,24 @@
 package sdl3-image
 
-version = 0.0.0
-brief = "Typed SDL3_image loading for core surfaces and textures"
+authors     = "Kamil Shakirov"
+maintainers = "Kamil Shakirov"
+
 license = "MIT"
-readme = "docs/image.md"
+brief   = "Typed SDL3_image loading for core surfaces and textures"
+readme  = "docs/image.md"
+version = 0.0.0
+
+homepage   = "https://codeberg.org/ska80/idris2-sdl3"
+sourceloc  = "https://codeberg.org/ska80/idris2-sdl3.git"
+bugtracker = "https://codeberg.org/ska80/idris2-sdl3/issues"
 
 langversion >= 0.8.0
 
-depends = sdl3
+depends = base >= 0.8.0
+        , sdl3
 
 sourcedir = "src"
+
 modules = SDL3.Image
         , SDL3.Image.Raw
         , SDL3.Image.Scoped

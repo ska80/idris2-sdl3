@@ -1,3 +1,5 @@
+/* -*- external-format: utf-8; -*- */
+
 #pragma once
 
 #include "core.h"

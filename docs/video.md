@@ -53,5 +53,5 @@ Initialize `video`. Main thread only. [Shared resource/error rules](resources.md
 
 ## Example
 
-[Hello](../examples/hello/Main.idr): resizable window, logical resolution, input conversion.  [Build
+[Basic](../examples/basic/Main.idr): resizable window, logical resolution, input conversion.  [Build
 and run commands](build.md#examples).

@@ -1,12 +1,22 @@
 package sdl3-mixer
 
-version = 0.0.0
-brief = "Typed SDL3_mixer assets and tracks"
+authors     = "Kamil Shakirov"
+maintainers = "Kamil Shakirov"
+
 license = "MIT"
-readme = "docs/mixer.md"
+brief   = "Typed SDL3_mixer assets and tracks"
+readme  = "docs/mixer.md"
+version = 0.0.0
+
+homepage   = "https://codeberg.org/ska80/idris2-sdl3"
+sourceloc  = "https://codeberg.org/ska80/idris2-sdl3.git"
+bugtracker = "https://codeberg.org/ska80/idris2-sdl3/issues"
 
 langversion >= 0.8.0
-depends = sdl3
+
+depends = base >= 0.8.0
+        , sdl3
+
 sourcedir = "src"
 
 modules = SDL3.Mixer

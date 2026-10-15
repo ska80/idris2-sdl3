@@ -1,4 +1,4 @@
-IPKG := batches.ipkg
+IPKG       := batches.ipkg
 EXECUTABLE := batch-timing
 
 include ../common.mk

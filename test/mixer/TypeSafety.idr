@@ -3,7 +3,9 @@ module TypeSafety
 import SDL3
 import SDL3.Mixer
 import SDL3.Mixer.Scoped
+
 import Data.Buffer
+
 import System.FFI
 
 failing "Mismatch between"

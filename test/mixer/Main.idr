@@ -1,13 +1,16 @@
 module Main
 
+import TypeSafety
+
 import SDL3
 import SDL3.Mixer
 import SDL3.Mixer.Scoped
+
 import Data.Buffer
 import Data.IORef
+
 import System
 import System.File
-import TypeSafety
 
 %default covering
 

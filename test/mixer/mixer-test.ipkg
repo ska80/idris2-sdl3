@@ -2,7 +2,8 @@ package mixer-test
 
 version = 0.0.0
 
-depends = sdl3, sdl3-mixer
+depends = sdl3
+        , sdl3-mixer
 
 sourcedir = "."
 

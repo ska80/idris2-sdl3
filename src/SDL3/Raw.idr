@@ -2,6 +2,7 @@
 module SDL3.Raw
 
 import Data.Buffer
+
 import System.FFI
 
 %default total

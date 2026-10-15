@@ -1,5 +1,5 @@
-IPKG := mixer.ipkg
-EXECUTABLE := mixer-example
+IPKG       := mixer.ipkg
+EXECUTABLE := mixer
 EXTENSIONS := mixer
 
 include ../common.mk

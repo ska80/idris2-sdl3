@@ -3,6 +3,7 @@ module Main
 import SDL3
 import SDL3.Mixer
 import SDL3.Mixer.Scoped
+
 import System
 
 %default covering
@@ -57,7 +58,7 @@ run musicPath soundPath = withMixerLibrary $ withMixer $ \mixer =>
 main : IO ()
 main = do
   [_, musicPath, soundPath] <- getArgs | _ => do
-    putStrLn "Usage: mixer-example music-file sound-file"
+    putStrLn "Usage: mixer music-file sound-file"
     exitFailure
   result <- run musicPath soundPath
   SDL3.quit

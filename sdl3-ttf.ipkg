@@ -1,16 +1,24 @@
 package sdl3-ttf
 
+authors     = "Kamil Shakirov"
+maintainers = "Kamil Shakirov"
+
+license = "MIT"
+brief   = "Typed SDL3_ttf fonts and reusable renderer text"
+readme  = "docs/ttf.md"
 version = 0.0.0
 
-brief = "Typed SDL3_ttf fonts and reusable renderer text"
-license = "MIT"
-readme = "docs/ttf.md"
+homepage   = "https://codeberg.org/ska80/idris2-sdl3"
+sourceloc  = "https://codeberg.org/ska80/idris2-sdl3.git"
+bugtracker = "https://codeberg.org/ska80/idris2-sdl3/issues"
 
 langversion >= 0.8.0
 
-depends = sdl3
+depends = base >= 0.8.0
+        , sdl3
 
 sourcedir = "src"
+
 modules = SDL3.TTF
         , SDL3.TTF.Raw
         , SDL3.TTF.Scoped

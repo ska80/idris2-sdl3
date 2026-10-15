@@ -1,3 +1,5 @@
+/* -*- external-format: utf-8; -*- */
+
 #include "image.h"
 
 SDL_Surface* idris_image_load_io(SDL_IOStream* stream) {

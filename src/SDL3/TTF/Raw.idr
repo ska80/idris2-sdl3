@@ -58,6 +58,7 @@ prim__drawText : AnyPtr -> Double -> Double -> PrimIO Int
 %foreign "C:idris_ttf_size_new, libidris2_sdl3_ttf, ttf.h"
 export
 prim__newTextSize : PrimIO NativeSize
+
 %foreign "C:idris_ttf_size, libidris2_sdl3_ttf, ttf.h"
 export
 prim__textSize : AnyPtr -> NativeSize -> PrimIO Int

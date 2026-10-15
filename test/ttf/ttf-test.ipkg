@@ -2,7 +2,8 @@ package ttf-test
 
 version = 0.0.0
 
-depends = sdl3, sdl3-ttf
+depends = sdl3
+        , sdl3-ttf
 
 sourcedir = "."
 

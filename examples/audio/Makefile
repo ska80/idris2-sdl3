@@ -1,4 +1,4 @@
-IPKG := audio.ipkg
+IPKG       := audio.ipkg
 EXECUTABLE := audio
 
 include ../common.mk

@@ -1,3 +1,5 @@
+/* -*- external-format: utf-8; -*- */
+
 #include "ttf.h"
 #include "internal.h"
 
@@ -34,8 +36,7 @@ int idris_ttf_color(TTF_Text* text, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
 }
 
 int idris_ttf_draw(TTF_Text* text, double x, double y) {
-    if (!idris_sdl_fits_float(x) || !idris_sdl_fits_float(y))
-        return SDL_SetError("Text position must be finite and fit SDL floats");
+    if (!idris_sdl_fits_float(x) || !idris_sdl_fits_float(y)) return SDL_SetError("Text position must be finite and fit SDL floats");
 
     return TTF_DrawRendererText(text, (float)x, (float)y);
 }

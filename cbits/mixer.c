@@ -1,3 +1,5 @@
+/* -*- external-format: utf-8; -*- */
+
 #include "mixer.h"
 #include "internal.h"
 
