@@ -1,4 +1,5 @@
 #include "core.h"
+#include "internal.h"
 
 #include <assert.h>
 #include <math.h>
@@ -176,7 +177,25 @@ static void input_tests(void) {
     assert(idris_sdl_event_kind(&event) == 39 && idris_sdl_event_timestamp(&event) == 0x100000002ull);
 }
 
+static void abi_checks(void) {
+    assert(idris_sdl_buffer_range(0, 0, 0));
+    assert(idris_sdl_buffer_range(32, 32, 0));
+    assert(idris_sdl_buffer_range(32, 16, 16));
+    assert(!idris_sdl_buffer_range(32, 33, 0));
+    assert(!idris_sdl_buffer_range(32, 16, 17));
+    assert(!idris_sdl_buffer_range(SDL_MAX_UINT64, SDL_MAX_UINT64, 1));
+    assert(!idris_sdl_buffer_range(SDL_MAX_UINT64, 1, SDL_MAX_UINT64));
+    assert(idris_sdl_buffer_range(SIZE_MAX, SIZE_MAX, 0));
+    assert(!idris_sdl_buffer_range(SDL_MAX_UINT64, SIZE_MAX, 1));
+    assert(idris_sdl_fits_float(FLT_MAX) && idris_sdl_fits_float(-FLT_MAX));
+    assert(idris_sdl_fits_float(0) && idris_sdl_fits_float(1.0e-300));
+    assert(!idris_sdl_fits_float(NAN) && !idris_sdl_fits_float(INFINITY));
+    assert(!idris_sdl_fits_float(-INFINITY) && !idris_sdl_fits_float((double)FLT_MAX * 2));
+}
+
 int main(void) {
+    abi_checks();
+
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD));
 
     SDL_Window*   window   = SDL_CreateWindow("extended tests", 16, 16, SDL_WINDOW_HIDDEN);

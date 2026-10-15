@@ -1,42 +1,28 @@
+||| Main-thread text ownership scopes. Shared cleanup contract: docs/resources.md.
 module SDL3.TTF.Scoped
 
 import SDL3
 import SDL3.TTF
+import SDL3.Internal.Resource
 
 %default total
 
-withOwned : IO (Either String resource) -> (resource -> IO ()) ->
-            (resource -> IO (Either String a)) -> IO (Either String a)
-withOwned acquire release action = do
-  Right resource <- acquire | Left err => pure (Left err)
-  result <- action resource
-  release resource
-  pure result
-
-||| Main thread. Balance one successful init on ordinary return. All child scopes must finish first.
-||| Exceptions, process exit, and nonreturning callbacks do not guarantee cleanup.
+||| Balance one successful initialization. Finish all child scopes first.
 export
 withTTF : IO (Either String a) -> IO (Either String a)
-withTTF action = do
-  True <- initTTF | False => Left <$> getError
-  result <- action
-  quitTTF
-  pure result
+withTTF = withLibrary initTTF quitTTF
 
-||| Own a font on the main thread. Destroy its text objects before returning.
-||| Do not close or retain the font. Failed acquisition skips the action. Ordinary-return cleanup only.
+||| Destroy dependent text objects before returning.
 export
 withFont : String -> Double -> (Font -> IO (Either String a)) -> IO (Either String a)
-withFont path size = withOwned (openFont path size) closeFont
+withFont path size = withResource (openFont path size) closeFont
 
-||| Own an engine on the main thread. Keep the renderer alive and destroy all text before returning.
-||| Do not destroy or retain the engine. Ordinary-return cleanup only.
+||| Keep the renderer alive and destroy dependent text objects before returning.
 export
 withRendererTextEngine : Renderer -> (RendererTextEngine -> IO (Either String a)) -> IO (Either String a)
-withRendererTextEngine renderer = withOwned (createRendererTextEngine renderer) destroyRendererTextEngine
+withRendererTextEngine renderer = withResource (createRendererTextEngine renderer) destroyRendererTextEngine
 
-||| Own reusable text on the main thread. Keep its font, engine, and renderer alive through cleanup.
-||| Do not destroy or retain the text. Ordinary-return cleanup only.
+||| Keep the font, engine, and renderer alive through text cleanup.
 export
 withText : RendererTextEngine -> Font -> String -> (Text -> IO (Either String a)) -> IO (Either String a)
-withText engine font value = withOwned (createText engine font value) destroyText
+withText engine font value = withResource (createText engine font value) destroyText

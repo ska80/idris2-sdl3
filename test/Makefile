@@ -16,6 +16,8 @@ native: $(NATIVE_BUILD)/native $(NATIVE_BUILD)/audio-native $(NATIVE_BUILD)/subs
 $(NATIVE_BUILD):
 	$(MKDIR) -p $@
 
+$(addprefix $(NATIVE_BUILD)/,native audio-native subset-native extended-native mixer-native ttf-native): ../cbits/internal.h
+
 $(NATIVE_BUILD)/native: native.c ../cbits/core.c ../cbits/core.h | $(NATIVE_BUILD)
 	$(CC) $(CFLAGS) -std=c11 -Wall -Wextra -Werror -I../cbits \
 		$(shell $(PKG_CONFIG) --cflags sdl3) native.c \

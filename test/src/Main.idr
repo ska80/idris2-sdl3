@@ -26,6 +26,7 @@ import TimerTests
 import VSyncTests
 import WaitTests
 import ScopedTests
+import ResourceHelperTests
 import TargetScopeTests
 import TargetTextureScopeTests
 import RotationTests
@@ -131,6 +132,7 @@ smoke : IO (Either String ())
 smoke = do
   Right () <- timerTests | Left err => pure (Left err)
   Right () <- scopedTests | Left err => pure (Left err)
+  Right () <- resourceHelperTests | Left err => pure (Left err)
   Right () <- windowTitleTests | Left err => pure (Left err)
   Right () <- windowVisibilityTests | Left err => pure (Left err)
   Right () <- windowStyleTests | Left err => pure (Left err)

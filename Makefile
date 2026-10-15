@@ -1,8 +1,19 @@
 PACK ?= pack
 CG   ?= chez
+
 ROOT := $(CURDIR)
 
-# NOTE: The Idris packages share build directories. Keep pack invocations serial.
+PACK_CHEZ = $(PACK) --no-prompt --cg=chez
+
+EXTENSIONS := mixer image ttf
+CORE_EXAMPLES := hello locking audio
+OPTIONAL_EXAMPLES := mixer media batches
+TEST_TARGETS := test $(addprefix test-,$(EXTENSIONS))
+PACKAGES := sdl3.ipkg $(addprefix sdl3-,$(addsuffix .ipkg,$(EXTENSIONS))) \
+            test/test.ipkg $(addprefix test/,$(addsuffix .ipkg,$(EXTENSIONS))) \
+            $(addprefix examples/,$(addsuffix .ipkg,$(CORE_EXAMPLES) $(OPTIONAL_EXAMPLES)))
+
+# Package builds share directories. Separate pack invocations must remain serial.
 .NOTPARALLEL:
 
 ifneq ($(CG),chez)
@@ -10,93 +21,40 @@ $(error Only the Chez backend is supported)
 endif
 
 export LD_LIBRARY_PATH := $(ROOT)/cbits:/usr/local/lib:$(LD_LIBRARY_PATH)
+TEST_ENV = SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software SDL_AUDIO_DRIVER=dummy
 
-.PHONY: all
+.PHONY: all clean example $(EXTENSIONS) $(TEST_TARGETS) \
+        $(addprefix run-,$(CORE_EXAMPLES)) $(addprefix example-,$(OPTIONAL_EXAMPLES))
 all:
-	$(PACK) --no-prompt --cg=chez build sdl3.ipkg
+	$(PACK_CHEZ) build sdl3.ipkg
 
+$(EXTENSIONS): all
+	$(PACK_CHEZ) build sdl3-$@.ipkg
 
-.PHONY: example
-example: all
-	$(PACK) --no-prompt --cg=chez build examples/hello.ipkg
-	$(PACK) --no-prompt --cg=chez build examples/locking.ipkg
-	$(PACK) --no-prompt --cg=chez build examples/audio.ipkg
-
-.PHONY: run-hello run-locking run-audio
-run-hello: example
-	$(PACK) --no-prompt --cg=chez run examples/hello.ipkg
-
-run-locking: example
-	$(PACK) --no-prompt --cg=chez run examples/locking.ipkg
-
-run-audio: example
-	$(PACK) --no-prompt --cg=chez run examples/audio.ipkg
-
-
-.PHONY: test
-test: export LD_LIBRARY_PATH := $(ROOT)/test/native-build:$(LD_LIBRARY_PATH)
+$(TEST_TARGETS): export LD_LIBRARY_PATH := $(ROOT)/test/native-build:$(LD_LIBRARY_PATH)
 test: all
 	$(MAKE) -C test native
 	$(RM) test/build/exec/sdl3-test
-	SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software SDL_AUDIO_DRIVER=dummy \
-		$(PACK) --no-prompt --cg=chez run test/test.ipkg
+	$(TEST_ENV) $(PACK_CHEZ) run test/test.ipkg
 
+$(addprefix test-,$(EXTENSIONS)): test-%: %
+	$(MAKE) -C test $*-native
+	$(RM) test/build/exec/sdl3-$*-test
+	$(TEST_ENV) $(PACK_CHEZ) run test/$*.ipkg
 
-.PHONY: mixer test-mixer example-mixer
-mixer: all
-	$(PACK) --no-prompt --cg=chez build sdl3-mixer.ipkg
+example: all
+	@set -e; for name in $(CORE_EXAMPLES); do $(PACK_CHEZ) build examples/$$name.ipkg; done
 
-test-mixer: export LD_LIBRARY_PATH := $(ROOT)/test/native-build:$(LD_LIBRARY_PATH)
-test-mixer: mixer
-	$(MAKE) -C test mixer-native
-	$(RM) test/build/exec/sdl3-mixer-test
-	SDL_AUDIO_DRIVER=dummy $(PACK) --no-prompt --cg=chez run test/mixer.ipkg
+$(addprefix run-,$(CORE_EXAMPLES)): run-%: example
+	$(PACK_CHEZ) run examples/$*.ipkg
 
 example-mixer: mixer
-	$(PACK) --no-prompt --cg=chez build examples/mixer.ipkg
-
-.PHONY: image test-image
-image: all
-	$(PACK) --no-prompt --cg=chez build sdl3-image.ipkg
-
-test-image: export LD_LIBRARY_PATH := $(ROOT)/test/native-build:$(LD_LIBRARY_PATH)
-test-image: image
-	$(MAKE) -C test image-native
-	$(RM) test/build/exec/sdl3-image-test
-	SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software $(PACK) --no-prompt --cg=chez run test/image.ipkg
-
-.PHONY: ttf test-ttf
-ttf: all
-	$(PACK) --no-prompt --cg=chez build sdl3-ttf.ipkg
-
-test-ttf: export LD_LIBRARY_PATH := $(ROOT)/test/native-build:$(LD_LIBRARY_PATH)
-test-ttf: ttf
-	$(MAKE) -C test ttf-native
-	$(RM) test/build/exec/sdl3-ttf-test
-	SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software $(PACK) --no-prompt --cg=chez run test/ttf.ipkg
-
-.PHONY: example-media example-batches
 example-media: image ttf
-	$(PACK) --no-prompt --cg=chez build examples/media.ipkg
-
 example-batches: all
-	$(PACK) --no-prompt --cg=chez build examples/batches.ipkg
+$(addprefix example-,$(OPTIONAL_EXAMPLES)): example-%:
+	$(PACK_CHEZ) build examples/$*.ipkg
 
-.PHONY: clean
 clean:
-	$(PACK) --no-prompt clean examples/hello.ipkg
-	$(PACK) --no-prompt clean examples/locking.ipkg
-	$(PACK) --no-prompt clean examples/audio.ipkg
-	$(PACK) --no-prompt clean examples/media.ipkg
-	$(PACK) --no-prompt clean examples/batches.ipkg
-	$(PACK) --no-prompt clean test/test.ipkg
-	$(PACK) --no-prompt clean sdl3.ipkg
-	$(PACK) --no-prompt clean examples/mixer.ipkg
-	$(PACK) --no-prompt clean test/mixer.ipkg
-	$(PACK) --no-prompt clean sdl3-mixer.ipkg
-	$(PACK) --no-prompt clean test/image.ipkg
-	$(PACK) --no-prompt clean sdl3-image.ipkg
-	$(PACK) --no-prompt clean test/ttf.ipkg
-	$(PACK) --no-prompt clean sdl3-ttf.ipkg
+	@set -e; for package in $(PACKAGES); do $(PACK) --no-prompt clean $$package; done
 	$(MAKE) -C cbits clean
 	$(MAKE) -C test clean

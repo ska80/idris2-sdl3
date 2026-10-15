@@ -5,6 +5,7 @@ import SDL3
 import SDL3.Raw
 import SDL3.TTF.Raw
 import SDL3.Internal.Handles
+import SDL3.Internal.Result
 
 import System.FFI
 
@@ -31,17 +32,11 @@ export
 quitTTF : IO ()
 quitTTF = primIO prim__quitTTF
 
-ownedTextResource : (AnyPtr -> a) -> PrimIO AnyPtr -> IO (Either String a)
-ownedTextResource wrap action = do
-  ptr <- primIO action
-  0 <- primIO (prim__isNull ptr) | _ => Left <$> getError
-  pure (Right (wrap ptr))
-
 ||| Point size narrows to SDL float. Rejects nonpositive, nonfinite, and out-of-range sizes.
 ||| File paths use UTF-8 and end at embedded NUL. Keep all operations in this subset on the main thread.
 export
 openFont : String -> Double -> IO (Either String Font)
-openFont path size = ownedTextResource MkFont (prim__openFont path size)
+openFont path size = owned MkFont (prim__openFont path size)
 
 export
 closeFont : Font -> IO ()
@@ -49,7 +44,7 @@ closeFont (MkFont ptr) = primIO (prim__closeFont ptr)
 
 export
 createRendererTextEngine : Renderer -> IO (Either String RendererTextEngine)
-createRendererTextEngine renderer = ownedTextResource MkRendererTextEngine $
+createRendererTextEngine renderer = owned MkRendererTextEngine $
   prim__createTextEngine (unsafeHandlePointer renderer)
 
 ||| Destroy all text objects first. The renderer remains owned by the caller.

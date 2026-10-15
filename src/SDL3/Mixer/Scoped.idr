@@ -1,52 +1,38 @@
+||| Mixer ownership scopes. Shared cleanup contract: docs/resources.md.
 module SDL3.Mixer.Scoped
 
 import SDL3
 import SDL3.Mixer
+import SDL3.Internal.Resource
 
 %default total
 
-withOwned : IO (Either String resource) -> (resource -> IO ()) ->
-            (resource -> IO (Either String a)) -> IO (Either String a)
-withOwned acquire release action = do
-  Right resource <- acquire | Left err => pure (Left err)
-  result <- action resource
-  release resource
-  pure result
-
-||| Balance one successful initMixer with quitMixer on ordinary return. Not thread-safe.
-||| All child scopes must finish first. Exceptions and nonreturning actions do not guarantee cleanup.
+||| Balance one successful initialization. Serialize initialization/shutdown; finish child scopes first.
 export
 withMixerLibrary : IO (Either String a) -> IO (Either String a)
-withMixerLibrary action = do
-  True <- initMixer | False => Left <$> getError
-  result <- action
-  quitMixer
-  pure result
+withMixerLibrary = withLibrary initMixer quitMixer
 
-||| Main-thread device ownership. Destroy all track scopes before returning.
-||| Do not destroy or retain the supplied mixer. Ordinary returns only guarantee cleanup.
+||| Main-thread device ownership. Finish track scopes before returning.
 export
 withMixer : (Mixer DeviceOutput -> IO (Either String a)) -> IO (Either String a)
-withMixer = withOwned createMixer destroyMixer
+withMixer = withResource createMixer destroyMixer
 
+||| No device or background processing. Finish track scopes before returning.
 export
 withMemoryMixer : AudioSpec -> (Mixer MemoryOutput -> IO (Either String a)) -> IO (Either String a)
-withMemoryMixer spec = withOwned (createMemoryMixer spec) destroyMixer
+withMemoryMixer spec = withResource (createMemoryMixer spec) destroyMixer
 
-||| Own the caller's asset reference. Assigned tracks keep their internal references.
-||| Do not destroy or retain the supplied Audio after return. Ordinary-return cleanup only.
+||| Own the caller's asset reference. Assigned tracks retain their own references.
 export
 withAudio : Mixer output -> String -> DecodeMode -> (Audio -> IO (Either String a)) -> IO (Either String a)
-withAudio mixer path mode = withOwned (loadAudio mixer path mode) destroyAudio
+withAudio mixer path mode = withResource (loadAudio mixer path mode) destroyAudio
 
-||| Keep the mixer alive until this callback returns and the track is destroyed.
-||| Do not destroy or retain the supplied track. Ordinary-return cleanup only.
+||| Keep the creating mixer alive through track cleanup.
 export
 withTrack : Mixer output -> (Track -> IO (Either String a)) -> IO (Either String a)
-withTrack mixer = withOwned (createTrack mixer) destroyTrack
+withTrack mixer = withResource (createTrack mixer) destroyTrack
 
-||| Allocate once around the playback loop. Options are not retained by playTrack.
-||| Do not free or retain the supplied options. Ordinary-return cleanup only.
+||| Allocate around playback, not per play. playTrack does not retain options.
 export
 withPlayOptions : (PlayOptions -> IO (Either String a)) -> IO (Either String a)
-withPlayOptions = withOwned newPlayOptions freePlayOptions
+withPlayOptions = withResource newPlayOptions freePlayOptions

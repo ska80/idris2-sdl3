@@ -5,6 +5,18 @@ import SDL3.Scoped
 import SDL3.Raw
 import Data.Buffer
 
+failing "Undefined name audioFormatCode"
+  internalAudioCode : Bits32
+  internalAudioCode = audioFormatCode AudioS16LE
+
+failing "Undefined name withResource"
+  internalResource : IO (Either String ())
+  internalResource = withResource (pure (Right ())) (\_ => pure ()) (\_ => pure (Right ()))
+
+failing "Undefined name nonnegative64"
+  internalResult : IO (Either String Bits64)
+  internalResult = nonnegative64 (pure 0)
+
 failing "Mismatch between"
   windowAsGamepad : Window -> IO Bool
   windowAsGamepad window = gamepadConnected window

@@ -1,132 +1,84 @@
-# Initialization and resource ownership
+# Resource contract
 
-Import `SDL3` for the typed API. Import `SDL3.Scoped` for resource scopes.  A scope creates a
-resource and releases it when its callback returns.  A callback is the function that receives the
-resource.
+Applies to core and all extensions. Typed APIs use opaque handles. Raw/internal APIs bypass these
+guarantees.
 
 ## Initialization and errors
 
-`init flags` returns `IO Bool`. Combine initialization flags with `<+>`, such as `video <+>
-audio`. `neutral` supplies empty flags. Initialization flags and window flags have distinct
-types. Initialize SDL on the main thread.
-
-Creation functions return `IO (Either String resource)` and copy errors into `Left`.  Many controls
-return `IO Bool`, with `False` for failure. After such a failure, call `getError` immediately on the
-same thread. Another SDL call can replace the error.  A boolean state query, such as
-`isWindowHidden`, is not a success indicator.
-
-Call `quit` after releasing owned resources, even if initialization fails.  Copy an error before
-cleanup if you need to report it afterward.  This example opens and closes a window without an event
-loop:
-
-```idris
-import SDL3
-import SDL3.Scoped
-
-openAndClose : IO (Either String ())
-openAndClose = do
-  ok <- init video
-  result <- if not ok then Left <$> getError else
-    withWindow "SDL3" 640 480 resizable (\window => pure (Right ()))
-  quit
-  pure result
-```
+- Initialize SDL on the main thread: `init (video <+> audio <+> gamepad)`. Select only needed
+  flags. `neutral` selects none.
+- Call `quit` last, after resource cleanup, including after failed initialization.
+- Creation/query `Left err`: copied error. Control `False`: read `getError` immediately on the same
+  thread, before cleanup.
+- Boolean state queries report state, not success. Another SDL call can replace the current error.
+- Strings and paths use UTF-8 C strings. Embedded NUL ends the value.
+- SDL `float` values widen to `Double` without gaining precision. Drawing values narrow back to
+  floats.
 
 ## Manual ownership
 
-Destroy textures before their renderer, and renderers before their window.  Switch away from a
-texture before destroying it as a render target.  Destroy playback streams before `quit`. Each
-stream also closes its owned logical audio device.
+| Resource | Release | Required order or special rule |
+| --- | --- | --- |
+| `Window` | `destroyWindow` | After its renderers |
+| `Renderer` | `destroyRenderer` | After its textures and text engines |
+| `Texture access` | `destroyTexture` | After unlocking and switching away from it as a render target |
+| `Surface` | `destroySurface` | A texture copied from it can outlive it |
+| `PlaybackStream` | `destroyPlaybackStream` | Also closes its owned logical audio device |
+| `WAV` | `freeWAV` | Queued copies survive cleanup |
+| `Gamepad` | `closeGamepad` | Once per successful open, including after removal |
+| `Cursor` | `destroyCursor` | Select another cursor first |
+| `IOStream` | `closeIO` | Invalid even if close fails. Never retry close |
+| Reusable buffer/snapshot | Matching `free...` | No users or borrowed views after release |
+| Image result | Core surface/texture release | Same core handle types |
+| TTF text/font/engine | Matching `destroy...` / `closeFont` | [TTF resource order](ttf.md#resources) |
+| Mixer track/asset/options/output | Matching `destroy...` / `freePlayOptions` | [Mixer reference ownership](mixer.md#ownership-and-threads) |
 
-Free surfaces, WAV data, event buffers, coordinate buffers, point buffers, rectangle buffers, and
-texture-lock buffers exactly once. Also release geometry, keyboard snapshot, mouse query, and
-render-state storage exactly once.  Use the matching destroy or free function. Do not use a handle
-after destruction. The types prevent handle confusion, not access to freed memory, duplicate
-cleanup, or renderer mismatches.
-
-Events, strings, sizes, and points returned as copied values can outlive their source resource. A
-copied identifier does not keep a window alive. A copied size does not track later changes. A
-texture copied from a surface can outlive that surface.
+- Release each owned reference exactly once. Copying a handle does not acquire another reference.
+- Types do not prevent stale access, duplicate cleanup, thread mistakes, or renderer/mixer identity
+  errors.
+- Copied strings, events, IDs, sizes, and query records survive source cleanup. They are snapshots,
+  not live state or ownership.
 
 ## Scoped resources
 
-Resource helpers return `IO (Either String a)` and take a callback with the same result
-form. Acquisition failure returns `Left` without calling the callback.  Ordinary `Right` and `Left`
-callback returns both trigger cleanup. Helpers preserve the result unless cleanup reports failure,
-as with I/O stream closing. Callback errors take precedence over close errors. Runtime exceptions,
-process exit, and nonreturning callbacks do not guarantee cleanup.
+A scope acquires a resource, calls an action, then releases the resource.
 
-The helpers cover these resources:
+- Import the corresponding `.Scoped` module. Resource helpers follow the `with...` naming
+  convention.
+- Failed acquisition skips the action and cleanup.
+- Ordinary `Right` and `Left` returns both trigger cleanup. Exceptions, process exit, and
+  nonreturning actions do not guarantee cleanup.
+- Do not release supplied handles yourself or retain handles/actions that use them beyond the scope.
+- Nest dependent resources inside their owners. Allocate reusable buffers around the loop, not
+  within each frame/event.
+- Callback errors precede cleanup errors. After a successful callback, failed close/unlock returns
+  its cleanup error.
 
-- `withWindow` and `withRenderer` own windows and renderers.
-- `withStreamingTexture`, `withTargetTexture`, and `withTextureFromSurface` own textures.
-- `withBMP` and `withWAV` own loaded image and audio data.
-- `withGamepad` owns one open gamepad reference, including after disconnection.
-- `withSystemCursor` owns a cursor, without selecting it or restoring previous selection.
-- `withFileIO` and `withMemoryIO` own streams that become invalid even after close failure.
-- `withPlaybackStream` owns a playback stream and its logical device.
-- `withEventBuffer` and `withCoordinateBuffer` own reusable event and conversion storage.
-- `withPointBuffer`, `withRectBuffer`, and `withTextureLockBuffer` own reusable drawing storage.
-- `withGeometryBuffer` owns reusable vertices and indices.
-- `withKeyboardSnapshot`, `withMouseStateBuffer`, and `withRenderStateBuffer` own reusable query
-  storage.
-
-Do not destroy a supplied resource or retain it after the callback returns.  Do not store functions
-that use it later. Nest dependent resources inside their owners' scopes. Keep buffers around the
-update loop, not inside each frame or event handler. Each helper entry creates a resource, rather
-than reusing an earlier allocation.
-
-`withTargetTexture` owns a texture but does not select it for drawing.  Nest `withRenderTarget`
-inside its callback and finish selection before texture cleanup.  See [textures](textures.md) for
-selection and pixel-locking rules.
+`withTargetTexture` owns a texture without selecting it. Nest `withRenderTarget` inside it.
+`withSystemCursor` owns a cursor without selecting it or restoring the previous selection.
 
 ## Temporary state
 
-`withRenderTarget` is exported by `SDL3`. The other state helpers are exported by `SDL3.Scoped`:
-`withDrawBlendMode`, `withTextureAlphaMod`, `withTextureBlendMode`, and `withTextureScaleMode`,
-`withRenderViewport`, `withRenderClipRect`, `withRenderScale`, `withDrawColor`, and
-`withTextureColorMod`. These helpers borrow existing resources and restore only their named state.
-They do not own or destroy the resource. Keep the same target selected throughout viewport, clip,
-and scale scopes.
+- `withRenderTarget` is in `SDL3`. Other state helpers are in `SDL3.Scoped`.
+- State scopes borrow live resources and restore only their named state. Nested scopes save their
+  own entry state.
+- Failed query: skip the action. Failed setting: skip the action but still attempt restoration.
+- Setting/action errors precede restoration errors. If only restoration fails, return its error.
+- `Left` does not guarantee restoration. The ordinary-return limit above applies to restoration too.
+- Keep the same target selected throughout viewport, clip, and scale scopes. Restore target changes
+  in an inner scope.
+- `withTextureLockRGBA` submits writes on unlock, including after `Left`. It does not restore pixels
+  or undo writes.
 
-A failed initial query skips the action. A failed setting also skips the action but still attempts
-restoration. Setting and action errors take precedence over restoration errors. If only restoration
-fails, the helper returns that error.  A `Left` result does not guarantee restoration.
+## Threads and unsafe access
 
-Nested scopes save their own entry state. Ordinary callback returns trigger a restoration attempt,
-but exceptions and nonreturning actions do not. Keep all borrowed resources alive throughout the
-action and restoration. `withTextureLockRGBA` instead releases a pixel lock and submits writes, even
-after a callback error. It does not undo writes.
-
-## Extension resources
-
-The optional [Image package](image.md) returns the existing core surface and texture types.  Its
-stream loaders borrow their source during the call without closing it. The decoded resource can
-outlive the source stream.  Core destroy functions release the returned resources.
-
-The optional [TTF package](ttf.md) owns fonts, text engines, and reusable text objects.  Destroy
-text before its font and engine. Destroy engines before their renderers, and close fonts before
-balancing TTF initialization.  Call SDL `quit` last. Extension scopes have the same ordinary-return
-limit as core scopes.
-
-## Thread rules and raw bindings
-
-Run window, rendering, and event operations on the main thread. Do not share reusable event or
-drawing buffers between threads. Audio operations have separate rules in the [audio
-guide](audio.md). Timing functions can run on any thread.
-
-`SDL3.Raw` exposes the unsafe foreign-function interface, which calls native C functions.  It does
-not enforce pointer validity, buffer capacity, or resource lifetimes.  Use it only when you can
-enforce the corresponding SDL and adapter requirements.  Mixing raw calls with typed handles can
-break ownership and format assumptions.
-
-`SDL3.Internal.Handles` is an unsafe bridge for binding modules, not an application API.  Explicitly
-importing it permits pointer access and handle forging. It has the same safety obligations as raw
-bindings.  The normal core import keeps resource constructors private.
-
-## Examples and tests
-
-[Hello](../examples/Hello.idr) nests texture and renderer ownership inside a window scope.
-[Audio](../examples/Audio.idr) keeps playback streams inside loaded WAV scopes.  `make test`
-exercises cleanup, skipped callbacks, preserved results, and rejection of wrong handle types. It
-does not establish cleanup after runtime exceptions.
+- Main thread: initialization, windows, rendering, events, keyboard/mouse queries, cursors,
+  clipboard, and this TTF subset.
+- Timing calls: any thread. Other thread rules: [audio](audio.md), [gamepads](gamepads.md),
+  [I/O](io.md), [Image](image.md), [Mixer](mixer.md).
+- Serialize access to shared resources and their cleanup. Never mutate or free native storage during
+  a call that uses it.
+- `SDL3.Raw` and extension `.Raw` modules require callers to enforce pointer validity, bounds,
+  alignment, and lifetime.
+- `SDL3.Internal.*` modules are implementation details, not application APIs. `Internal.Handles`
+  permits pointer access and handle forging.

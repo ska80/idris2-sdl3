@@ -23,6 +23,9 @@ modules = SDL3
         , SDL3.Flags
         , SDL3.Raw
         , SDL3.Internal.Handles
+        , SDL3.Internal.Audio
+        , SDL3.Internal.Resource
+        , SDL3.Internal.Result
         , SDL3.Scoped
 
 prebuild = "make -C cbits"

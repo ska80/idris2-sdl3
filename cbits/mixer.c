@@ -1,6 +1,5 @@
 #include "mixer.h"
-
-#include <float.h>
+#include "internal.h"
 
 _Static_assert(sizeof(int) == sizeof(Sint32), "Mixer requires 32-bit C int");
 
@@ -65,7 +64,7 @@ int idris_mix_paused(MIX_Track* track) {
 }
 
 static int valid_gain(double gain) {
-    if (!(gain >= 0.0 && gain <= FLT_MAX)) return SDL_SetError("Mixer gain must be finite, nonnegative, and fit a float");
+    if (!(gain >= 0.0 && idris_sdl_fits_float(gain))) return SDL_SetError("Mixer gain must be finite, nonnegative, and fit a float");
 
     return 1;
 }
@@ -127,7 +126,7 @@ Sint32 idris_mix_generate(MIX_Mixer* mixer, void* data, Uint64 capacity, Uint32 
 
     const int frame_bytes = SDL_AUDIO_FRAMESIZE(spec);
 
-    if (frame_bytes <= 0 || !data || count > SDL_MAX_SINT32 || (Uint64)offset + count > capacity || (Uint64)offset + count > SIZE_MAX ||
+    if (frame_bytes <= 0 || !data || count > SDL_MAX_SINT32 || !idris_sdl_buffer_range(capacity, offset, count) ||
         offset % (Uint32)frame_bytes || count % (Uint32)frame_bytes) {
         SDL_SetError("Mixer output range must fit the buffer and contain aligned whole frames");
 

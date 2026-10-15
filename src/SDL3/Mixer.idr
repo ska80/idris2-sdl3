@@ -2,10 +2,10 @@
 module SDL3.Mixer
 
 import SDL3
-import SDL3.Raw
 import SDL3.Mixer.Raw
+import SDL3.Internal.Audio
+import SDL3.Internal.Result
 import Data.Buffer
-import System.FFI
 
 %default total
 
@@ -51,32 +51,16 @@ export
 quitMixer : IO ()
 quitMixer = primIO prim__quitMixer
 
-ownedMixerObject : (AnyPtr -> a) -> PrimIO AnyPtr -> IO (Either String a)
-ownedMixerObject wrap action = do
-  ptr <- primIO action
-  0 <- primIO (prim__isNull ptr) | _ => Left <$> getError
-  pure (Right (wrap ptr))
-
 ||| Main thread. Opens default playback and initializes SDL audio internally.
 export
 createMixer : IO (Either String (Mixer DeviceOutput))
-createMixer = ownedMixerObject MkMixer prim__createMixerDevice
-
-mixerFormatCode : AudioFormat -> Bits32
-mixerFormatCode AudioU8 = 0x0008
-mixerFormatCode AudioS8 = 0x8008
-mixerFormatCode AudioS16LE = 0x8010
-mixerFormatCode AudioS16BE = 0x9010
-mixerFormatCode AudioS32LE = 0x8020
-mixerFormatCode AudioS32BE = 0x9020
-mixerFormatCode AudioF32LE = 0x8120
-mixerFormatCode AudioF32BE = 0x9120
+createMixer = owned MkMixer prim__createMixerDevice
 
 ||| No device or background rendering. generateMixer advances this mixer explicitly.
 export
 createMemoryMixer : AudioSpec -> IO (Either String (Mixer MemoryOutput))
 createMemoryMixer (MkAudioSpec format channels frequency) =
-  ownedMixerObject MkMixer (prim__createMemoryMixer (mixerFormatCode format) channels frequency)
+  owned MkMixer (prim__createMemoryMixer (audioFormatCode format) channels frequency)
 
 ||| Also destroys remaining tracks. Device mixers must be destroyed on the main thread.
 export
@@ -87,7 +71,7 @@ destroyMixer (MkMixer ptr) = primIO (prim__destroyMixer ptr)
 ||| Audio assets can be shared across mixers. UTF-8 paths end at an embedded NUL.
 export
 loadAudio : Mixer output -> String -> DecodeMode -> IO (Either String Audio)
-loadAudio (MkMixer ptr) path mode = ownedMixerObject MkAudio $
+loadAudio (MkMixer ptr) path mode = owned MkAudio $
   prim__loadAudio ptr path (case mode of Predecode => 1; DecodeOnPlayback => 0)
 
 ||| Releases this reference, not references retained by tracks. Do not use the handle afterward.
@@ -105,7 +89,7 @@ getAudioDuration (MkAudio ptr) = do
 
 export
 createTrack : Mixer output -> IO (Either String Track)
-createTrack (MkMixer ptr) = ownedMixerObject MkTrack (prim__createTrack ptr)
+createTrack (MkMixer ptr) = owned MkTrack (prim__createTrack ptr)
 
 ||| Stops immediately and releases track input. Must run before destroying its mixer.
 export
@@ -207,19 +191,14 @@ export
 setTrackPlaybackPosition : Track -> Bits64 -> IO Bool
 setTrackPlaybackPosition (MkTrack ptr) frames = (/= 0) <$> primIO (prim__seekTrack ptr frames)
 
-mixerFrames : PrimIO Int64 -> IO (Either String Bits64)
-mixerFrames action = do
-  value <- primIO action
-  if value < 0 then Left <$> getError else pure (Right (cast value))
-
 export
 getTrackPlaybackPosition : Track -> IO (Either String Bits64)
-getTrackPlaybackPosition (MkTrack ptr) = mixerFrames (prim__trackPosition ptr)
+getTrackPlaybackPosition (MkTrack ptr) = nonnegative64 (prim__trackPosition ptr)
 
 ||| Convert milliseconds using assigned input, not the mixer output rate.
 export
 trackMSToFrames : Track -> Bits32 -> IO (Either String Bits64)
-trackMSToFrames (MkTrack ptr) ms = mixerFrames (prim__trackMSToFrames ptr (cast ms))
+trackMSToFrames (MkTrack ptr) ms = nonnegative64 (prim__trackMSToFrames ptr (cast ms))
 
 ||| Checked byte range in a reusable buffer. Only memory mixers support explicit generation.
 ||| On success all requested bytes are initialized, including silence. The count excludes trailing silence.

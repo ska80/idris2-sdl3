@@ -1,13 +1,12 @@
 #include "ttf.h"
-
-#include <float.h>
+#include "internal.h"
 
 int idris_ttf_init(void) {
     return TTF_Init();
 }
 
 TTF_Font* idris_ttf_open_font(const char* path, double size) {
-    if (!(size > 0 && size <= FLT_MAX) || (float)size == 0) {
+    if (!(size > 0 && idris_sdl_fits_float(size)) || (float)size == 0) {
         SDL_SetError("Font size must be finite, positive, and fit a positive float");
 
         return NULL;
@@ -35,7 +34,7 @@ int idris_ttf_color(TTF_Text* text, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
 }
 
 int idris_ttf_draw(TTF_Text* text, double x, double y) {
-    if (!(x >= -FLT_MAX && x <= FLT_MAX && y >= -FLT_MAX && y <= FLT_MAX))
+    if (!idris_sdl_fits_float(x) || !idris_sdl_fits_float(y))
         return SDL_SetError("Text position must be finite and fit SDL floats");
 
     return TTF_DrawRendererText(text, (float)x, (float)y);

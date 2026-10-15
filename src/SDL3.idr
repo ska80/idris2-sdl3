@@ -2,11 +2,16 @@ module SDL3
 
 import public SDL3.Events
 import public SDL3.Flags
+
 import SDL3.Raw
 import SDL3.Internal.Handles
+import SDL3.Internal.Audio
+import SDL3.Internal.Resource
+import SDL3.Internal.Result
 
 import Data.Buffer
 import Data.Bits
+
 import System.FFI
 
 %default total
@@ -333,17 +338,8 @@ export
 quit : IO ()
 quit = primIO prim__quit
 
-owned : (AnyPtr -> a) -> PrimIO AnyPtr -> IO (Either String a)
-owned wrap action = do
-  ptr <- primIO action
-  null <- primIO (prim__isNull ptr)
-  if null /= 0 then Left <$> getError else pure (Right (wrap ptr))
-
 ownedTexture : PrimIO NativeTexture -> IO (Either String (Texture access))
-ownedTexture action = do
-  ptr <- primIO action
-  null <- primIO (prim__textureIsNull ptr)
-  if null /= 0 then Left <$> getError else pure (Right (MkTexture ptr))
+ownedTexture = nullable prim__textureIsNull MkTexture
 
 newWindow : String -> Int -> Int -> WindowFlags -> IO (Either String Window)
 newWindow title width height flags = do
@@ -635,10 +631,7 @@ getWindowDisplayScale (MkWindow ptr _) = queriedWindowScale (prim__getWindowDisp
 ||| Allocate reusable lock output storage once, outside the frame loop.
 export
 newTextureLockBuffer : IO (Either String TextureLockBuffer)
-newTextureLockBuffer = do
-  ptr <- primIO prim__textureLockNew
-  0 <- primIO (prim__textureLockIsNull ptr) | _ => Left <$> getError
-  pure (Right (MkTextureLockBuffer ptr))
+newTextureLockBuffer = nullable prim__textureLockIsNull MkTextureLockBuffer prim__textureLockNew
 
 ||| Free storage on the main thread. An outstanding lock is unlocked first.
 ||| Keep any locked texture and its renderer alive. Do not free storage inside a lock callback.
@@ -867,14 +860,10 @@ setRenderTarget (MkRenderer renderer) (Just (MkTexture texture)) =
 export
 withRenderTarget : Renderer -> Maybe (Texture TargetAccess) ->
                    IO (Either String a) -> IO (Either String a)
-withRenderTarget {a} renderer@(MkRenderer ptr) target action = do
+withRenderTarget renderer@(MkRenderer ptr) target action = do
   previous <- primIO (prim__getRenderTarget ptr)
-  selected <- setRenderTarget renderer target
-  result <- the (IO (Either String a)) (if selected then action else Left <$> getError)
-  restored <- primIO (prim__setRenderTarget ptr previous)
-  case result of
-    Left err => pure (Left err)
-    Right value => if restored /= 0 then pure (Right value) else Left <$> getError
+  withRestored (setRenderTarget renderer target)
+    ((/= 0) <$> primIO (prim__setRenderTarget ptr previous)) action
 
 ||| Draw the whole texture into the destination rectangle, or the whole target.
 ||| The texture must belong to this renderer and must not be the current target.
@@ -931,10 +920,7 @@ renderTextureRotated (MkRenderer renderer) (MkTexture texture) (Just (MkFRect sx
 ||| Allocate once and reuse for coordinate conversions. Do not share between threads.
 export
 newCoordinateBuffer : IO (Either String CoordinateBuffer)
-newCoordinateBuffer = do
-  ptr <- primIO prim__coordinateNew
-  0 <- primIO (prim__coordinateIsNull ptr) | _ => Left <$> getError
-  pure (Right (MkCoordinateBuffer ptr))
+newCoordinateBuffer = nullable prim__coordinateIsNull MkCoordinateBuffer prim__coordinateNew
 
 ||| Do not use the buffer after this call. Copied points remain valid.
 export
@@ -1476,15 +1462,16 @@ public export
 data AudioFormat = AudioU8 | AudioS8 | AudioS16LE | AudioS16BE
                  | AudioS32LE | AudioS32BE | AudioF32LE | AudioF32BE
 
-formatCode : AudioFormat -> Bits32
-formatCode AudioU8 = 0x0008
-formatCode AudioS8 = 0x8008
-formatCode AudioS16LE = 0x8010
-formatCode AudioS16BE = 0x9010
-formatCode AudioS32LE = 0x8020
-formatCode AudioS32BE = 0x9020
-formatCode AudioF32LE = 0x8120
-formatCode AudioF32BE = 0x9120
+export
+NativeAudioFormat AudioFormat where
+  audioFormatCode AudioU8 = 0x0008
+  audioFormatCode AudioS8 = 0x8008
+  audioFormatCode AudioS16LE = 0x8010
+  audioFormatCode AudioS16BE = 0x9010
+  audioFormatCode AudioS32LE = 0x8020
+  audioFormatCode AudioS32BE = 0x9020
+  audioFormatCode AudioF32LE = 0x8120
+  audioFormatCode AudioF32BE = 0x9120
 
 formatFromCode : Bits32 -> Maybe AudioFormat
 formatFromCode 0x0008 = Just AudioU8
@@ -1499,7 +1486,7 @@ formatFromCode _ = Nothing
 
 public export
 Eq AudioFormat where
-  x == y = formatCode x == formatCode y
+  x == y = audioFormatCode x == audioFormatCode y
 
 ||| Input format, channel count (1..8), and sample frames per second (positive).
 ||| This is the application's format. SDL converts to the device format as needed.
@@ -1541,10 +1528,8 @@ wavByteLength (MkWAV _ _ length) = length
 ||| Each call owns a separate logical device. Destroying the stream closes that device too.
 export
 openPlaybackStream : AudioSpec -> IO (Either String PlaybackStream)
-openPlaybackStream spec@(MkAudioSpec format channels frequency) = do
-  ptr <- primIO (prim__openPlayback (formatCode format) channels frequency)
-  0 <- primIO (prim__isNull ptr) | _ => Left <$> getError
-  pure (Right (MkPlaybackStream ptr spec))
+openPlaybackStream spec@(MkAudioSpec format channels frequency) =
+  owned (\ptr => MkPlaybackStream ptr spec) (prim__openPlayback (audioFormatCode format) channels frequency)
 
 ||| Drop queued audio and close the owned device. Do not use the stream afterward.
 ||| Serialize destruction with all users. Destroy before SDL quit.
@@ -1846,18 +1831,13 @@ export
 flushIO : IOStream -> IO Bool
 flushIO (MkIOStream ptr) = (/= 0) <$> primIO (prim__ioFlush ptr)
 
-ioPosition : PrimIO Int64 -> IO (Either String Bits64)
-ioPosition action = do
-  value <- primIO action
-  if value < 0 then Left <$> getError else pure (Right (cast value))
-
 export
 getIOSize : IOStream -> IO (Either String Bits64)
-getIOSize (MkIOStream ptr) = ioPosition (prim__ioSize ptr)
+getIOSize (MkIOStream ptr) = nonnegative64 (prim__ioSize ptr)
 
 export
 tellIO : IOStream -> IO (Either String Bits64)
-tellIO (MkIOStream ptr) = ioPosition (prim__ioTell ptr)
+tellIO (MkIOStream ptr) = nonnegative64 (prim__ioTell ptr)
 
 public export
 data IOOrigin = FromStart | FromCurrent | FromEnd
@@ -1869,7 +1849,7 @@ ioOrigin FromEnd = 2
 
 export
 seekIO : IOStream -> Int64 -> IOOrigin -> IO (Either String Bits64)
-seekIO (MkIOStream ptr) offset origin = ioPosition (prim__ioSeek ptr offset (ioOrigin origin))
+seekIO (MkIOStream ptr) offset origin = nonnegative64 (prim__ioSeek ptr offset (ioOrigin origin))
 
 public export
 data IOStatus = IOReady | IOFailure | IOEndOfFile | IONotReady | IOReadOnly | IOWriteOnly | OtherIOStatus Int32
@@ -2067,10 +2047,7 @@ record RelativeMouseState where
 
 export
 newMouseStateBuffer : IO (Either String MouseStateBuffer)
-newMouseStateBuffer = do
-  ptr <- primIO prim__mouseStateNew
-  0 <- primIO (prim__mouseStateIsNull ptr) | _ => Left <$> getError
-  pure (Right (MkMouseStateBuffer ptr))
+newMouseStateBuffer = nullable prim__mouseStateIsNull MkMouseStateBuffer prim__mouseStateNew
 
 export
 freeMouseStateBuffer : MouseStateBuffer -> IO ()
@@ -2133,10 +2110,7 @@ data RenderStateBuffer = MkRenderStateBuffer NativeRenderState
 
 export
 newRenderStateBuffer : IO (Either String RenderStateBuffer)
-newRenderStateBuffer = do
-  ptr <- primIO prim__renderStateNew
-  0 <- primIO (prim__renderStateIsNull ptr) | _ => Left <$> getError
-  pure (Right (MkRenderStateBuffer ptr))
+newRenderStateBuffer = nullable prim__renderStateIsNull MkRenderStateBuffer prim__renderStateNew
 
 export
 freeRenderStateBuffer : RenderStateBuffer -> IO ()

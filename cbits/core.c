@@ -1,8 +1,8 @@
 /* -*- external-format: utf-8; -*- */
 
 #include "core.h"
+#include "internal.h"
 
-#include <float.h>
 #include <stddef.h>
 
 _Static_assert(sizeof(int) == 4, "Bindings require 32-bit C int");
@@ -1068,8 +1068,8 @@ static int put_range(SDL_AudioStream* stream, const SDL_AudioSpec* spec, const v
 
     const Uint32 frame_bytes = (Uint32)SDL_AUDIO_FRAMESIZE(*spec);
 
-    if (length > SDL_MAX_SINT32 || (Uint64)offset + length > capacity || (Uint64)offset + length > SIZE_MAX || offset % frame_bytes ||
-        length % frame_bytes) {
+    if (length > SDL_MAX_SINT32 || !idris_sdl_buffer_range(capacity, offset, length) ||
+        offset % frame_bytes || length % frame_bytes) {
         return SDL_SetError("Audio range must fit the buffer and contain aligned whole sample frames");
     }
 
@@ -1105,7 +1105,7 @@ int idris_sdl_audio_flush(SDL_AudioStream* stream) {
 }
 
 int idris_sdl_audio_set_gain(SDL_AudioStream* stream, double gain) {
-    if (!(gain >= 0.0 && gain <= FLT_MAX)) return SDL_SetError("Audio gain must be finite, nonnegative, and fit a float");
+    if (!(gain >= 0.0 && idris_sdl_fits_float(gain))) return SDL_SetError("Audio gain must be finite, nonnegative, and fit a float");
 
     return SDL_SetAudioStreamGain(stream, (float)gain);
 }
@@ -1330,8 +1330,7 @@ int idris_sdl_io_flush(SDL_IOStream* stream) {
 }
 
 static int valid_io_range(SDL_IOStream* stream, const void* buffer, Uint64 capacity, Uint64 offset, Uint64 count) {
-    if (!stream || offset > capacity || count > capacity - offset || offset > SIZE_MAX || count > SIZE_MAX - (size_t)offset ||
-        count > SDL_MAX_SINT64 || (count && !buffer)) {
+    if (!stream || !idris_sdl_buffer_range(capacity, offset, count) || count > SDL_MAX_SINT64 || (count && !buffer)) {
         return SDL_SetError("IO range must fit a live stream and buffer");
     }
 
@@ -1392,15 +1391,11 @@ IdrisSDLGeometry* idris_sdl_geometry_new(Uint32 vertices, Uint32 indices) {
     return geometry;
 }
 
-static int finite_float(double value) {
-    return value >= -FLT_MAX && value <= FLT_MAX;
-}
-
 int idris_sdl_geometry_vertex(IdrisSDLGeometry* geometry, Uint32 index, double x, double y, Uint8 r, Uint8 g, Uint8 b, Uint8 a, double u,
                               double v) {
     if (!geometry || index >= geometry->vertex_capacity) return SDL_SetError("Geometry vertex index is out of range");
 
-    if (!finite_float(x) || !finite_float(y) || !finite_float(u) || !finite_float(v))
+    if (!idris_sdl_fits_float(x) || !idris_sdl_fits_float(y) || !idris_sdl_fits_float(u) || !idris_sdl_fits_float(v))
         return SDL_SetError("Vertex coordinates must fit finite SDL floats");
 
     geometry->vertices[index] = (SDL_Vertex){
@@ -1451,11 +1446,11 @@ static double batch_double(const void* source, Uint64 offset) {
 static int valid_batch_source(const void* source, Uint64 capacity, Uint64 offset, Uint32 count, Uint32 fields) {
     const Uint64 bytes = (Uint64)count * fields * sizeof(double);
 
-    if ((count && !source) || offset > capacity || bytes > capacity - offset || offset > SIZE_MAX || bytes > SIZE_MAX - (size_t)offset)
+    if ((count && !source) || !idris_sdl_buffer_range(capacity, offset, bytes))
         return SDL_SetError("Batch source range is outside the buffer");
 
     for (Uint64 i = 0; i < (Uint64)count * fields; ++i) {
-        if (!finite_float(batch_double(source, offset + i * sizeof(double))))
+        if (!idris_sdl_fits_float(batch_double(source, offset + i * sizeof(double))))
             return SDL_SetError("Batch coordinates must fit finite SDL floats");
     }
 

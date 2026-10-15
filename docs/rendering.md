@@ -1,180 +1,120 @@
 # 2D rendering
 
-Import `SDL3` and initialize `video`. Create a renderer for a live window with `createRenderer`, or
-use `withRenderer` from `SDL3.Scoped`.  Use rendering functions on the main thread. Controls report
-failure with `False`.  Read `getError` immediately after failure.
+Initialize `video`. Create a renderer for a live window. Main thread only. [Resource/error
+rules](resources.md).
 
 ## Drawing a frame
 
-`setDrawColor renderer r g b a` selects byte-sized color channels for shapes and clearing.  `clear
-renderer` clears the entire current target, regardless of viewport or clipping.  `present renderer`
-displays a frame after you restore the window as the render target.  Redraw from application state
-rather than relying on previous presented pixels.
+| API | Contract |
+| --- | --- |
+| `setDrawColor renderer r g b a` | Byte RGBA for shapes and clearing |
+| `clear renderer` | Clear the entire active target, ignoring viewport and clip |
+| `drawPoint renderer (MkPoint x y)` | `Point RenderSpace` |
+| `drawLine renderer start end` | Render-space endpoints |
+| `drawRect renderer (Just (MkFRect x y w h))` | Outline. `Nothing` uses the full-target outline |
+| `fillRect renderer x y w h` | Filled rectangle |
+| `present renderer` | Present after restoring the window target. Redraw each frame from application state |
 
-The scalar shape calls use floating-point drawing coordinates:
-
-- `drawPoint renderer (MkPoint x y)` draws a `Point RenderSpace`.
-- `drawLine renderer start end` draws between two render-space points.
-- `drawRect renderer (Just (MkFRect x y width height))` draws an outline.
-- `drawRect renderer Nothing` uses SDL's default full-target outline.
-- `fillRect renderer x y width height` draws a filled rectangle.
-
-Shapes use the current drawing color, blend mode, viewport, clip, and scale.  Coordinates narrow
-from Idris `Double` to SDL `float`. Use finite values that fit SDL floats. Fractional pixel coverage
-depends on the renderer.  See [textures](textures.md) for images, source rectangles, and rotation.
+Coordinates narrow to SDL floats. Use finite representable values. Fractional coverage depends on
+the renderer.  Textures: [texture reference](textures.md). Reusable arrays: [batches and
+geometry](geometry.md).
 
 ## Viewport and clipping
 
-A viewport is a drawing region with its own origin.  `setRenderViewport renderer (Just (MkRect x y
-width height))` sets it on the current target.  Drawing starts at `(0, 0)` within that region and
-clips to its bounds.  Dimensions must be nonnegative. Pass `Nothing` to restore the whole target.
+| Setter | Effect on current target |
+| --- | --- |
+| `setRenderViewport renderer (Just rect)` | Nonnegative dimensions. Changes origin and clips to the region |
+| `setRenderViewport renderer Nothing` | Automatic full-target viewport |
+| `setRenderClipRect renderer (Just rect)` | Extra clip relative to the viewport, without moving its origin |
+| `setRenderClipRect renderer Nothing` | Disable extra clipping, not viewport clipping |
 
-`setRenderClipRect renderer (Just rect)` adds clipping relative to the viewport without moving its
-origin. An empty clip blocks drawing. `Nothing` disables this extra clip, not viewport clipping. Use
-`fillRect` rather than `clear` to clear only a region.  Each render target retains its own viewport
-and clip rectangle.
+An enabled empty clip blocks drawing. Use `fillRect`, not `clear`, to clear a region.  Each target
+retains its own viewport, clip, scale, and logical presentation. Draw color/blend state belongs to
+the renderer.
 
 ## Logical resolution and scale
 
-A logical resolution is a fixed coordinate size for drawing.  `setRenderLogicalPresentation renderer
-width height mode` fits that size to the current target.  Enabled modes require positive `Int32`
-dimensions. Available modes are:
+`setRenderLogicalPresentation renderer width height mode`: positive `Int32` dimensions when enabled.
 
-- `PresentationDisabled`: Use target pixels and pass zero dimensions.
-- `PresentationStretch`: Stretch each axis to fill the target.
-- `PresentationLetterbox`: Preserve proportions and add borders.
-- `PresentationOverscan`: Preserve proportions and crop excess content.
-- `PresentationIntegerScale`: Fit with integer scale factors.
+| Mode | Effect |
+| --- | --- |
+| `PresentationDisabled` | Use target pixels. Pass zero dimensions |
+| `PresentationStretch` | Stretch each axis |
+| `PresentationLetterbox` | Preserve proportions, add borders |
+| `PresentationOverscan` | Preserve proportions, crop excess |
+| `PresentationIntegerScale` | Fit using integer scale factors |
 
-`setRenderScale renderer scaleX scaleY` adds scaling to drawing coordinates.  Use `1 1` to reset
-it. Each target retains its own scale and logical presentation.  Configure only the intended targets
-to avoid scaling an off-screen image twice.  These controls do not transform input events.
+`setRenderScale renderer x y` adds dimensionless drawing scale. `1 1` resets it.  Configure only
+intended targets to avoid scaling off-screen images twice. These setters do not transform input
+events.
 
 ## Queries and temporary state
 
-`newRenderStateBuffer` allocates reusable storage for render queries. Release it with
-`freeRenderStateBuffer`, or use `withRenderStateBuffer` outside the loop.  All queries use the main
-thread and return copied values through `Either String`.  Reusing the buffer does not change earlier
-results.
+Allocate `RenderStateBuffer` once with `newRenderStateBuffer` or `withRenderStateBuffer`.  The
+following queries take `renderer buffer` and return copied values through `Either String`:
 
-`getRenderViewport renderer buffer` distinguishes an automatic full-target viewport (`Nothing`) from
-an explicit rectangle (`Just rect`).  `getRenderClipRect` distinguishes disabled clipping from an
-enabled empty rectangle.  `getRenderScale` returns dimensionless x and y scales for the current
-target.
+| Query | Value | Restoration helper |
+| --- | --- | --- |
+| `getRenderViewport` | `Maybe Rect`. `Nothing` means automatic, not an explicit full-size rectangle | `withRenderViewport` |
+| `getRenderClipRect` | `Maybe Rect`. `Nothing` means disabled, not an enabled empty clip | `withRenderClipRect` |
+| `getRenderScale` | `(Double, Double)` | `withRenderScale` |
+| `getDrawColor` | `MkColor r g b a`, byte channels | `withDrawColor` |
 
-`getDrawColor renderer buffer` returns `MkColor r g b a`. `getTextureColorMod texture` returns
-`MkRGB r g b` without extra query storage.  Both use byte channels. HDR means colors with a wider
-brightness range.  These queries do not preserve external float or HDR color precision.
-
-The corresponding scopes are `withRenderViewport`, `withRenderClipRect`, `withRenderScale`,
-`withDrawColor`, and `withTextureColorMod`.  The first four take reusable query storage. Texture
-color restoration leaves alpha unchanged.  Each scope restores only its named state after ordinary
-returns, under the [temporary-state rules](resources.md#temporary-state).
-
-Keep the same target selected throughout viewport, clip, and scale scopes.  If the action changes
-targets, restore that selection in an inner `withRenderTarget` scope.  Restoring an automatic
-viewport keeps its automatic resizing behavior instead of replacing it with an explicit rectangle.
+- [State-scope failure rules](resources.md#temporary-state) apply to all helpers.
+- Keep the same target selected throughout viewport, clip, and scale scopes.
+- Automatic viewport restoration preserves automatic resizing. Byte colors cannot preserve external
+  float/HDR precision (a wider brightness range).
+- Texture color, alpha, filtering, and blend queries/scopes: [texture
+  state](textures.md#color-alpha-and-filtering).
 
 ## Output dimensions
 
-`getRenderOutputSize renderer buffer` calls SDL's physical-output query and returns `Size
-PixelUnits`.  `getCurrentRenderOutputSize` calls the current-output query and returns `Size
-RenderOutputUnits`.  The separate unit prevents treating a logical output size as a physical window
-size.  Neither query subtracts the viewport or applies drawing scale.
+| Query (`renderer buffer`) | SDL-documented result |
+| --- | --- |
+| `getRenderOutputSize` | `Size PixelUnits`, ignoring targets and logical presentation |
+| `getCurrentRenderOutputSize` | `Size RenderOutputUnits`, including target and logical presentation |
 
-SDL documents the first result as independent of targets and logical presentation.  It documents the
-second as accounting for both. These bindings return SDL's results without a workaround.  With the
-tested SDL 3.4.16 software renderer, an active texture target changed the first result to the
-texture dimensions.  The second query also differed from the documented logical adjustment in that
-setup.  For a window's physical pixel size, use `getWindowSizeInPixels` with the window instead.
-
-Handle renderer reset notifications through the [event API](input.md#renderer-reset-events).  A
-target reset requires redrawing its contents. A device reset requires recreating textures.  The
-binding leaves resource recovery to the application and the relevant extension.
+Neither subtracts the viewport or applies draw scale. Both return SDL results without a workaround.
+With SDL 3.4.16 software rendering, the physical query reported active texture dimensions. The
+current query also differed from the documented logical adjustment.  For physical window pixels, use
+`getWindowSizeInPixels`. Recovery notifications: [renderer reset
+events](input.md#renderer-reset-events).
 
 ## Coordinate conversion
 
-Mouse event positions use window coordinates, even when drawing uses a logical resolution.
-`renderCoordinatesFromWindow renderer buffer point` converts `Point WindowSpace` to `Point
-RenderSpace`. `renderCoordinatesToWindow` performs the inverse conversion.  Both return copied
-points through `Either String`.
-
-Allocate a `CoordinateBuffer` once with `newCoordinateBuffer` and free it with
-`freeCoordinateBuffer`. Alternatively, keep the event loop inside `withCoordinateBuffer`.  Use the
-intended render target and match the event's `WindowID` to the renderer's window.  Conversion
-includes window dimensions, logical presentation, scale, and viewport state.
-
-Points outside the scene are not clamped. Compare results with scene bounds before handling
-clicks. Clipping does not restrict conversion. The functions convert positions, not relative motion
-distances. Returned points survive buffer reuse, but their types do not track renderer identity or
-later changes to rendering state.
-
-## Point and rectangle batches
-
-`newPointBuffer capacity` and `newRectBuffer capacity` allocate fixed-capacity arrays.  Capacity is
-a `Bits32` value from 1 through 2147483647, subject to memory limits.  Entries start at
-zero. `setPoint buffer index point` and `setRect buffer index rect` replace zero-based
-entries. Out-of-range writes fail without changing entries.
-
-`drawPoints renderer buffer count` draws a prefix of independent points.  `drawLines renderer buffer
-count` joins that prefix into connected segments.  It does not close the path automatically. Repeat
-the first point at the end to close it.  Zero points and fewer than two line points draw nothing on
-a valid renderer.
-
-`drawRects` outlines a rectangle prefix and `fillRects` fills it.  Counts use `Bits32` and cannot
-exceed capacity. Unwritten entries are zero values, not skipped entries. A rectangle array cannot
-request the implicit rectangle used by `drawRect renderer Nothing`. Rectangle dimensions follow SDL
-semantics without extra validation.
-
-Batches use the current rendering state. SDL consumes the array during the call.  Reuse or free it
-after the call, not during drawing. Allocate outside the frame loop, then call `freePointBuffer` or
-`freeRectBuffer` exactly once. Scoped alternatives are `withPointBuffer` and `withRectBuffer`. These
-buffers own CPU memory, not a renderer.
-
-`copyPoints` and `copyRects` copy packed doubles from a reusable `Data.Buffer` after range and
-conversion validation.  `GeometryBuffer` provides checked vertex and index storage for triangle
-submission.  See [geometry and bulk updates](geometry.md) for formats, ownership, and separate CPU
-preparation and submission measurements.
+- `renderCoordinatesFromWindow renderer buffer point`: `Point WindowSpace` to `Point
+  RenderSpace`. `renderCoordinatesToWindow` is the inverse.
+- Allocate `CoordinateBuffer` once (`newCoordinateBuffer` / `withCoordinateBuffer`). Queries return
+  copied `Either String` results.
+- Select the intended target and match event `WindowID` to the renderer's window.
+- Conversion includes window size, logical presentation, scale, and viewport. It does not clamp to
+  the scene or clip rectangle.
+- Convert positions, not relative motion distances. Results do not track later renderer-state
+  changes.
 
 ## Blending
 
-Blending combines source and destination pixels. `setDrawBlendMode renderer mode` controls shapes,
-while `setTextureBlendMode texture mode` controls that texture.  Their queries return `Either String
-BlendMode`. Available modes are:
+`setDrawBlendMode` controls shapes. `setTextureBlendMode` controls a texture. Corresponding getters return `Either String BlendMode`.
 
-- `NoBlend`: Copy source color and alpha.
-- `AlphaBlend`: Combine colors using source alpha.
-- `PremultipliedAlphaBlend`: Use source colors already multiplied by alpha.
-- `AdditiveBlend`: Add source colors scaled by source alpha.
-- `PremultipliedAdditiveBlend`: Add source colors without scaling them again.
-- `ModulateBlend`: Multiply source and destination colors.
-- `MultiplyBlend`: Also preserve destination color based on source transparency.
-- `OtherBlendMode code`: Preserve a custom or unknown SDL code.
+| Mode | Effect |
+| --- | --- |
+| `NoBlend` | Copy source color/alpha |
+| `AlphaBlend`, `PremultipliedAlphaBlend` | Alpha combination with ordinary / already-premultiplied source colors |
+| `AdditiveBlend`, `PremultipliedAdditiveBlend` | Add ordinary / already-premultiplied source colors |
+| `ModulateBlend` | Multiply source and destination colors |
+| `MultiplyBlend` | Multiply with source-transparency contribution |
+| `OtherBlendMode code` | Preserve custom/unknown SDL codes |
 
-Prepare premultiplied pixels yourself. The binding does not convert their colors.  Blend codes are
-complete modes, not independent flags. Equality compares SDL codes.  SDL can choose the closest
-supported mode, so a rejected setting does not guarantee unchanged state.
+- Premultiply pixels yourself. Blend values are complete modes, not flags. Equality compares SDL
+  codes.
+- SDL can select a supported alternative. Failed setting does not prove unchanged state.
+- `composeBlendMode rgb alpha` accepts two `MkBlendEquation sourceFactor destinationFactor
+  operation` values.
+- Factors: zero, one, source/destination color/alpha, and their one-minus values. Operations: add,
+  subtract, reverse-subtract, minimum, maximum.
+- Composition is safe on any thread and does not test support. Cache the result. Apply it on the
+  main thread.
+- The software renderer rejects custom modes. `withDrawBlendMode` restores only renderer-wide draw
+  blending.
 
-`composeBlendMode rgb alpha` creates a mode from two `BlendEquation` values.  Use `MkBlendEquation
-sourceFactor destinationFactor operation` for each equation.  Factors select zero, one, source or
-destination color or alpha, or their one-minus counterparts.  Operations are `BlendAdd`,
-`BlendSubtract`, `BlendReverseSubtract`, `BlendMinimum`, and `BlendMaximum`.
-
-Composition is safe on any thread and does not test renderer support or change rendering state.
-Cache the result if you reuse it. Apply it on the main thread and handle failure.  The software
-renderer does not support custom modes.
-
-`withDrawBlendMode renderer mode action` temporarily changes shape blending.  Draw blending belongs
-to the renderer, not its selected target. The helper restores only that mode after an ordinary
-return. See [temporary state](resources.md#temporary-state) for failure and restoration rules.
-
-## Ownership, examples, and tests
-
-Destroy textures before their renderer, then destroy its window.  Do not share drawing buffers
-between threads or mutate them during drawing.  See [resource ownership](resources.md) for scope
-limits and [timing](timing.md) for VSync.
-
-[Hello](../examples/Hello.idr) demonstrates logical resolution, texture drawing, and click
-conversion.  `make test` uses the software renderer to test pixels, clipping, scaling, batches, and
-blending.  Hardware rendering and custom-mode support need separate tests. A batch call does not
-promise one GPU operation or a speed increase.
+Example: [Hello](../examples/Hello.idr). Commands: [build/run](build.md#examples).

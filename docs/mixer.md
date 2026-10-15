@@ -1,191 +1,102 @@
-# SDL3_mixer
+# Mixer
 
-`SDL3.Mixer` provides reusable audio assets, independent tracks, looping, fades, and gain controls.
-An asset holds audio data. A track plays one assigned input. Multiple tracks can share an asset and
-play it at the same time. The mixer combines their output.
+Package `sdl3-mixer`. Imports `SDL3.Mixer`, `SDL3.Mixer.Scoped`.  [Build/setup](build.md),
+[resource/error rules](resources.md). Core formats: [audio](audio.md#streams-and-formats).
 
-This extension uses a separate `sdl3-mixer` package. Core-only applications still depend only on
-`sdl3` and do not load SDL3_mixer. See [core audio](audio.md) for PCM queues and WAV playback
-without this extension.
+## Resources and assets
 
-## Build and use
+| API | Contract / scope |
+| --- | --- |
+| `initMixer`, `quitMixer` | Balance each successful initialization. `withMixerLibrary` |
+| `createMixer` | `Mixer DeviceOutput`. Default logical playback device. Initializes SDL audio internally. `withMixer` |
+| `createMemoryMixer spec` | `Mixer MemoryOutput`. Fixed format, no device/background processing. `withMemoryMixer` |
+| `loadAudio mixer path mode` | Whole file in memory. Loading mixer is a format hint. `withAudio` |
+| `createTrack mixer` | Reusable playback of one assigned input. `withTrack` |
+| `newPlayOptions` | Reusable playback properties. `withPlayOptions` |
+| `getAudioDuration` | `KnownFrames count`, `UnknownDuration`, or `InfiniteDuration`, in asset sample frames |
+| `getAudioDecoders` | Copied initialized decoder names, not guaranteed file extensions |
 
-Install SDL3_mixer 3.2.0 or newer development files, plus the [core build
-requirements](../README.md#build-and-run).  From the repository root, run:
+- `DecodeOnPlayback` retains encoded data. `Predecode` retains decoded samples. Neither is
+  incremental disk streaming.
+- Formats depend on installed decoders. Multiple tracks/mixers can share one asset. Assets can
+  outlive the loading mixer.
+- Input/asset frames contain one sample per input channel. They are not necessarily output frames.
 
-```sh
-pkg-config --modversion sdl3-mixer
-make mixer
-make test-mixer
-make example-mixer
-```
+## Playback and options
 
-For another project, add this entry alongside its existing `sdl3` entry in `pack.toml`:
+| API | Contract |
+| --- | --- |
+| `setTrackAudio track (Just asset)` | Retain input. Assignment alone does not start a stopped track |
+| `setTrackAudio track Nothing` | Remove input. A playing track stops on subsequent processing |
+| `playTrack track Nothing` | Start/restart one play from the beginning, no fade. Restarts paused tracks too |
+| `playTrack track (Just options)` | Read properties during the call. Do not retain them |
+| `pauseTrack`, `resumeTrack` | Hold/continue position |
+| `stopTrack track fadeFrames` | Zero stops immediately. Positive input-frame count starts an asynchronous fade |
+| `setTrackPlaybackPosition` | Seek input without starting. Support/precision depend on decoder |
+| `getTrackPlaybackPosition` | `Either String Bits64`, input frames |
+| `trackMSToFrames track milliseconds` | Convert `Bits32` milliseconds using currently assigned input rate |
+| `trackPlaying`, `trackPaused` | State, not success or exact audible completion. Paused is not playing |
 
-```toml
-[custom.all.sdl3-mixer]
-type = "local"
-path = "/path/to/idris2-sdl3"
-ipkg = "sdl3-mixer.ipkg"
-```
+| Option setter | Value |
+| --- | --- |
+| `setPlayLoops` | `PlayOnce`, `Repeat n` additional plays, `LoopForever`. `Repeat 0` is one play. n ≤2147483647 |
+| `setPlayStartFrames` | Initial input-frame position |
+| `setPlayLoopStartFrames` | Input-frame position for later repeats |
+| `setPlayFadeInFrames` | Input frames from silence. Zero disables fade |
 
-Add `sdl3-mixer` to the application package dependencies. Import `SDL3.Mixer` for the typed API and
-`SDL3.Mixer.Scoped` for cleanup helpers. Import `SDL3` for `getError` and `AudioSpec`.  Build with
-Chez. At runtime, include `cbits` and the installed SDL library directory in `LD_LIBRARY_PATH`. The
-extension build creates `cbits/libidris2_sdl3_mixer.so`.
+- Frame values must fit nonnegative signed 64-bit range. Invalid setters preserve the old property.
+- Allocate/configure options outside the update loop. Changes affect later play calls, not current
+  playback.
+- Restart after replacing active input/configuration. Later `playTrack` resets seek position from
+  its options.
+- A decoder can accept looping but stop when seeking fails. Paused tracks do not advance fades.
+- Reuse separate tracks for overlapping sounds. No automatic track pool. Submitted device audio can
+  remain after stopping.
 
-## Assets and output
+## Gain
 
-`initMixer` initializes SDL3_mixer. Each successful call needs a matching `quitMixer` after resource
-cleanup. `withMixerLibrary action` handles this pair on ordinary return. Initialization and final
-shutdown are not thread-safe.
-
-`createMixer` opens the default playback device and returns `Mixer DeviceOutput`. SDL_mixer
-initializes SDL audio internally. It converts loaded audio to the device format. The mixer owns its
-logical audio device, so `destroyMixer` closes that device without closing unrelated playback
-devices.
-
-`loadAudio mixer path mode` loads the whole file into native memory. `DecodeOnPlayback` stores the
-encoded data and decodes it during playback. `Predecode` decodes it during loading and stores the
-samples. Neither mode keeps a file open for incremental disk access. Paths use UTF-8 C strings, so
-an embedded NUL ends the path.
-
-A decoder converts a file format to audio samples. Supported formats depend on the installed
-SDL3_mixer build. `getAudioDecoders` copies the available decoder names, not file extensions.
-`loadAudio` returns a copied error if no decoder accepts the file. The binding does not promise that
-MP3, Ogg, or any other optional format is available.
-
-`getAudioDuration` returns `KnownFrames count`, `UnknownDuration`, or `InfiniteDuration`.  A sample
-frame contains one sample for each channel. These frames use the asset format, not necessarily the
-output format. The copied duration survives asset cleanup. Loaded assets can be shared across mixers
-and can outlive the mixer used during loading.
-
-## Playback and configuration
-
-Create tracks once with `createTrack mixer`. Assign an asset with `setTrackAudio track (Just
-asset)`.  Assignment to a stopped track does not start playback. Replacing input on a playing track
-can leave its old position and loop configuration unsuitable. Call `playTrack` to restart with the
-new configuration. `setTrackAudio track Nothing` removes input. The mixer marks a playing track as
-stopped when it next processes that missing input.
-
-`playTrack track Nothing` starts or restarts one play from the beginning, without a fade.  It also
-restarts a paused track. `pauseTrack` holds its position, and `resumeTrack` continues it.  Separate
-tracks have independent controls. For overlapping copies of a sound, reuse several
-tracks. Restarting one track replaces its previous playback. There is no automatic track pool.
-
-`newPlayOptions` creates reusable playback configuration. `playTrack track (Just options)` reads
-that configuration during the call. The caller can then reuse or free it. Changes affect later play
-calls, not current playback. These setters return `IO Bool`:
-
-- `setPlayLoops`: `PlayOnce`, `Repeat n` for n additional plays, or `LoopForever`.
-- `setPlayStartFrames`: The initial input position, with zero for the beginning.
-- `setPlayLoopStartFrames`: The input position for later repeats, with zero for the beginning.
-- `setPlayFadeInFrames`: The input frames for a fade from silence, with zero to disable the fade.
-
-`Repeat 0` means one play. Repeat counts must not exceed 2147483647. Frame values must fit the
-nonnegative signed 64-bit range. Invalid values fail without replacing that property.  Allocate and
-configure these properties outside the update loop. The adapter does not allocate per-play
-configuration. SDL_mixer and its decoders can allocate internally.
-
-Positions and fades use the current input frame rate. `trackMSToFrames track milliseconds` converts
-`Bits32` milliseconds after input assignment. Input changes can change this conversion.
-`setTrackPlaybackPosition` seeks the input without starting playback. Some inputs cannot seek, and
-some decoders only approximate a frame position. A later `playTrack` resets the initial position
-from its configuration. SDL_mixer can accept a loop request but stop at the loop point if the input
-cannot seek.
-
-`stopTrack track fadeFrames` stops immediately when `fadeFrames` is zero. A positive value starts a
-fade-out and does not wait for completion. Paused tracks cannot advance their fade until they
-resume. `getTrackPlaybackPosition`, `trackPlaying`, and `trackPaused` report mixer state, not
-audible completion. Samples already sent to a device can still play after a stop.
-
-Gain multiplies sample amplitude. `setTrackGain` controls one track, and `setMixerGain` controls the
-whole mix. Zero produces silence, and one leaves amplitude unchanged. Values above one can distort
-the output. NaN means "not a number". The setters reject negative, infinite, NaN, and
-out-of-float-range values.  `getTrackGain` excludes fades and master gain. Gain queries widen SDL
-floats to `Double` without adding precision.
-
-Creation functions and position queries return `Either String a`. If a control returns `False`, read
-`getError` immediately on the same thread. State queries return state, not success.  Successful
-playback does not prove that a physical device produces sound.
-
-## Ownership and threads
-
-Destroy tracks before their mixer. Release asset references and playback configuration before final
-`quitMixer`. Call SDL `quit` last. `destroyMixer` also destroys any remaining child tracks, so do
-not use or destroy those handles afterward. Final `quitMixer` destroys remaining mixer objects and
-invalidates their handles. Prefer explicit cleanup instead of relying on that fallback.
-
-`destroyAudio` releases the caller's reference. Tracks retain their own references after assignment,
-so they can continue after this call. Do not use the caller's handle afterward, even if a track
-still retains the underlying data. Copying an Idris handle does not acquire another reference.  An
-asset does not require its loading mixer to remain alive.
-
-`withMixer`, `withMemoryMixer`, `withAudio`, `withTrack`, and `withPlayOptions` own their supplied
-handles. They clean up after ordinary `Right` and `Left` callback returns and preserve the result.
-Failed acquisition skips the callback. Do not manually destroy or retain supplied handles.  Runtime
-exceptions, process exit, and nonreturning callbacks do not guarantee cleanup.  Types distinguish
-resources but do not enforce lifetimes or track-to-mixer identity.
-
-Create and destroy device mixers on the main thread. SDL permits individual asset, track, and
-memory-mixer operations from application threads. Serialize compound controls and configuration
-changes on shared objects. Do not destroy resources during another call that uses them.  No callback
-enters Idris from an SDL audio thread. No managed buffer remains borrowed after a call.
-
-```idris
-import SDL3
-import SDL3.Mixer
-import SDL3.Mixer.Scoped
-
-loopForAWhile : String -> IO (Either String ())
-loopForAWhile path = withMixerLibrary $ withMixer $ \mixer =>
-  withAudio mixer path DecodeOnPlayback $ \asset =>
-    withTrack mixer $ \track => withPlayOptions $ \options => do
-      True <- setTrackAudio track (Just asset) | False => Left <$> getError
-      True <- setTrackGain track 0.25 | False => Left <$> getError
-      True <- setPlayLoops options LoopForever | False => Left <$> getError
-      True <- playTrack track (Just options) | False => Left <$> getError
-      -- A real application keeps these scopes around its update loop.
-      delayNS 1000000000
-      True <- stopTrack track 0 | False => Left <$> getError
-      pure (Right ())
-```
+- `setMixerGain` / `getMixerGain`: whole output. `setTrackGain` / `getTrackGain`: one track,
+  excluding master gain and fades.
+- Linear amplitude: 0 silent, 1 unchanged, >1 can distort. Setters require finite nonnegative values
+  that fit SDL float.
+- Getters return `Double` with SDL float precision. Gain does not report audible completion.
 
 ## Output to memory
 
-`createMemoryMixer spec` returns `Mixer MemoryOutput`. It opens no device and advances only through
-`generateMixer mixer buffer offset count`. `AudioSpec` accepts the eight [core
-formats](audio.md#streams-and-formats), 1 through 8 channels, and a positive frame rate. The output
-format remains fixed.  Device mixers cannot be passed to `generateMixer` through the typed API.
+`generateMixer mixer buffer offset count` accepts only `Mixer MemoryOutput` and advances playback
+explicitly.
 
-Offset and count are `Bits32` bytes. Both must align to complete output frames. The range must fit
-the actual buffer capacity, and count must not exceed 2147483647. On success, SDL initializes the
-whole requested range. `Right bytes` excludes appended silence, so it can be smaller than count,
-including zero. The buffer can contain valid silence beyond that returned count.
+- Offset/count: `Bits32` bytes, aligned to whole output frames. Actual capacity/native address
+  bounds. Count ≤2147483647.
+- Success initializes the entire requested range. Returned bytes exclude appended silence and can be
+  zero.
+- Reuse the buffer after return, not during generation. No temporary native heap buffer in the
+  adapter. SDL/decoders can allocate internally.
 
-Allocate the output buffer once and reuse it. Do not read or modify it during generation.  The
-adapter creates no temporary native heap buffer. SDL_mixer can allocate, decode, and convert
-internally. No performance or exact audible-timing measurements exist.
+## Ownership and threads
 
-## Example and tests
+- Tracks retain assigned assets. `destroyAudio` releases only the caller's reference. Do not use
+  that caller handle afterward.
+- Destroy tracks before their mixer. `destroyMixer` also destroys remaining tracks and closes its
+  owned device. Child handles then become invalid.
+- Release assets/options before final `quitMixer`. SDL `quit` last. Final mixer quit destroys
+  remaining mixer objects and invalidates handles.
+- Create/destroy device mixers on the main thread. Serialize library initialization/shutdown.
+- Individual asset/track/memory operations can run on application threads. Serialize compound
+  changes and destruction with other users.
+- No Idris callbacks on SDL audio threads. No managed buffer remains borrowed after a call.
 
-After `make example-mixer`, run from the repository root:
+## Limits and example
 
-```sh
-LD_LIBRARY_PATH="$PWD/cbits:/usr/local/lib:${LD_LIBRARY_PATH:-}" \
-  examples/build/exec/sdl3-mixer-example music-file sound-file
-```
+No streaming I/O input, groups, tags, spatial effects, callbacks, or advanced decoder configuration
+in this subset.  Dependency sanitizer qualification: [testing limits](internals.md#tests).
 
-The example loops music and uses a separate sound track. Enter `p` to pause music, `r` to resume,
-`m` to restart, `s` to stop, or `d` to fade it out over one second. Enter `f` to retrigger the sound
-or `x` to stop it. Each command needs Enter. Enter `q`, an empty line, or end of input to exit.
+[Ownership/playback example](../examples/MixerExample.idr). [Build/run
+arguments](build.md#examples).
 
-`make test-mixer` runs native, Idris, and compile-time tests with dummy audio. Memory-mixer tests
-inspect generated samples, loops, fades, gain, input references, and guarded output ranges.  Device
-tests cover independent tracks and owned-device cleanup without audible output.  Real devices,
-compressed-format quality, latency, and device changes need manual testing.  See [native testing
-limits](internals.md#tests) for the installed decoder dependency's leak report.
-
-This initial subset does not bind streaming I/O input, groups, tags, spatial effects, callbacks, or
-advanced decoder configuration. It does not expose raw pointers from core I/O or playback handles.
-Future input loaders must state whether they borrow, retain, or consume each source.
+| Command + Enter | Action |
+| --- | --- |
+| `p`, `r`, `m`, `s` | Pause, resume, restart, stop music |
+| `d` | One-second fade-out |
+| `f`, `x` | Retrigger / stop independent sound |
+| `q`, empty line, EOF | Exit |
