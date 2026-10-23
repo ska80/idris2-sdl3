@@ -1,0 +1,26 @@
+package sdl3-mixer
+
+authors     = "Kamil Shakirov"
+maintainers = "Kamil Shakirov"
+
+license = "MIT"
+brief   = "Typed SDL3_mixer assets and tracks"
+readme  = "../docs/mixer.md"
+version = 0.0.0
+
+homepage   = "https://codeberg.org/ska80/idris2-sdl3"
+sourceloc  = "https://codeberg.org/ska80/idris2-sdl3.git"
+bugtracker = "https://codeberg.org/ska80/idris2-sdl3/issues"
+
+langversion >= 0.8.0
+
+depends = base >= 0.8.0
+        , sdl3
+
+sourcedir = "src"
+
+modules = SDL3.Mixer
+        , SDL3.Mixer.Raw
+        , SDL3.Mixer.Scoped
+
+prebuild = "make -C cbits"

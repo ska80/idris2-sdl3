@@ -1,11 +1,14 @@
 ||| Unsafe C boundary. Prefer SDL3 for typed handles and null checks.
 module SDL3.Raw
 
+
 import Data.Buffer
 
 import System.FFI
 
+
 %default total
+
 
 %foreign "C:idris_sdl_init, libidris2_sdl3, core.h"
 export

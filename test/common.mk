@@ -28,7 +28,7 @@ FIXTURE_LIBRARY := libidris2_sdl3_$(EXTENSION)_test.so
 FIXTURE_SOURCES ?= fixtures.c
 FIXTURE_HEADERS ?= fixtures.h
 FIXTURE_PACKAGE ?= sdl3
-ADAPTER := ../../cbits/$(EXTENSION)
+ADAPTER := ../cbits/$(EXTENSION)
 
 export LD_LIBRARY_PATH := $(CURDIR)/$(NATIVE_BUILD):$(LD_LIBRARY_PATH)
 TEST_ENV = SDL_VIDEODRIVER=dummy SDL_RENDER_DRIVER=software SDL_AUDIO_DRIVER=dummy
@@ -50,7 +50,7 @@ $(NATIVE_BUILD):
 	$(MKDIR) -p $@
 
 $(NATIVE_BUILD)/native: native.c $(FIXTURE_SOURCES) $(FIXTURE_HEADERS) $(ADAPTER).c $(ADAPTER).h ../../cbits/core.h ../../cbits/internal.h | $(NATIVE_BUILD)
-	$(CC) $(CFLAGS) -std=c11 -Wall -Wextra -Werror -I../../cbits -I.. \
+	$(CC) $(CFLAGS) -std=c11 -Wall -Wextra -Werror -I../cbits -I../../cbits -I../../test \
 		$(shell $(PKG_CONFIG) --cflags sdl3-$(EXTENSION)) native.c $(FIXTURE_SOURCES) $(ADAPTER).c \
 		-o $@ $(shell $(PKG_CONFIG) --libs sdl3-$(EXTENSION))
 

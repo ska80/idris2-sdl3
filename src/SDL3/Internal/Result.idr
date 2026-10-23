@@ -1,9 +1,12 @@
 ||| SDL result conversion shared by core and extensions. Not an application API.
 module SDL3.Internal.Result
 
+
 import SDL3.Raw
 
+
 %default total
+
 
 export
 nullable : (pointer -> PrimIO Int) -> (pointer -> value) -> PrimIO pointer -> IO (Either String value)

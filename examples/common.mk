@@ -7,7 +7,7 @@ ROOT := $(abspath ../..)
 
 PACK_CHEZ = $(PACK) --no-prompt --cg=chez
 
-# Dependency packages still share build directories in the repository root.
+# Examples share the library build directories. Keep dependency builds serial.
 .NOTPARALLEL:
 
 ifneq ($(CG),chez)

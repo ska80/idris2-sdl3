@@ -1,5 +1,6 @@
 module SDL3
 
+
 import public SDL3.Events
 import public SDL3.Flags
 
@@ -14,7 +15,9 @@ import Data.Bits
 
 import System.FFI
 
+
 %default total
+
 
 ||| Owned window and reusable native size storage. Destroy after its renderer, before quit.
 export

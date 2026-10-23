@@ -3,12 +3,15 @@
 ||| Do not manually release supplied resources or retain them beyond their scopes.
 module SDL3.Scoped
 
+
 import SDL3
 import SDL3.Internal.Resource
 
 import Data.Buffer
 
+
 %default total
+
 
 ||| Own one open gamepad reference, including after removal.
 export

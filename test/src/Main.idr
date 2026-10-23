@@ -1,5 +1,6 @@
 module Main
 
+
 import SDL3
 
 import System
@@ -46,7 +47,9 @@ import FlashTests
 import WindowOpacityTests
 import MouseGrabTests
 
+
 %default covering
+
 
 require : String -> Bool -> IO (Either String ())
 require label True = pure (Right ())

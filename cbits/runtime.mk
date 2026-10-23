@@ -17,4 +17,11 @@ $(error Cannot read library directories for $(SDL_PACKAGES) with $(PKG_CONFIG))
 endif
 endif
 
-export LD_LIBRARY_PATH := $(ROOT)/cbits$(if $(SDL_LIBRARY_PATH),:$(SDL_LIBRARY_PATH))$(if $(LD_LIBRARY_PATH),:$(LD_LIBRARY_PATH))
+# Prefer package-owned adapters over stale copies in the root cbits directory.
+# Keep checkout paths with spaces intact.
+EXTENSION_LIBRARY_PATH := $(shell \
+	for extension in $(patsubst sdl3-%,%,$(filter sdl3-%,$(SDL_PACKAGES))); do \
+		printf '%s/%s/cbits:' "$(ROOT)" "$$extension"; \
+	done)
+
+export LD_LIBRARY_PATH := $(EXTENSION_LIBRARY_PATH)$(ROOT)/cbits$(if $(SDL_LIBRARY_PATH),:$(SDL_LIBRARY_PATH))$(if $(LD_LIBRARY_PATH),:$(LD_LIBRARY_PATH))

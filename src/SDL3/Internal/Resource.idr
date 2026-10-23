@@ -1,9 +1,12 @@
 ||| Shared ordinary-return cleanup. Not an application API or an exception handler.
 module SDL3.Internal.Resource
 
+
 import SDL3.Raw
 
+
 %default total
+
 
 -- Copy the error before any cleanup call can replace it.
 sdlFailure : IO (Either String a)

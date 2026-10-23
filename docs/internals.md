@@ -11,17 +11,20 @@ Contributor reference. Public contracts: [resources](resources.md). Commands and
 | `src/SDL3/Raw.idr` | Foreign calls: `prim__lowerCamelCase` |
 | `src/SDL3/Events.idr`, `Flags.idr` | Copied event data and typed flags |
 | `src/SDL3/Scoped.idr` | Core acquisition and temporary-state helpers |
-| `src/SDL3/{Image,TTF,Mixer}*` | Independent optional packages with typed, raw, and scoped modules |
+| `{image,mixer,ttf}/src/SDL3/` | Independent optional packages with typed, raw, and scoped modules |
+| `{image,mixer,ttf}/sdl3-*.ipkg` | Extension package files, each with its own `build/` directory |
 | `src/SDL3/Internal/Resource.idr` | Shared acquisition, cleanup, initialization, and state restoration |
 | `src/SDL3/Internal/Result.idr` | Nullable pointers, owned-pointer results, nonnegative signed results |
 | `src/SDL3/Internal/Audio.idr` | Shared audio-format codes via an internal interface |
 | `src/SDL3/Internal/Handles.idr` | Unsafe pointer conversion for extension/core interoperability |
-| `cbits/{core,image,ttf,mixer}.{c,h}` | Native adapters, separate shared libraries |
+| `cbits/core.{c,h}` | Core native adapter and shared declarations |
+| `{image,mixer,ttf}/cbits/` | Extension C sources, headers, and separate shared libraries |
+| `cbits/extension.mk` | Shared extension native build rules |
 | `cbits/internal.h` | Shared finite-float and overflow-safe buffer-range tests |
 | `cbits/runtime.mk` | Shared pkg-config discovery for runtime library paths |
 | `vendor/` | [SDL3 and extension header references, versions, and checksums](../vendor/README.md) |
 | `test/*.c`, `test/*.h`, `test/src` | Core native, Idris, and compile-time rejection tests. Shared WAV fixtures |
-| `test/{image,ttf,mixer}/` | Each extension's native tests, fixtures, `Main.idr`, package, and Makefile |
+| `{image,mixer,ttf}/test/` | Each extension's native tests, fixtures, `Main.idr`, package, and Makefile |
 | `test/common.mk` | Shared extension test build/run rules |
 
 ## Native boundary

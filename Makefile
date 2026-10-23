@@ -7,9 +7,9 @@ PACK_CHEZ = $(PACK) --no-prompt --cg=chez
 
 EXTENSIONS   := mixer image ttf
 TEST_TARGETS := test $(addprefix test-,$(EXTENSIONS))
-PACKAGES     := sdl3.ipkg $(addprefix sdl3-,$(addsuffix .ipkg,$(EXTENSIONS))) test/test.ipkg
+PACKAGES     := sdl3.ipkg $(foreach extension,$(EXTENSIONS),$(extension)/sdl3-$(extension).ipkg) test/test.ipkg
 
-# Package builds share directories. Separate pack invocations must remain serial.
+# Callers share dependency build directories. Keep separate pack invocations serial.
 .NOTPARALLEL:
 
 ifneq ($(CG),chez)
@@ -33,7 +33,7 @@ core:
 	$(PACK_CHEZ) build sdl3.ipkg
 
 $(EXTENSIONS): core
-	$(PACK_CHEZ) build sdl3-$@.ipkg
+	$(PACK_CHEZ) build $@/sdl3-$@.ipkg
 
 test: export LD_LIBRARY_PATH := $(ROOT)/test/native-build:$(LD_LIBRARY_PATH)
 test: core
@@ -42,10 +42,13 @@ test: core
 	$(TEST_ENV) $(PACK_CHEZ) run test/test.ipkg
 
 $(addprefix test-,$(EXTENSIONS)): test-%:
-	$(MAKE) -C test/$* PACK="$(PACK)" CG="$(CG)" run
+	$(MAKE) -C $*/test PACK="$(PACK)" CG="$(CG)" run
 
 clean:
 	@set -e; for package in $(PACKAGES); do $(PACK) --no-prompt clean $$package; done
 	$(MAKE) -C cbits clean
 	$(MAKE) -C test clean
-	@set -e; for extension in $(EXTENSIONS); do $(MAKE) -C test/$$extension PACK="$(PACK)" CG="$(CG)" clean; done
+	@set -e; for extension in $(EXTENSIONS); do \
+		$(MAKE) -C $$extension/cbits clean; \
+		$(MAKE) -C $$extension/test PACK="$(PACK)" CG="$(CG)" clean; \
+	done

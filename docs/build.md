@@ -28,8 +28,17 @@ path = "/path/to/idris2-sdl3"
 ipkg = "sdl3.ipkg"
 ```
 
-For each selected extension, repeat the entry with its package name and matching `.ipkg` filename.
-Add those package names to the application's `.ipkg` `depends` field. Extensions depend on
+For each selected extension, add an entry with its package name and matching `.ipkg` filename.
+Set `path` to its `image`, `mixer`, or `ttf` directory, not the repository root. For example:
+
+```toml
+[custom.all.sdl3-mixer]
+type = "local"
+path = "/path/to/idris2-sdl3/mixer"
+ipkg = "sdl3-mixer.ipkg"
+```
+
+Add the selected package names to the application's `.ipkg` `depends` field. Extensions depend on
 `sdl3`. Core-only builds do not need them.
 
 - Typed imports: `SDL3`, `SDL3.Image`, `SDL3.TTF`, `SDL3.Mixer`.
@@ -41,7 +50,7 @@ Add those package names to the application's `.ipkg` `depends` field. Extensions
 Make targets get each required SDL library directory from `pkg-config --variable=libdir`.  They
 preserve the existing `LD_LIBRARY_PATH`. Core-only targets do not query optional packages.  Set
 `PKG_CONFIG_PATH` for nonstandard installations, or override `PKG_CONFIG` to select another
-pkg-config command.  After changing SDK installations, clean and rebuild.
+pkg-config command. After changing the source layout or SDK installation, clean and rebuild.
 
 For direct core-only executable runs from the repository root:
 
@@ -50,8 +59,9 @@ sdl_libdir=$(pkg-config --variable=libdir sdl3) || exit 1
 export LD_LIBRARY_PATH="$PWD/cbits${sdl_libdir:+:$sdl_libdir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 ```
 
-For direct extension runs, also add each selected extension's `libdir`. These directories can differ
-from SDL3's.
+For direct extension runs, also add each selected extension's adapter directory (`image/cbits`,
+`mixer/cbits`, or `ttf/cbits`) and its installed `libdir`. These library directories can differ from
+SDL3's. The Make targets set these paths automatically.
 
 ## Targets and tests
 
@@ -64,7 +74,11 @@ from SDL3's.
 | `make test-image`, `make test-ttf`, `make test-mixer` | Optional package tests |
 | `make clean` | Remove library/test artifacts without prompts. Clean examples in their own directories |
 
-Extension tests live in `test/image`, `test/ttf`, and `test/mixer`. Each directory contains
+Each extension owns its directory: `image/`, `mixer/`, or `ttf/`. Its `.ipkg` file sits beside
+`src/`, `cbits/`, and `test/`. For example, `mixer/sdl3-mixer.ipkg` builds the Mixer package.
+Core sources, adapters, and tests remain in the root `src/`, `cbits/`, and `test/` directories.
+
+Extension tests live in `image/test`, `ttf/test`, and `mixer/test`. Each test directory contains
 `Main.idr`, native tests, a Makefile, and a package file that matches its package name.  Package and
 executable names are `image-test`, `ttf-test`, and `mixer-test`.  The core test package and
 executable use `test`.  Each suite owns its `build/` and `native-build/` directories. Mixer reuses
@@ -72,7 +86,9 @@ the WAV fixture source in `test/`, but builds its own fixture library.
 
 From an extension's test directory, `make` builds its tests and required packages. `make run` builds
 and runs its native and Idris tests. `make native` runs only its native tests.  `make clean` removes
-only that suite's outputs. Shared rules live in `test/common.mk`.
+only that suite's outputs. For example, run `make -C image/test run` from the repository root.
+Shared test rules live in `test/common.mk`. Shared native adapter rules live in `cbits/extension.mk`.
+To build only an extension's C adapter, use `make -C image/cbits` (or `mixer/cbits`, `ttf/cbits`).
 
 Full validation:
 
@@ -90,8 +106,8 @@ git diff --check
   path for `SDL3_TEST_FONT`.
 - If `pack run` hides compiler errors, use `pack --no-prompt --cg=chez build test/test.ipkg` (or the
   failing test package).
-- Package builds share directories. Make serializes them. Do not run separate pack processes
-  concurrently in this checkout.
+- Builds share dependency outputs. Make serializes its package commands. Do not run separate pack
+  processes concurrently in this checkout.
 - Hardware behavior and dependency leak limits: [testing limits](internals.md#tests).
 
 ## Examples

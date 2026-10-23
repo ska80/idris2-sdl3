@@ -1,7 +1,9 @@
 module SDL3.Events
 
+
 import Data.Bits
 import Data.Fin
+
 
 %default total
 

@@ -1,8 +1,11 @@
 module SDL3.Flags
 
+
 import Data.Bits
 
+
 %default total
+
 
 ||| Initialization flags cannot be used as window flags.
 export
